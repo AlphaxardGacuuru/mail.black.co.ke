@@ -1,0 +1,21 @@
+{
+    "agents": [
+        "copilot"
+    ],
+    "guidelines": true,
+    "mcp": true,
+    "nightwatch_mcp": false,
+    "sail": true,
+    "skills": [
+        "ai-sdk-development",
+        "fortify-development",
+        "laravel-best-practices",
+        "configuring-horizon",
+        "socialite-development",
+        "wayfinder-development",
+        "inertia-react-development",
+        "tailwindcss-development",
+        "echo-react-development",
+        "echo-development"
+    ]
+}

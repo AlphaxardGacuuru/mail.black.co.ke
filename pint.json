@@ -1,0 +1,38 @@
+{
+    "preset": "laravel",
+    "rules": {
+        "indentation_type": true,
+        "single_quote": {
+            "enabled": false
+        },
+        "array_syntax": {
+            "syntax": "short"
+        },
+        "binary_operator_spaces": {
+            "default": "single_space"
+        },
+        "concat_space": {
+            "spacing": "one"
+        },
+        "function_declaration": {
+            "closure_function_spacing": "none"
+        },
+        "method_argument_space": {
+            "on_multiline": "ensure_fully_multiline"
+        },
+        "method_chaining_indentation": true,
+        "no_multiline_whitespace_before_semicolons": true,
+        "no_whitespace_before_comma_in_array": {
+            "enabled": true
+        },
+        "no_extra_blank_lines": {
+            "enabled": true
+        },
+        "no_whitespace_in_blank_line": true,
+        "single_line_throw": true,
+        "trim_array_spaces": true,
+        "whitespace_after_comma_in_array": {
+            "enabled": true
+        }
+    }
+}
