@@ -21,10 +21,6 @@ class DatabaseSeeder extends Seeder
                 AdminUserSeeder::class,
                 UserSeeder::class,
                 PropertySeeder::class,
-                StaffSeeder::class,
-                TenantSeeder::class,
-                WaterReadingSeeder::class,
-                InvoiceSeeder::class,
             ]);
         }
     }

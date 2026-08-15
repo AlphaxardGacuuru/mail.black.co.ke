@@ -39,7 +39,6 @@ class SupportTicketController extends Controller
     public function store(Request $request): SupportTicketResource
     {
         $this->validate($request, [
-            "complaintToId" => "nullable|uuid|exists:user_units,id",
             "category" => "required|in:".implode(',', SupportTicketCategory::values()),
             "subject" => "required|string|max:255",
             "priority" => "nullable|in:".implode(',', SupportTicketPriority::values()),
