@@ -45,7 +45,7 @@ class WelcomeNotification extends Notification implements ShouldQueue
             ->subject('Welcome to Black Property!')
             ->greeting('Hello '.$notifiable->name.',')
             ->line("Thank you for joining Black Property. We are excited to have you on board!")
-            ->action('Go To Dashboard', url('/admin/dashboard'));
+            ->action('Go To Inbox', url('/mail'));
     }
 
     /**

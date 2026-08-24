@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react"
 import type { FC } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { index as subscriptionPlansRoute } from "@/actions/App/Http/Controllers/SubscriptionPlanController"
-import Axios from "@/lib/axios"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { GlassCard, GlassInner } from "@/components/ui/glass-card"
 import IncomeBar from "@/components/Dashboard/IncomeBar"
@@ -91,7 +88,7 @@ const workflowBenefits = [
 	"A cleaner path from vacancy to signed tenant.",
 ]
 
-const subscriptionPlansFallback: SubscriptionPlanData[] = [
+const subscriptionPlans: SubscriptionPlanData[] = [
 	{
 		name: "Starter",
 		description:
@@ -143,15 +140,6 @@ const subscriptionPlansFallback: SubscriptionPlanData[] = [
 ]
 
 const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
-	const { data: subscriptionPlans = subscriptionPlansFallback } = useQuery({
-		queryKey: ["subscription-plans"],
-		queryFn: () =>
-			Axios.get(subscriptionPlansRoute().url).then(
-				(res) => res.data.data as SubscriptionPlanData[]
-			),
-		placeholderData: subscriptionPlansFallback,
-	})
-
 	const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly")
 
 	const yearlyDiscountPercent = Math.round(
@@ -254,7 +242,7 @@ const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
 				<div className="bg-motion-float bg-motion-delay-3 absolute bottom-[38%] left-[36%] h-48 w-48 -rotate-12 rounded-full bg-primary/46 dark:bg-primary/34" />
 				<div className="bg-motion-drift absolute bottom-[12%] right-[20%] h-56 w-56 rounded-[3rem] bg-secondary/60 dark:bg-secondary/25" />
 				{/* Brand Background Gradient Start */}
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_10%,rgba(194,24,91,0.18),transparent_35%),radial-gradient(circle_at_88%_14%,rgba(224,242,254,0.55),transparent_40%),linear-gradient(to_bottom,transparent,rgba(194,24,91,0.08),transparent)] dark:bg-[radial-gradient(circle_at_12%_10%,rgba(194,24,91,0.22),transparent_35%),radial-gradient(circle_at_88%_14%,rgba(224,242,254,0.22),transparent_40%),linear-gradient(to_bottom,transparent,rgba(194,24,91,0.12),transparent)]" />
+				<div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_10%,rgba(143,255,224,0.18),transparent_35%),radial-gradient(circle_at_88%_14%,rgba(0,49,58,0.55),transparent_40%),linear-gradient(to_bottom,transparent,rgba(143,255,224,0.08),transparent)] dark:bg-[radial-gradient(circle_at_12%_10%,rgba(143,255,224,0.22),transparent_35%),radial-gradient(circle_at_88%_14%,rgba(0,49,58,0.22),transparent_40%),linear-gradient(to_bottom,transparent,rgba(143,255,224,0.12),transparent)]" />
 				{/* Brand Background Gradient End */}
 				<div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.75)_1px,transparent_1px)] bg-size-[16px_16px] opacity-[0.12] dark:opacity-[0.05]" />
 				<div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.32)_0%,transparent_30%,rgba(148,163,184,0.2)_50%,transparent_70%,rgba(255,255,255,0.22)_100%)] opacity-[0.26] dark:opacity-[0.12]" />
@@ -691,7 +679,7 @@ const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
 
 						<div className="flex flex-col gap-3 lg:min-w-64">
 							<Link
-								href="/admin/dashboard"
+								href="/mail"
 								variant="solid"
 								size="lg"
 								className={`w-full justify-center capitalize ${magnifyHoverClass}`}>

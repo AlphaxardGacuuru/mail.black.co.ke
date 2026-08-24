@@ -13,7 +13,7 @@ const WaterTabInfo: FC = () => {
 				transparency flows through every interaction.
 			</p>
 			<Link
-				href="/admin/dashboard"
+				href="/mail"
 				variant="solid"
 				size="sm"
 				className="mt-2 capitalize"

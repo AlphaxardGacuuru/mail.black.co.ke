@@ -50,8 +50,8 @@ class SupportTicket extends Model
     * Relationships
     */
 
-    public function userUnit()
+    public function user()
     {
-        return $this->belongsTo(UserUnit::class);
+        return $this->belongsTo(User::class);
     }
 }

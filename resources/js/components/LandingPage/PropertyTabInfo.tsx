@@ -14,7 +14,7 @@ const PropertyTabInfo: FC = () => {
 				intuitive as it is powerful.
 			</p>
 			<Link
-				href="/admin/dashboard"
+				href="/mail"
 				variant="solid"
 				size="sm"
 				className="mt-2 capitalize"

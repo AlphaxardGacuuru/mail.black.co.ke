@@ -1,9 +1,9 @@
 import { Link } from "@/components/ui/link"
-import { Home, Building, Download } from "lucide-react"
+import { Download, Mail } from "lucide-react"
 import AppLogo from "@/components/app-logo"
 import AppLogoMark from "@/components/app-logo-mark"
+import { MailNav } from "@/components/mail-nav"
 import { NavFooter } from "@/components/nav-footer"
-import { NavMain } from "@/components/nav-main"
 import { NavNotifications } from "@/components/nav-notifications"
 import { NavUser } from "@/components/nav-user"
 import {
@@ -16,19 +16,14 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar"
-const DASHBOARD_URL = "/admin/dashboard"
+const HOME_URL = "/mail"
 import type { NavItem } from "@/types"
 
 export const mainNavItems: NavItem[] = [
 	{
-		title: "Dashboard",
-		href: DASHBOARD_URL,
-		icon: Home,
-	},
-	{
-		title: "Properties",
-		href: "/admin/properties",
-		icon: Building,
+		title: "Mail",
+		href: "/mail",
+		icon: Mail,
 	},
 ]
 
@@ -55,7 +50,7 @@ export function AppSidebar() {
 							<SidebarMenuButton
 								size="lg"
 								asChild>
-								<Link href={DASHBOARD_URL}>
+								<Link href={HOME_URL}>
 									{state === "collapsed" ? (
 										<div className="flex justify-center w-full text-sidebar-primary-foreground">
 											<AppLogoMark className="fill-current text-primary dark:text-white" />
@@ -71,7 +66,7 @@ export function AppSidebar() {
 			</SidebarHeader>
 
 			<SidebarContent>
-				<NavMain items={mainNavItems} />
+				<MailNav />
 			</SidebarContent>
 
 			<SidebarFooter>

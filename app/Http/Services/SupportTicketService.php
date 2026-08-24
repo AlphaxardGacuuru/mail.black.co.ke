@@ -18,7 +18,7 @@ class SupportTicketService extends Service
      */
     public function index(Request $request)
     {
-        $query = SupportTicket::with(['userUnit.user', 'userUnit.unit.property']);
+        $query = SupportTicket::with('user');
 
         $query = $this->search($query, $request);
 
@@ -38,7 +38,7 @@ class SupportTicketService extends Service
 
     public function show($id)
     {
-        $supportTicket = SupportTicket::with(['userUnit.user', 'userUnit.unit.property'])->findOrFail($id);
+        $supportTicket = SupportTicket::with('user')->findOrFail($id);
 
         return [
             true,
@@ -56,8 +56,7 @@ class SupportTicketService extends Service
     public function store(Request $request)
     {
         $supportTicket = new SupportTicket;
-        $supportTicket->user_unit_id = auth("sanctum")->user()->currentUserUnit()->id;
-        $supportTicket->complaint_to_id = $request->input('complaintToId');
+        $supportTicket->user_id = auth('sanctum')->id();
         $supportTicket->category = $request->input('category');
         $supportTicket->subject = $request->input('subject');
         $supportTicket->priority = $request->input('priority');
@@ -148,20 +147,8 @@ class SupportTicketService extends Service
      */
     public function search($query, $request)
     {
-        if ($request->propertyId != "undefined") {
-            $propertyIds = explode(",", $request->propertyId);
-
-            $isSuper = in_array("All", $propertyIds);
-
-            if (! $isSuper) {
-                $query = $query->whereHas('userUnit.unit', function ($q) use ($propertyIds) {
-                    $q->whereIn('property_id', $propertyIds);
-                });
-            }
-        }
-
         if ($request->filled('tenantId')) {
-            $query = $query->where('user_unit_id', $request->input('tenantId'));
+            $query = $query->where('user_id', $request->input('tenantId'));
         }
 
         if ($request->filled('number')) {

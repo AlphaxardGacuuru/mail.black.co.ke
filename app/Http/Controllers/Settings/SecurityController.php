@@ -8,17 +8,12 @@ use App\Support\Spa;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 
-class SecurityController extends Controller implements HasMiddleware
+class SecurityController extends Controller
 {
-    /**
-     * Get the middleware that should be assigned to the controller.
-     */
-    public static function middleware(): array
+    public function __construct()
     {
-        return [new Middleware('password.confirm', only: ['edit'])];
+        $this->middleware('password.confirm')->only('edit');
     }
 
     /**

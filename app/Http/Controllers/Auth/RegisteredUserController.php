@@ -11,6 +11,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
+
 class RegisteredUserController extends Controller
 {
     /**
@@ -26,21 +27,21 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'settings' => [
-                'invoicesGeneratedNotification' => true,
-                'invoiceReminderNotification' => true,
-            ],
-        ]);
+        $user = new User;
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->password = Hash::make($request->password);
+        $user->settings = [
+            'invoicesGeneratedNotification' => true,
+            'invoiceReminderNotification' => true,
+        ];
+        $user->save();
 
         $token = $user
             ->createToken($request->device_name)
             ->plainTextToken;
-            
-            UserCreatedEvent::dispatch($user);
+
+        UserCreatedEvent::dispatch($user);
 
         return response([
             "status" => "success",

@@ -13,7 +13,7 @@ const TenantTabInfo: FC = () => {
 				seamlessly. Your properties never stay empty long.
 			</p>
 			<Link
-				href="/admin/dashboard"
+				href="/mail"
 				variant="solid"
 				size="sm"
 				className="mt-2 capitalize"

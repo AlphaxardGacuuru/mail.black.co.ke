@@ -3,151 +3,115 @@
 namespace App\Http\Services;
 
 use App\Http\Resources\UserResource;
+use App\Models\Role;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Collection;
 
 class UserService extends Service
 {
-    /*
-     * Get All Users
-     */
-    public function index($request)
-    {
-        if ($request->filled("idAndName")) {
-            $userQuery = User::select("id", "name");
+	public function index(Request $request): LengthAwarePaginator|Collection
+	{
+		if ($request->filled('idAndName')) {
+			return User::query()
+				->select('id', 'name')
+				->orderBy('id', 'DESC')
+				->get();
+		}
 
-            $users = $userQuery
-                ->orderBy("id", "DESC")
-                ->get();
+		$query = $this->search(User::query(), $request);
 
-            return $users;
-        }
+		return $query
+			->orderBy('id', 'DESC')
+			->paginate();
+	}
 
-        $query = new User;
+	public function show(int|string $id): User
+	{
+		return User::query()->findOrFail($id);
+	}
 
-        $query = $this->search($query, $request);
+	public function store(Request $request): array
+	{
+		$user = User::query()->create([
+			'name' => $request->string('name')->toString(),
+			'email' => $request->string('email')->toString(),
+			'password' => Hash::make($request->string('password')->toString()),
+			'phone' => $request->input('phone'),
+			'settings' => $request->input('settings'),
+		]);
 
-        $users = $query
-            ->orderby("id", "DESC")
-            ->paginate();
+		if ($request->filled('userRoles')) {
+			$user->syncRoles($request->input('userRoles'));
+		}
 
-        return $users;
-    }
+		return [true, 'Account Created', $user->fresh()];
+	}
 
-    /**
-     * Display the specified resource.
-     */
-    public function show($id)
-    {
-        return User::findOrFail($id);
-    }
+	public function update(Request $request, int|string $id): array
+	{
+		$user = User::query()->findOrFail($id);
 
-    /**
-     * Create a new user (registration logic)
-     *
-     * @throws ValidationException
-     */
-    public function store($request)
-    {
-        $user = User::create([
-            'name' => $request->input('name'),
-            'email' => $request->input('email'),
-            'password' => $request->input('password'),
-        ]);
+		if ($request->filled('name')) {
+			$user->name = $request->string('name')->toString();
+		}
 
-        return $user;
-    }
+		if ($request->filled('email')) {
+			$user->email = $request->string('email')->toString();
+		}
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update($request, $id)
-    {
-        $user = User::findOrFail($id);
-        $user->name = $request->filled('name') ? $request->input('name') : $user->name;
-        $user->phone = $request->filled('phone') ? $request->input('phone') : $user->phone;
+		if ($request->filled('phone')) {
+			$user->phone = $request->input('phone');
+		}
 
-        // Password update handled if present (already validated in controller)
-        if ($request->filled('password')) {
-            $user->password = Hash::make($request->input('password'));
-        }
+		if ($request->filled('password')) {
+			$user->password = Hash::make($request->string('password')->toString());
+		}
 
-        $user->settings = $request->filled('settings') ? $request->input('settings') : $user->settings;
+		if ($request->exists('settings')) {
+			$user->settings = $request->input('settings');
+		}
 
-        if ($request->filled('userRoles')) {
-            $user->syncRoles($request->userRoles);
-        }
+		$saved = $user->save();
 
-        $saved = $user->save();
+		if ($request->filled('userRoles')) {
+			$user->syncRoles($request->input('userRoles'));
+		}
 
-        return [$saved, "Account Updated", $user];
-    }
+		return [$saved, 'Account Updated', $user->fresh()];
+	}
 
-    /*
-     * Soft Delete Service
-     */
-    public function destroy($id)
-    {
-        $user = User::findOrFail($id);
+	public function destroy(int|string $id): array
+	{
+		$user = User::query()->findOrFail($id);
+		$deleted = $user->delete();
 
-        $deleted = $user->delete();
+		return [$deleted, $user->name . ' deleted'];
+	}
 
-        return [$deleted, $user->name . " deleted"];
-    }
+	public function auth(): UserResource|Response
+	{
+		if (! auth('sanctum')->check()) {
+			return response(['message' => 'Not Authenticated'], 401);
+		}
 
-    /*
-     * Force Delete Service
-     */
-    public function forceDestroy($id)
-    {
-        $user = User::findOrFail($id);
+		return new UserResource(auth('sanctum')->user());
+	}
 
-        // Get old thumbnail and delete it
-        $oldThumbnail = substr($user->thumbnail, 9);
+	protected function search($query, Request $request)
+	{
+		if ($request->filled('roleId')) {
+			$roleName = Role::query()->findOrFail($request->input('roleId'))->name;
+			$query = $query->role($roleName);
+		}
 
-        Storage::disk("public")->delete($oldThumbnail);
+		if ($request->filled('name')) {
+			$query = $query->where('name', 'LIKE', '%' . $request->input('name') . '%');
+		}
 
-        $deleted = $user->delete();
-
-        return [$deleted, $user->name . " deleted"];
-    }
-
-    /**
-     * Get Auth.
-     */
-    public function auth()
-    {
-        if (auth("sanctum")->check()) {
-
-            $auth = auth('sanctum')->user();
-
-            return new UserResource($auth);
-        } else {
-            return response(["message" => "Not Authenticated"], 401);
-        }
-    }
-
-    /*
-     * Search
-     */
-    public function search($query, $request)
-    {
-        $roleId = $request->roleId;
-
-        if ($request->filled("roleId")) {
-            $roleName = Role::find($roleId)->name;
-
-            $query = $query->role($roleName);
-        }
-
-        $name = $request->input("name");
-
-        if ($request->filled("name")) {
-            $query = $query->where("name", "LIKE", "%" . $name . "%");
-        }
-
-        return $query;
-    }
+		return $query;
+	}
 }

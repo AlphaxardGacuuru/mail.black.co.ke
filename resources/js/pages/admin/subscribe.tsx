@@ -405,7 +405,7 @@ export default function Subscribe({
 					)
 
 					window.setTimeout(() => {
-						navigate({ to: "/admin/dashboard" })
+						navigate({ to: "/mail" })
 					}, 2500)
 				})
 				.catch(() => {

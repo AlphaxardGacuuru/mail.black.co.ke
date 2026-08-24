@@ -20,13 +20,15 @@ class FilePondController extends Controller
 
         $path = $file->store($directory, 'public');
 
-        return TemporaryUpload::create([
-            'disk' => 'public',
-            'path' => $path,
-            'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getClientMimeType(),
-            'size' => $file->getSize(),
-        ]);
+        $temporaryUpload = new TemporaryUpload;
+        $temporaryUpload->disk = 'public';
+        $temporaryUpload->path = $path;
+        $temporaryUpload->original_name = $file->getClientOriginalName();
+        $temporaryUpload->mime_type = $file->getClientMimeType();
+        $temporaryUpload->size = $file->getSize();
+        $temporaryUpload->save();
+
+        return $temporaryUpload;
     }
 
     /*
@@ -184,6 +186,39 @@ class FilePondController extends Controller
     }
 
     public function destroySupportTicketAttachment(int|string $id): Response
+    {
+        $temporaryUpload = TemporaryUpload::find($id);
+
+        if (! $temporaryUpload) {
+            return response('Attachment already removed', 200);
+        }
+
+        Storage::disk($temporaryUpload->disk)->delete($temporaryUpload->path);
+        $temporaryUpload->delete();
+
+        return response('Attachment deleted', 200);
+    }
+
+    /*
+     * Mail Compose Attachments
+     */
+
+    public function storeMailAttachment(Request $request): Response
+    {
+        $this->validate($request, [
+            'filepond-mail-attachments' => 'required|file|max:25600',
+        ]);
+
+        $temporaryUpload = $this->uploadToTemporaryStore(
+            $request,
+            'filepond-mail-attachments',
+            'temporary-uploads/mail'
+        );
+
+        return response((string) $temporaryUpload->id, 200);
+    }
+
+    public function destroyMailAttachment(int|string $id): Response
     {
         $temporaryUpload = TemporaryUpload::find($id);
 

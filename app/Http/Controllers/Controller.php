@@ -2,15 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
-use Illuminate\Http\Request;
+use Illuminate\Routing\Controller as BaseController;
 
-abstract class Controller
+class Controller extends BaseController
 {
-    use ValidatesRequests;
-
-    protected function shouldReturnJson(Request $request): bool
-    {
-        return $request->expectsJson() && ! $request->header('X-Inertia');
-    }
+    use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
 }

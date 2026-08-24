@@ -16,13 +16,8 @@ return new class extends Migration
         Schema::create('support_tickets', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->unsignedBigInteger('number')->unique();
-            $table->foreignUuid('user_unit_id')
+            $table->foreignUuid('user_id')
                 ->constrained()
-                ->onUpdate('cascade')
-                ->onDelete('cascade');
-            $table->foreignUuid('complaint_to_id')
-                ->nullable()
-                ->constrained('user_units')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
             $table->string('category');

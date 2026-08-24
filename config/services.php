@@ -23,6 +23,9 @@ return [
         'secret' => env('MAILGUN_SECRET'),
         'endpoint' => env('MAILGUN_ENDPOINT', 'api.mailgun.net'),
         'scheme' => 'https',
+        // Mailgun's inbound-webhook HTTP signing key can differ from the API secret above —
+        // confirm in the Mailgun dashboard and set MAILGUN_WEBHOOK_SIGNING_SECRET if so.
+        'webhook_signing_secret' => env('MAILGUN_WEBHOOK_SIGNING_SECRET'),
     ],
 
     'resend' => [

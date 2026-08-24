@@ -7,20 +7,12 @@ const SUBSCRIBE_PATH = "/admin/subscribe"
 type AuthShape = {
 	name?: unknown
 	activeSubscription?: unknown
-	subscriptionByPropertyIds?: unknown
 	emailVerifiedAt?: unknown
 	email_verified_at?: unknown
 }
 
 type RouteLocation = {
 	pathname: string
-}
-
-function hasPropertySubscriptions(auth: AuthShape): boolean {
-	return (
-		Array.isArray(auth.subscriptionByPropertyIds) &&
-		auth.subscriptionByPropertyIds.length > 0
-	)
 }
 
 function hasEmailVerification(auth: AuthShape): boolean {
@@ -59,8 +51,7 @@ export async function requireSubscribed({
 	if (
 		auth.name !== "Guest" &&
 		auth.activeSubscription == null &&
-		hasEmailVerification(auth) &&
-		!hasPropertySubscriptions(auth)
+		hasEmailVerification(auth)
 	) {
 		throw redirect({ to: SUBSCRIBE_PATH })
 	}

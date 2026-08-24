@@ -69,14 +69,14 @@ class AuthenticatedSessionController extends Controller
                 $dbUser->forceFill($attributes)->save();
             }
         } else {
-            $dbUser = User::create([
-                'name'              => $socialUser->getName() ?: 'Google User',
-                'email'             => $socialUser->getEmail(),
-                'google_id'         => $socialUser->getId(),
-                'avatar'            => $avatarUrl,
-                'email_verified_at' => now(),
-                'password'          => Str::random(40),
-            ]);
+            $dbUser = new User;
+            $dbUser->name = $socialUser->getName() ?: 'Google User';
+            $dbUser->email = $socialUser->getEmail();
+            $dbUser->google_id = $socialUser->getId();
+            $dbUser->avatar = $avatarUrl;
+            $dbUser->email_verified_at = now();
+            $dbUser->password = Str::random(40);
+            $dbUser->save();
 
             $dbUser->notify(new WelcomeNotification);
             event(new Registered($dbUser));

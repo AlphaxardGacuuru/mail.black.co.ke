@@ -31,6 +31,10 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         'email',
         'password',
         'settings',
+        'mailbox_address',
+        'mailgun_domain',
+        'mailgun_api_key',
+        'mailgun_endpoint',
     ];
 
     /**
@@ -41,6 +45,7 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'mailgun_api_key',
     ];
 
     /**
@@ -53,6 +58,7 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         'email_verified_at' => 'datetime',
         'updated_at' => 'datetime:d M Y',
         'created_at' => 'datetime:d M Y',
+        // 'mailgun_api_key' => 'encrypted',
     ];
 
     protected string $guard_name = 'web';
@@ -118,87 +124,9 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
      * Relationships
      */
 
-    public function userSubscriptionPlans()
-    {
-        return $this->hasMany(UserSubscriptionPlan::class);
-    }
-
-    public function properties()
-    {
-        return $this->hasMany(Property::class);
-    }
-
-    public function property()
-    {
-        return $this->belongsToMany(Property::class, "user_properties");
-    }
-
-    public function units()
-    {
-        return $this->belongsToMany(Unit::class, 'user_units');
-    }
-
-    public function userProperties()
-    {
-        return $this->hasMany(UserProperty::class);
-    }
-
-    public function userUnits()
-    {
-        return $this->hasMany(UserUnit::class);
-    }
-
-    public function referralPayouts()
-    {
-        return $this->hasMany(ReferralPayout::class);
-    }
-
     /*
      * Custom functions
      */
-
-    public function activeSubscription()
-    {
-        $userSubscriptionPlan = $this->userSubscriptionPlans()
-            ->where('status', 'active')
-            ->first();
-
-        if (! $userSubscriptionPlan) {
-            return null;
-        }
-
-        $userSubscriptionPlan->name = $userSubscriptionPlan->subscriptionPlan->name;
-        $userSubscriptionPlan->price = $userSubscriptionPlan->subscriptionPlan->price;
-        $userSubscriptionPlan->max_units = $userSubscriptionPlan->subscriptionPlan->max_units;
-
-        return $userSubscriptionPlan;
-    }
-
-    public function subscriptionByPropertyIds()
-    {
-        return $this->userProperties
-            ->map(function($userProperty) {
-                $activeSubscription = $userProperty
-                    ->property
-                    ->user
-                    ->activeSubscription();
-
-                return $activeSubscription ? $userProperty->property_id : null;
-            })->filter();
-    }
-
-    public function currentUserUnit()
-    {
-        return $this->userUnits()
-            ->whereNull("vacated_at")
-            ->orderBy("id", "DESC")
-            ->first();
-    }
-
-    public function currentUnit()
-    {
-        return $this->currentUserUnit()?->unit;
-    }
 
     /**
      * Route notifications for the Vonage channel.
@@ -208,5 +136,13 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     public function routeNotificationForVonage()
     {
         return $this->phone;
+    }
+
+    /**
+     * Determine whether the user has their own Mailgun credentials configured.
+     */
+    public function hasMailgunCredentials(): bool
+    {
+        return filled($this->mailgun_domain) && filled($this->mailgun_api_key);
     }
 }

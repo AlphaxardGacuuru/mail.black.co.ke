@@ -39,7 +39,7 @@ export async function requireAuth() {
 export async function requireGuest() {
 	const auth = await getAuth()
 	if (auth) {
-		throw redirect({ to: "/admin/dashboard" })
+		throw redirect({ to: "/mail" })
 	}
 }
 
@@ -96,7 +96,7 @@ export async function requireSuperAdmin({
 	const auth = (await getAuth()) as (User & SuperAdminAuthShape) | null
 
 	if (!auth || !isSuperAdmin(auth)) {
-		throw redirect({ to: "/admin/dashboard" })
+		throw redirect({ to: "/mail" })
 	}
 }
 
