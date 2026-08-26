@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import type { FC } from "react"
+import AppLogo from "@/components/app-logo"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { GlassCard, GlassInner } from "@/components/ui/glass-card"
 import MailStatusIcon from "@/components/mail/MailStatusIcon"
@@ -241,6 +242,17 @@ const Welcome: FC<WelcomeProps> = () => {
 			</div>
 			{/* END: Page Backdrop Elements */}
 
+			{/* START: Header */}
+			<header className="relative z-10 mx-auto flex max-w-7xl items-center px-4 py-6 sm:px-6 lg:px-8">
+				<Link
+					href="/"
+					variant="unstyled"
+					size="none">
+					<AppLogo className="h-20 w-auto" />
+				</Link>
+			</header>
+			{/* END: Header */}
+
 			{/* START: Hero Section */}
 			<section
 				data-cursor-label="Inbox overview"
@@ -342,17 +354,8 @@ const Welcome: FC<WelcomeProps> = () => {
 									<GlassInner
 										key={message.subject}
 										className="flex items-center gap-3 p-3">
-										<div className="relative shrink-0">
-											<div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
-												{message.from.slice(0, 2).toUpperCase()}
-											</div>
-											<span className="absolute -bottom-0.5 -left-0.5 flex items-center justify-center rounded-full bg-background p-0.5 ring-1 ring-background">
-												<MailStatusIcon
-													status={message.status}
-													isRead={message.isRead}
-													className="size-2.5"
-												/>
-											</span>
+										<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+											{message.from.slice(0, 2).toUpperCase()}
 										</div>
 										<div className="min-w-0 flex-1">
 											<div className="flex items-center justify-between gap-2">
@@ -363,9 +366,16 @@ const Welcome: FC<WelcomeProps> = () => {
 													{message.time}
 												</span>
 											</div>
-											<p className="truncate text-sm text-muted-foreground">
-												{message.subject}
-											</p>
+											<div className="flex items-center gap-1.5">
+												<MailStatusIcon
+													status={message.status}
+													isRead={message.isRead}
+													className="size-3.5 shrink-0"
+												/>
+												<p className="truncate text-sm text-muted-foreground">
+													{message.subject}
+												</p>
+											</div>
 										</div>
 									</GlassInner>
 								))}

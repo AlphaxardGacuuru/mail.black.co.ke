@@ -39,13 +39,31 @@ registerRoute(
 registerRoute(
 	({ url }) =>
 		url.origin === self.location.origin &&
-		/\.(png|ico|svg|webmanifest)$/.test(url.pathname),
+		/\.(png|ico|svg)$/.test(url.pathname),
 	new CacheFirst({
 		cacheName: "static-icons",
 		plugins: [
 			new ExpirationPlugin({
 				maxEntries: 20,
 				maxAgeSeconds: 30 * 24 * 60 * 60,
+			}),
+		],
+	})
+)
+
+// Web app manifest: network-first. A long-lived cache here would pin the
+// app name/icons shown in the install prompt to whatever they were on the
+// first visit, surviving rebrands for up to the cache's expiry.
+registerRoute(
+	({ url }) =>
+		url.origin === self.location.origin &&
+		url.pathname.endsWith(".webmanifest"),
+	new NetworkFirst({
+		cacheName: "webmanifest",
+		plugins: [
+			new ExpirationPlugin({
+				maxEntries: 1,
+				maxAgeSeconds: 24 * 60 * 60,
 			}),
 		],
 	})

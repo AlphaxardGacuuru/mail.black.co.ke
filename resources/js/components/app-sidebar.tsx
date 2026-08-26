@@ -1,7 +1,6 @@
 import { Link } from "@/components/ui/link"
 import { Download, Mail } from "lucide-react"
 import AppLogo from "@/components/app-logo"
-import AppLogoMark from "@/components/app-logo-mark"
 import { MailNav } from "@/components/mail-nav"
 import { NavFooter } from "@/components/nav-footer"
 import { NavNotifications } from "@/components/nav-notifications"
@@ -48,13 +47,11 @@ export function AppSidebar() {
 					<SidebarMenu className="min-w-0 flex-1">
 						<SidebarMenuItem>
 							<SidebarMenuButton
-								size="lg"
+								size="xl"
 								asChild>
 								<Link href={HOME_URL}>
 									{state === "collapsed" ? (
-										<div className="flex justify-center w-full text-sidebar-primary-foreground">
-											<AppLogoMark className="fill-current text-primary dark:text-white" />
-										</div>
+										<AppLogo variant="icon" className="h-8" />
 									) : (
 										<AppLogo />
 									)}

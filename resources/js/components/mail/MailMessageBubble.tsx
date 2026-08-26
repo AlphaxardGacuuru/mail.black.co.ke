@@ -34,28 +34,12 @@ export default function MailMessageBubble({ message, isExpanded, onToggleExpand 
 				type="button"
 				onClick={onToggleExpand}
 				className="flex w-full items-center gap-3 p-3 text-left hover:bg-muted/40">
-				<div className="relative shrink-0">
-					<Avatar className="size-8">
-						<AvatarFallback>{initials(message.from?.name, message.from?.address)}</AvatarFallback>
-					</Avatar>
-					{message.status && (
-						<span className="absolute -bottom-0.5 -left-0.5 flex items-center justify-center rounded-full bg-background p-0.5 ring-1 ring-background">
-							<MailStatusIcon
-								status={message.status}
-								isRead={message.isRead}
-								className="size-2.5"
-							/>
-						</span>
-					)}
-				</div>
+				<Avatar className="size-8 shrink-0">
+					<AvatarFallback>{initials(message.from?.name, message.from?.address)}</AvatarFallback>
+				</Avatar>
 
 				<div className="flex-1 min-w-0">
-					<div className="flex items-center justify-between gap-2">
-						<span className="font-medium truncate">{fromName}</span>
-						<span className="text-xs text-muted-foreground shrink-0">
-							{formatDate(message.sentAt ?? message.receivedAt ?? message.createdAt)}
-						</span>
-					</div>
+					<span className="font-medium truncate block">{fromName}</span>
 
 					{!isExpanded && <p className="text-sm text-muted-foreground truncate">{message.snippet}</p>}
 
@@ -103,6 +87,19 @@ export default function MailMessageBubble({ message, isExpanded, onToggleExpand 
 					)}
 				</div>
 			)}
+
+			<div className="flex items-center justify-end gap-1 px-3 pb-2">
+				<span className="text-xs text-muted-foreground">
+					{formatDate(message.sentAt ?? message.receivedAt ?? message.createdAt)}
+				</span>
+				{message.status && (
+					<MailStatusIcon
+						status={message.status}
+						isRead={message.isRead}
+						className="size-3.5"
+					/>
+				)}
+			</div>
 		</div>
 	)
 }

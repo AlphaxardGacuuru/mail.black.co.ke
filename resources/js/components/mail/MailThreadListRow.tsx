@@ -3,7 +3,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import MailStatusIcon from "@/components/mail/MailStatusIcon"
 import { cn } from "@/lib/utils"
-import { useArchiveMailThread, useStarMailThread, useTrashMailThread } from "@/queries/mail"
+import {
+	useArchiveMailThread,
+	useStarMailThread,
+	useTrashMailThread,
+} from "@/queries/mail"
 import type { MailThreadSummary } from "@/types/mail"
 
 type Props = {
@@ -22,12 +26,19 @@ function formatDate(value: string | null): string {
 	const date = new Date(value)
 	const now = new Date()
 	if (date.toDateString() === now.toDateString()) {
-		return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+		return date.toLocaleTimeString(undefined, {
+			hour: "numeric",
+			minute: "2-digit",
+		})
 	}
 	return date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
 }
 
-export default function MailThreadListRow({ thread, isSelected, onSelect }: Props) {
+export default function MailThreadListRow({
+	thread,
+	isSelected,
+	onSelect,
+}: Props) {
 	const starMutation = useStarMailThread(true)
 	const unstarMutation = useStarMailThread(false)
 	const archiveMutation = useArchiveMailThread()
@@ -41,40 +52,62 @@ export default function MailThreadListRow({ thread, isSelected, onSelect }: Prop
 				isSelected && "bg-muted",
 				thread.hasUnread && "bg-background"
 			)}>
-			<div className="relative shrink-0">
-				<Avatar className="size-9">
-					<AvatarFallback>{initials(thread.from?.name, thread.from?.address)}</AvatarFallback>
-				</Avatar>
-				{thread.status && (
-					<span className="absolute -bottom-0.5 -left-0.5 flex items-center justify-center rounded-full bg-background p-0.5 ring-1 ring-background">
-						<MailStatusIcon
-							status={thread.status}
-							isRead={thread.isRead}
-							className="size-2.5"
-						/>
-					</span>
-				)}
-			</div>
+			<Avatar className="size-9 shrink-0">
+				<AvatarFallback>
+					{initials(thread.from?.name, thread.from?.address)}
+				</AvatarFallback>
+			</Avatar>
 
 			<div className="flex-1 min-w-0">
 				<div className="flex items-center justify-between gap-2">
+					{/* Name Start */}
 					<span className={cn("truncate", thread.hasUnread && "font-semibold")}>
 						{thread.from?.name ?? thread.from?.address ?? "Unknown"}
 					</span>
+					{/* Name End */}
+					{/* Timestamp Start */}
 					<span className="text-xs text-muted-foreground shrink-0">
 						{formatDate(thread.lastMessageAt)}
 					</span>
+					{/* Timestamp End */}
 				</div>
 
-				<div className="flex items-center gap-2">
-					<span className={cn("truncate text-sm", thread.hasUnread ? "font-medium" : "text-muted-foreground")}>
-						{thread.subject || "(no subject)"}
-						{thread.snippet ? ` — ${thread.snippet}` : ""}
-					</span>
-					{thread.messageCount > 1 && (
-						<span className="text-xs text-muted-foreground shrink-0">({thread.messageCount})</span>
-					)}
-					{thread.hasAttachments && <Paperclip className="size-3 text-muted-foreground shrink-0" />}
+				<div className="flex items-center justify-between gap-2">
+					<div>
+						{/* Subject Start */}
+						<span
+							className={cn(
+								"truncate text-sm",
+								thread.hasUnread ? "font-medium" : "text-muted-foreground"
+							)}>
+							{thread.subject || "(no subject)"}
+							{thread.snippet ? ` — ${thread.snippet}` : ""}
+						</span>
+						{/* Subject End */}
+						{/* Message Count Start */}
+						{thread.messageCount > 1 && (
+							<span className="text-xs text-muted-foreground shrink-0">
+								({thread.messageCount})
+							</span>
+						)}
+						{/* Message Count End */}
+						{/* Attachments Start */}
+						{thread.hasAttachments && (
+							<Paperclip className="size-3 text-muted-foreground shrink-0" />
+						)}
+						{/* Attachments End */}
+					</div>
+					{/* Status Start */}
+					<div>
+						{thread.status && (
+							<MailStatusIcon
+								status={thread.status}
+								isRead={thread.isRead}
+								className="size-3.5 shrink-0"
+							/>
+						)}
+					</div>
+					{/* Status End */}
 				</div>
 			</div>
 
@@ -85,9 +118,17 @@ export default function MailThreadListRow({ thread, isSelected, onSelect }: Prop
 					className="size-7"
 					onClick={(event) => {
 						event.stopPropagation()
-						;(thread.isStarred ? unstarMutation : starMutation).mutate(thread.id)
+						;(thread.isStarred ? unstarMutation : starMutation).mutate(
+							thread.id
+						)
 					}}>
-					<Star className={thread.isStarred ? "size-3.5 fill-yellow-400 text-yellow-400" : "size-3.5"} />
+					<Star
+						className={
+							thread.isStarred
+								? "size-3.5 fill-yellow-400 text-yellow-400"
+								: "size-3.5"
+						}
+					/>
 				</Button>
 				<Button
 					variant="ghost"
