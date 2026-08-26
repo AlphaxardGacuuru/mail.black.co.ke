@@ -8,6 +8,7 @@ import { SelectField, SelectItem } from "@/components/ui/select"
 import type { MailgunAccount } from "@/types"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
+import { invalidateAuth } from "@/middleware/auth"
 
 const ENDPOINTS = [
 	{ value: "api.mailgun.net", label: "United States" },
@@ -18,6 +19,7 @@ type Props = { initialAccounts: MailgunAccount[] }
 
 type AccountForm = {
 	mailbox_address: string
+	mail_from_name: string
 	mailgun_domain: string
 	mailgun_api_key: string
 	mailgun_endpoint: string
@@ -26,6 +28,7 @@ type AccountForm = {
 
 const emptyForm: AccountForm = {
 	mailbox_address: "",
+	mail_from_name: "",
 	mailgun_domain: "",
 	mailgun_api_key: "",
 	mailgun_endpoint: "api.mailgun.net",
@@ -44,6 +47,7 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 		setShowForm(true)
 		setForm({
 			mailbox_address: account.mailboxAddress,
+			mail_from_name: account.mailFromName ?? "",
 			mailgun_domain: account.mailgunDomain,
 			mailgun_api_key: "",
 			mailgun_endpoint: account.mailgunEndpoint,
@@ -71,6 +75,7 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 		})
 			.then((response) => {
 				setAccounts(response.data.accounts)
+				invalidateAuth()
 				toast.success(response.data.message)
 				reset()
 			})
@@ -111,7 +116,7 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 					variant="outline"
 					onClick={() => setShowForm(true)}>
 					<Plus className="size-4" />
-					Add another account
+					Add account
 				</Button>
 			)}
 
@@ -129,6 +134,13 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 					value={form.mailbox_address}
 					onChange={(event) =>
 						setForm({ ...form, mailbox_address: event.target.value })
+					}
+				/>
+				<Input
+					label="From name"
+					value={form.mail_from_name}
+					onChange={(event) =>
+						setForm({ ...form, mail_from_name: event.target.value })
 					}
 				/>
 				<Input

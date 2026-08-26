@@ -23,6 +23,8 @@ class MailgunAccountController extends Controller
             $request->user()->update(['active_mailgun_account_id' => $account->id]);
         }
 
+        $request->user()->refresh();
+
         return response()->json(['message' => 'Mailgun account added.', 'accounts' => $this->accounts($request->user())]);
     }
 
@@ -36,6 +38,8 @@ class MailgunAccountController extends Controller
         }
 
         $account->update($data);
+
+        $request->user()->refresh();
 
         return response()->json(['message' => 'Mailgun account updated.', 'accounts' => $this->accounts($request->user())]);
     }
@@ -70,6 +74,7 @@ class MailgunAccountController extends Controller
         return $user->mailgunAccounts()->get()->map(fn(MailgunAccount $account) => [
             'id' => $account->id,
             'mailboxAddress' => $account->mailbox_address,
+            'mailFromName' => $account->mail_from_name,
             'mailgunDomain' => $account->mailgun_domain,
             'mailgunEndpoint' => $account->mailgun_endpoint,
             'signature' => $account->signature,

@@ -17,6 +17,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
             $table->string('mailbox_address')->unique();
+            $table->string('mail_from_name')->nullable();
             $table->string('mailgun_domain');
             $table->text('mailgun_api_key');
             $table->string('mailgun_endpoint')->default('api.mailgun.net');

@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, ArrowLeft, Star, Trash2, X } from "lucide-react"
+import { Archive, ArrowLeft, Star, Trash2, X } from "lucide-react"
 import { useMemo, useState } from "react"
 import MailComposeInline from "@/components/mail/MailComposeInline"
 import MailMessageBubble from "@/components/mail/MailMessageBubble"
@@ -22,6 +22,7 @@ type Props = {
 
 export default function MailThreadView({ threadId, variant, onClose, onBack }: Props) {
 	const { auth } = useApp()
+	const activeAccount = auth?.mailgunAccounts?.find((account) => account.isActive)
 	const { data: thread, isLoading } = useMailThread(threadId)
 	const starMutation = useStarMailThread(true)
 	const unstarMutation = useStarMailThread(false)
@@ -31,7 +32,9 @@ export default function MailThreadView({ threadId, variant, onClose, onBack }: P
 	const [expandedId, setExpandedId] = useState<string | null>(null)
 
 	const defaultExpandedId = useMemo(() => {
-		if (!thread) return null
+		if (!thread) {
+			return null
+		}
 		const unread = thread.messages.find((message) => !message.isRead)
 		return (unread ?? thread.messages[thread.messages.length - 1])?.id ?? null
 	}, [thread])
@@ -151,7 +154,7 @@ export default function MailThreadView({ threadId, variant, onClose, onBack }: P
 				<div className="p-3">
 					<MailComposeInline
 						parentMessage={lastMessage}
-						currentUserEmail={auth?.mailboxAddress as string | undefined}
+						currentUserEmail={activeAccount?.mailboxAddress}
 						onSent={() => {}}
 					/>
 				</div>

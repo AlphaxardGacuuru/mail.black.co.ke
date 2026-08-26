@@ -48,6 +48,7 @@ class HandleInertiaRequests extends Middleware
                     'mailgunAccounts' => $user->mailgunAccounts()->get()->map(fn ($account) => [
                         'id' => $account->id,
                         'mailboxAddress' => $account->mailbox_address,
+                        'mailFromName' => $account->mail_from_name,
                         'mailgunDomain' => $account->mailgun_domain,
                         'mailgunEndpoint' => $account->mailgun_endpoint,
                         'signature' => $account->signature,

@@ -12,8 +12,9 @@ type Props = {
 
 export default function MailFolderPage({ folder, labelId }: Props) {
 	const { auth } = useApp()
+	const activeAccount = auth?.mailgunAccounts?.find((account) => account.isActive)
 
-	if (auth && !auth.mailboxAddress) {
+	if (auth && !activeAccount?.mailboxAddress) {
 		return (
 			<>
 				<Head title="Mail" />

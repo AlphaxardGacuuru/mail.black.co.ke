@@ -1,4 +1,5 @@
 import { Breadcrumbs } from "@/components/breadcrumbs"
+import { MailgunAccountSwitcher } from "@/components/mailgun-account-switcher"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import type { BreadcrumbItem as BreadcrumbItemType } from "@/types"
@@ -24,7 +25,8 @@ export function AppSidebarHeader({
 					<Breadcrumbs breadcrumbs={breadcrumbs} />
 				</div>
 			</div>
-			<div className="flex flex-wrap justify-between items-center gap-2">
+			<div className="flex flex-wrap items-center justify-between gap-2">
+				<MailgunAccountSwitcher />
 			</div>
 		</header>
 	)

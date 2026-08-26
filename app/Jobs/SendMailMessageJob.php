@@ -43,7 +43,11 @@ class SendMailMessageJob implements ShouldQueue
             ->to($to)
             ->cc($cc)
             ->bcc($bcc)
-            ->send(new ComposedMail($mailMessage, $account?->signature));
+            ->send(new ComposedMail(
+                $mailMessage,
+                $account?->signature,
+                $account?->mail_from_name
+            ));
 
         $messageId = $sentMessage ? trim((string) $sentMessage->getMessageId(), '<>') : null;
 

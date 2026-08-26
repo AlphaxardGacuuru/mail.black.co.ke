@@ -1,6 +1,7 @@
 export type MailgunAccount = {
 	id: string
 	mailboxAddress: string
+	mailFromName: string | null
 	mailgunDomain: string
 	mailgunEndpoint: string
 	signature: string | null

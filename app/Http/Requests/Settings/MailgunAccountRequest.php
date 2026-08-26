@@ -37,6 +37,7 @@ class MailgunAccountRequest extends FormRequest
             'mailgun_api_key' => ['nullable', 'string', 'max:255'],
             'mailgun_endpoint' => $this->mailgunEndpointRules(),
             'signature' => ['nullable', 'string', 'max:10000'],
+            'mail_from_name' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

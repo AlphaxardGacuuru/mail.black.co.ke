@@ -16,14 +16,21 @@ class ComposedMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public MailMessage $mailMessage, public ?string $signature = null) {}
+    public function __construct(
+        public MailMessage $mailMessage,
+        public ?string $signature = null,
+        public ?string $mailFromName = null,
+    ) {}
 
     public function envelope(): Envelope
     {
         $from = $this->mailMessage->from_address ?? [];
 
         return new Envelope(
-            from: new Address($from['address'] ?? config('mail.from.address'), $from['name'] ?? null),
+            from: new Address(
+                $from['address'] ?? config('mail.from.address'),
+                $this->mailFromName ?: ($from['name'] ?? null),
+            ),
             subject: $this->mailMessage->subject ?? '(no subject)',
         );
     }
