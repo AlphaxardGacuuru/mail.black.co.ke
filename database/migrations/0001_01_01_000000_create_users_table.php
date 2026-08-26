@@ -15,10 +15,6 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('name');
             $table->string('email')->unique();
-            $table->string('mailbox_address')->nullable()->unique();
-            $table->string('mailgun_domain')->nullable();
-            $table->text('mailgun_api_key')->nullable();
-            $table->string('mailgun_endpoint')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->text('two_factor_secret')->nullable();
