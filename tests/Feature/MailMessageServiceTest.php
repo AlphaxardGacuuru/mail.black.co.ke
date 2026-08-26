@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Services\MailMessageService;
 use App\Http\Services\MailSanitizerService;
+use App\Models\MailgunAccount;
 use App\Models\MailMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,9 +16,15 @@ class MailMessageServiceTest extends TestCase
 
     public function test_create_outbound_message_returns_saved_result_and_message(): void
     {
-        $user = User::factory()->create([
+        $user = User::factory()->create();
+        $account = MailgunAccount::create([
+            'user_id' => $user->id,
             'mailbox_address' => 'sender@example.com',
+            'mailgun_domain' => 'example.com',
+            'mailgun_api_key' => 'key',
+            'mailgun_endpoint' => 'api.mailgun.net',
         ]);
+        $user->update(['active_mailgun_account_id' => $account->id]);
 
         $service = new TestMailMessageService(new MailSanitizerService);
 

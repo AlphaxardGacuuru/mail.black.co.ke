@@ -67,12 +67,8 @@ class SendMailMessageJob implements ShouldQueue
             $domain = $account->mailgun_domain;
             $secret = $account->mailgun_api_key;
             $endpoint = $account->mailgun_endpoint;
-        } elseif (! $user?->hasMailgunCredentials()) {
-            return Mail::mailer(config('mail.default'));
         } else {
-            $domain = $user->mailgun_domain;
-            $secret = $user->mailgun_api_key;
-            $endpoint = $user->mailgun_endpoint;
+            return Mail::mailer(config('mail.default'));
         }
 
         $mailerName = "mailgun-user-{$user->id}-account-" . ($account?->id ?? 'legacy');

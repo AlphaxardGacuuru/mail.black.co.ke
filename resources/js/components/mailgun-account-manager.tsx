@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react"
 import { useState } from "react"
 import MailgunAccountController from "@/actions/App/Http/Controllers/Settings/MailgunAccountController"
 import { Button } from "@/components/ui/button"
@@ -36,9 +37,11 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 	const [editingId, setEditingId] = useState<string | null>(null)
 	const [form, setForm] = useState<AccountForm>(emptyForm)
 	const [processing, setProcessing] = useState(false)
+	const [showForm, setShowForm] = useState(false)
 
 	function editAccount(account: MailgunAccount): void {
 		setEditingId(account.id)
+		setShowForm(true)
 		setForm({
 			mailbox_address: account.mailboxAddress,
 			mailgun_domain: account.mailgunDomain,
@@ -51,6 +54,7 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 	function reset(): void {
 		setEditingId(null)
 		setForm(emptyForm)
+		setShowForm(false)
 	}
 
 	function submit(event: React.FormEvent<HTMLFormElement>): void {
@@ -101,6 +105,17 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 				))}
 			</div>
 
+			{!showForm && (
+				<Button
+					type="button"
+					variant="outline"
+					onClick={() => setShowForm(true)}>
+					<Plus className="size-4" />
+					Add another account
+				</Button>
+			)}
+
+			{showForm && (
 			<form
 				onSubmit={submit}
 				className="space-y-4 rounded-md border p-4">
@@ -153,7 +168,6 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 					onChange={(event) =>
 						setForm({ ...form, signature: event.target.value })
 					}
-					placeholder="Regards,\nYour name"
 					rows={4}
 				/>
 				<div className="flex justify-end gap-2">
@@ -170,6 +184,7 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 					</Button>
 				</div>
 			</form>
+			)}
 		</div>
 	)
 }

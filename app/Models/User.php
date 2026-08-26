@@ -31,10 +31,6 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         'email',
         'password',
         'settings',
-        'mailbox_address',
-        'mailgun_domain',
-        'mailgun_api_key',
-        'mailgun_endpoint',
         'active_mailgun_account_id',
     ];
 
@@ -46,7 +42,6 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
-        'mailgun_api_key',
     ];
 
     /**
@@ -59,7 +54,6 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         'email_verified_at' => 'datetime',
         'updated_at' => 'datetime:d M Y',
         'created_at' => 'datetime:d M Y',
-        // 'mailgun_api_key' => 'encrypted',
     ];
 
     protected string $guard_name = 'web';
@@ -146,9 +140,9 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     {
         $account = $this->activeMailgunAccount;
 
-        return $account
-            ? filled($account->mailgun_domain) && filled($account->mailgun_api_key)
-            : filled($this->mailgun_domain) && filled($this->mailgun_api_key);
+        return $account !== null
+            && filled($account->mailgun_domain)
+            && filled($account->mailgun_api_key);
     }
 
     public function mailgunAccounts()

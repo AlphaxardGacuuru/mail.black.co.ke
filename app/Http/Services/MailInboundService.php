@@ -6,6 +6,7 @@ use App\Enums\MailFolder;
 use App\Enums\MailStatus;
 use App\Http\Services\Concerns\ResolvesMailThread;
 use App\Models\MailAttachment;
+use App\Models\MailgunAccount;
 use App\Models\MailMessage;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -35,7 +36,7 @@ class MailInboundService
             'attachment_count' => (int) $request->input('attachment-count', 0),
         ]);
 
-        $user = User::where('mailbox_address', $recipient)->first();
+        $user = MailgunAccount::where('mailbox_address', $recipient)->first()?->user;
 
         if (! $user) {
             Log::warning('Mailgun inbound: no matching mailbox for recipient', ['recipient' => $recipient]);

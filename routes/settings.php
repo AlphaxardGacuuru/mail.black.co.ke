@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Settings\MailgunCredentialsController;
 use App\Http\Controllers\Settings\MailgunAccountController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
@@ -12,8 +11,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('settings/profile', fn() => view('app'))->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
 
-    Route::patch('settings/mailgun-credentials', [MailgunCredentialsController::class, 'update'])->name('mailgun-credentials.update');
-    Route::delete('settings/mailgun-credentials', [MailgunCredentialsController::class, 'destroy'])->name('mailgun-credentials.destroy');
     Route::get('settings/mailgun-accounts', [MailgunAccountController::class, 'index'])->name('mailgun-accounts.index');
     Route::post('settings/mailgun-accounts', [MailgunAccountController::class, 'store'])->name('mailgun-accounts.store');
     Route::patch('settings/mailgun-accounts/{account}', [MailgunAccountController::class, 'update'])->name('mailgun-accounts.update');

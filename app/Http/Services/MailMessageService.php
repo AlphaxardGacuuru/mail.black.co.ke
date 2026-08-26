@@ -68,7 +68,7 @@ class MailMessageService extends Service
             'reply-all' => array_values(array_filter(array_merge(
                 [$parent->from_address],
                 $parent->to ?? [],
-            ), fn($address) => ($address['address'] ?? null) && $address['address'] !== $user->mailbox_address)),
+            ), fn($address) => ($address['address'] ?? null) && $address['address'] !== $user->activeMailgunAccount?->mailbox_address)),
             default => [],
         };
 
@@ -102,7 +102,7 @@ class MailMessageService extends Service
 
     protected function ensureMailboxConfigured(User $user): void
     {
-        if (! $user->mailbox_address) {
+        if (! $user->activeMailgunAccount?->mailbox_address) {
             throw ValidationException::withMessages([
                 'mailbox_address' => ['Set up your mailbox address in Settings before sending mail.'],
             ]);
@@ -152,7 +152,7 @@ class MailMessageService extends Service
         $mailMessage->direction = 'outbound';
         $mailMessage->folder = MailFolder::SENT->value;
         $mailMessage->from_address = [
-            'address' => $user->mailbox_address,
+            'address' => $user->activeMailgunAccount?->mailbox_address,
             'name' => $user->name
         ];
         $mailMessage->to = $fields['to'] ?? [];

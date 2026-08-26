@@ -30,11 +30,8 @@ class UserResource extends JsonResource
             "id" => $this->id,
             "name" => $this->name,
             "email" => $this->email,
-            "mailboxAddress" => $this->mailbox_address,
             "mailgunConfigured" => $this->hasMailgunCredentials(),
-            "mailgunDomain" => $this->mailgun_domain,
-            "mailgunEndpoint" => $this->mailgun_endpoint,
-            "mailgunAccounts" => $this->mailgunAccounts()->get()->map(fn ($account) => [
+            "mailgunAccounts" => $this->mailgunAccounts()->get()->map(fn($account) => [
                 "id" => $account->id,
                 "mailboxAddress" => $account->mailbox_address,
                 "mailgunDomain" => $account->mailgun_domain,
