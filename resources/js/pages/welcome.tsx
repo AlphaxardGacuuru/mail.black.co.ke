@@ -66,7 +66,8 @@ const fullStatusLegend: StatusLegendEntry[] = [
 	{
 		status: "opened",
 		label: "Opened",
-		description: "They've read it. The tick turns primary the instant it happens.",
+		description:
+			"They've read it. The tick turns primary the instant it happens.",
 		comingSoon: true,
 	},
 	{
@@ -75,7 +76,11 @@ const fullStatusLegend: StatusLegendEntry[] = [
 		description: "They followed a link inside it.",
 		comingSoon: true,
 	},
-	{ status: "failed", label: "Failed", description: "The send attempt failed." },
+	{
+		status: "failed",
+		label: "Failed",
+		description: "The send attempt failed.",
+	},
 	{
 		status: "bounced",
 		label: "Bounced",
@@ -272,8 +277,8 @@ const Welcome: FC<WelcomeProps> = () => {
 							</h1>
 							<p className="max-w-2xl text-lg leading-8 text-muted-foreground sm:text-xl">
 								An email client built around one status icon that tells you
-								exactly where every message stands, from your outbox to
-								their inbox.
+								exactly where every message stands, from your outbox to their
+								inbox.
 							</p>
 							<p className="max-w-xl text-base leading-7 text-muted-foreground/90">
 								Queued and sent today. Delivery, open, and click tracking are
@@ -391,8 +396,7 @@ const Welcome: FC<WelcomeProps> = () => {
 								<div>
 									<p className="text-sm font-medium">Read receipt clarity</p>
 									<p className="mt-1 text-sm text-muted-foreground">
-										Every status icon stays legible in both light and dark
-										mode.
+										Every status icon stays legible in both light and dark mode.
 									</p>
 								</div>
 							</div>
@@ -415,8 +419,8 @@ const Welcome: FC<WelcomeProps> = () => {
 							Designed around one question: did they see it?
 						</h2>
 						<p className="mt-4 text-lg leading-8 text-muted-foreground">
-							Every message carries a status icon that answers that question
-							at a glance, before you ever have to ask.
+							Every message carries a status icon that answers that question at
+							a glance, before you ever have to ask.
 						</p>
 					</div>
 
@@ -433,8 +437,8 @@ const Welcome: FC<WelcomeProps> = () => {
 								<ComingSoonBadge />
 							</h3>
 							<p className="mt-3 text-sm leading-6 text-muted-foreground">
-								The moment someone opens your email, the triple check will
-								turn primary — rolling out next, powered by Mailgun.
+								The moment someone opens your email, the triple check will turn
+								primary — rolling out next, powered by Mailgun.
 							</p>
 						</GlassCard>
 						{featureHighlights.map(({ icon: Icon, title, description }) => (
@@ -468,8 +472,8 @@ const Welcome: FC<WelcomeProps> = () => {
 						Every stage of a message, one status icon at a time.
 					</h2>
 					<p className="mt-4 text-lg leading-8 text-muted-foreground">
-						No dashboards to dig through. The icon at the bottom-left of
-						every message already tells the story.
+						No dashboards to dig through. The icon at the bottom-left of every
+						message already tells the story.
 					</p>
 				</div>
 
@@ -532,8 +536,8 @@ const Welcome: FC<WelcomeProps> = () => {
 						<CardContent>
 							<p className="text-sm leading-6 text-muted-foreground">
 								Replies collapse into a single thread with starred, sent, and
-								archive views, so a conversation never gets lost across a
-								dozen replies.
+								archive views, so a conversation never gets lost across a dozen
+								replies.
 							</p>
 						</CardContent>
 					</Card>
@@ -557,8 +561,8 @@ const Welcome: FC<WelcomeProps> = () => {
 						</CardHeader>
 						<CardContent>
 							<p className="text-sm leading-6 text-muted-foreground">
-								Failed sends are flagged the moment they happen today.
-								Bounce detection straight from Mailgun's webhook is next.
+								Failed sends are flagged the moment they happen today. Bounce
+								detection straight from Mailgun's webhook is next.
 							</p>
 						</CardContent>
 					</Card>
@@ -579,8 +583,8 @@ const Welcome: FC<WelcomeProps> = () => {
 						</CardHeader>
 						<CardContent>
 							<p className="text-sm leading-6 text-muted-foreground">
-								Send and receive as you@yourdomain, backed by verified
-								Mailgun credentials, not a shared, generic address.
+								Send and receive as you@yourdomain, backed by verified Mailgun
+								credentials, not a shared, generic address.
 							</p>
 						</CardContent>
 					</Card>

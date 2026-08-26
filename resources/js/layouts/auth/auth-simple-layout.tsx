@@ -22,7 +22,9 @@ export default function AuthSimpleLayout({
 				<div className="bg-motion-rotate bg-motion-delay-2 absolute right-[3%] top-[15%] h-36 w-36 rotate-12 rounded-3xl bg-secondary/85 dark:bg-secondary/40" />
 				<div className="bg-motion-float bg-motion-delay-3 absolute bottom-[38%] left-[36%] h-48 w-48 -rotate-12 rounded-full bg-primary/46 dark:bg-primary/34" />
 				<div className="bg-motion-drift absolute bottom-[12%] right-[20%] h-56 w-56 rounded-[3rem] bg-secondary/60 dark:bg-secondary/25" />
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_10%,rgba(194,24,91,0.18),transparent_35%),radial-gradient(circle_at_88%_14%,rgba(224,242,254,0.55),transparent_40%),linear-gradient(to_bottom,transparent,rgba(194,24,91,0.08),transparent)] dark:bg-[radial-gradient(circle_at_12%_10%,rgba(194,24,91,0.22),transparent_35%),radial-gradient(circle_at_88%_14%,rgba(224,242,254,0.22),transparent_40%),linear-gradient(to_bottom,transparent,rgba(194,24,91,0.12),transparent)]" />
+				{/* Brand Background Gradient Start */}
+				<div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_10%,rgba(143,255,224,0.18),transparent_35%),radial-gradient(circle_at_88%_14%,rgba(0,49,58,0.55),transparent_40%),linear-gradient(to_bottom,transparent,rgba(143,255,224,0.08),transparent)] dark:bg-[radial-gradient(circle_at_12%_10%,rgba(143,255,224,0.22),transparent_35%),radial-gradient(circle_at_88%_14%,rgba(0,49,58,0.22),transparent_40%),linear-gradient(to_bottom,transparent,rgba(143,255,224,0.12),transparent)]" />
+				{/* Brand Background Gradient End */}
 				<div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.75)_1px,transparent_1px)] bg-size-[16px_16px] opacity-[0.12] dark:opacity-[0.05]" />
 				<div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.32)_0%,transparent_30%,rgba(148,163,184,0.2)_50%,transparent_70%,rgba(255,255,255,0.22)_100%)] opacity-[0.26] dark:opacity-[0.12]" />
 				<div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,rgba(15,23,42,0.1)_0_1px,transparent_1px_12px)] opacity-[0.5] dark:opacity-[0.12]" />
