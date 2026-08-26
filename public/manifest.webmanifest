@@ -1,7 +1,7 @@
 {
-	"name": "Money Black",
-	"short_name": "Money",
-	"description": "Track accounts, categories, transactions, and budget totals from one installable app.",
+	"name": "Black Mail",
+	"short_name": "Black Mail",
+	"description": "An email client with read receipts built in, see when every message is queued, sent, delivered, and opened.",
 	"start_url": "/",
 	"scope": "/",
 	"display": "standalone",

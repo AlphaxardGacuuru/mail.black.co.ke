@@ -2,162 +2,152 @@ import { useEffect, useState } from "react"
 import type { FC } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { GlassCard, GlassInner } from "@/components/ui/glass-card"
-import IncomeBar from "@/components/Dashboard/IncomeBar"
-import BillingTabInfo from "@/components/LandingPage/BillingTabInfo"
-import OccupancyTabInfo from "@/components/LandingPage/OccupancyTabInfo"
-import PropertyTabInfo from "@/components/LandingPage/PropertyTabInfo"
-import { dashboard, dashboardProperties } from "@/components/LandingPage/data"
-import PropertyDoughnut from "@/components/Dashboard/PropertyDoughnut"
-import RentDoughnut from "@/components/Dashboard/RentDoughnut"
-import ServiceChargeDoughnut from "@/components/Dashboard/ServiceChargeDoughnut"
-import SubscriptionPlan from "@/components/SubscriptionPlan/SubscriptionPlan"
-import type {
-	BillingCycle,
-	SubscriptionPlanData,
-} from "@/components/SubscriptionPlan/SubscriptionPlan"
-import TenantTabInfo from "@/components/LandingPage/TenantTabInfo"
-import TenancyBar from "@/components/Dashboard/TenancyBar"
-import TenancyDoughnut from "@/components/Dashboard/TenancyDoughnut"
-import WaterTabInfo from "@/components/LandingPage/WaterTabInfo"
-import WaterDoughnut from "@/components/Dashboard/WaterDoughnut"
-import WaterUsagePie from "@/components/Dashboard/WaterUsagePie"
+import MailStatusIcon from "@/components/mail/MailStatusIcon"
+import type { MailMessageStatus } from "@/types/mail"
 import { Link } from "@/components/ui/link"
-import { cn } from "@/lib/utils"
 import {
 	ArrowRight,
-	BarChart3,
-	Building2,
 	CheckCircle2,
-	Droplets,
-	Receipt,
+	Clock,
+	Globe,
+	Inbox,
+	Mail,
+	Send,
 	ShieldCheck,
 	Sparkles,
-	UserPlus,
-	Users,
-	Wallet,
 } from "lucide-react"
 
 type WelcomeProps = {
 	canRegister?: boolean
-	activeSubscription?: {
-		id?: string
-		name?: string | null
-		price?: SubscriptionPlanData["price"]
-		maxUnits?: number
-		billingCycle?: string
-	} | null
 }
+
+function ComingSoonBadge() {
+	return (
+		<span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+			Coming soon
+		</span>
+	)
+}
+
+type StatusLegendEntry = {
+	status: MailMessageStatus
+	isRead?: boolean
+	label: string
+	description: string
+	comingSoon?: boolean
+}
+
+const heroStatusLegend: StatusLegendEntry[] = [
+	{ status: "sent", label: "Sent", description: "left your outbox" },
+	{
+		status: "delivered",
+		label: "Delivered",
+		description: "reached their inbox",
+		comingSoon: true,
+	},
+	{
+		status: "opened",
+		label: "Opened",
+		description: "they've read it",
+		comingSoon: true,
+	},
+]
+
+const fullStatusLegend: StatusLegendEntry[] = [
+	{ status: "queued", label: "Queued", description: "Waiting to send." },
+	{ status: "sent", label: "Sent", description: "Left your outbox." },
+	{
+		status: "delivered",
+		label: "Delivered",
+		description: "Reached their inbox.",
+		comingSoon: true,
+	},
+	{
+		status: "opened",
+		label: "Opened",
+		description: "They've read it. The tick turns primary the instant it happens.",
+		comingSoon: true,
+	},
+	{
+		status: "clicked",
+		label: "Clicked",
+		description: "They followed a link inside it.",
+		comingSoon: true,
+	},
+	{ status: "failed", label: "Failed", description: "The send attempt failed." },
+	{
+		status: "bounced",
+		label: "Bounced",
+		description: "Rejected by their mail server.",
+		comingSoon: true,
+	},
+]
 
 const featureHighlights = [
 	{
-		icon: Building2,
-		title: "Property command center",
+		icon: Inbox,
+		title: "Every stage, visible",
 		description:
-			"Track buildings, units, and occupancy health from one place without switching tools.",
+			"A clock for queued, one tick the moment it's sent — delivery, open, and click ticks are rolling out next.",
 	},
 	{
-		icon: Users,
-		title: "Occupancy visibility",
+		icon: ShieldCheck,
+		title: "Failures flagged in red",
 		description:
-			"See vacancies, tenant movement, and leasing performance before they become revenue problems.",
+			"Failed sends show up as a red tick immediately. Bounce detection straight from Mailgun's webhook is next.",
 	},
 	{
-		icon: Wallet,
-		title: "Confident collections",
+		icon: Send,
+		title: "Threaded conversations",
 		description:
-			"Rent, service charge, and utility performance stay visible with charts built for action.",
+			"Replies stay grouped into clean threads, so context never gets lost across a long back-and-forth.",
 	},
 	{
-		icon: Droplets,
-		title: "Utility control",
+		icon: Globe,
+		title: "Your domain, your inbox",
 		description:
-			"Monitor water usage and billing with the same level of clarity as rent operations.",
-	},
-	{
-		icon: UserPlus,
-		title: "Faster tenant acquisition",
-		description:
-			"Move from vacancy to onboarding with a workflow designed around property teams.",
+			"Send and receive on your own domain, backed by verified, Mailgun-authenticated credentials.",
 	},
 ]
 
 const workflowBenefits = [
-	"Portfolio-wide visibility for properties and units.",
-	"Live occupancy tracking across your portfolio.",
-	"Rent, service charge, and water oversight from one dashboard.",
-	"A cleaner path from vacancy to signed tenant.",
+	{ text: "Status tracking for every message you send, queued through sent." },
+	{
+		text: "Delivery confirmation and read receipts, powered by Mailgun's webhooks.",
+		comingSoon: true,
+	},
+	{ text: "A threaded inbox with starred, sent, and archive views." },
+	{ text: "Custom domain sending, backed by Mailgun's delivery network." },
 ]
 
-const subscriptionPlans: SubscriptionPlanData[] = [
+const mockInbox = [
 	{
-		name: "Starter",
-		description:
-			"For individual landlords and small teams managing a focused portfolio.",
-		features: [
-			"Property and unit tracking",
-			"Tenant onboarding and occupancy monitoring",
-			"Rent and billing overview",
-			"Water usage visibility",
-		],
-		price: {
-			monthly: 4900,
-			yearly: 49000,
-		},
+		from: "Acme Corp",
+		subject: "Q3 proposal, final review",
+		time: "9:41 AM",
+		status: "delivered" as MailMessageStatus,
+		isRead: false,
 	},
 	{
-		name: "Growth",
-		description:
-			"For scaling portfolios that need clearer collections, workflows, and reporting.",
-		features: [
-			"Everything in Starter",
-			"Advanced billing workflows",
-			"Service charge management",
-			"Portfolio-wide performance charts",
-			"Tenant acquisition support",
-		],
-		price: {
-			monthly: 9900,
-			yearly: 99000,
-		},
+		from: "Jordan Lee",
+		subject: "Following up on yesterday's call",
+		time: "8:15 AM",
+		status: "received" as MailMessageStatus,
+		isRead: true,
 	},
 	{
-		name: "Portfolio",
-		description:
-			"For operators managing multiple properties with stricter operational demands.",
-		features: [
-			"Everything in Growth",
-			"Multi-property oversight",
-			"Deeper revenue visibility",
-			"Priority onboarding assistance",
-			"Custom operational rollout",
-		],
-		price: {
-			monthly: 14900,
-			yearly: 149000,
-			onboarding_fee: 25000,
-		},
+		from: "Billing",
+		subject: "Invoice #482 delivery failed",
+		time: "Yesterday",
+		status: "bounced" as MailMessageStatus,
+		isRead: false,
 	},
 ]
 
-const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
-	const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly")
-
-	const yearlyDiscountPercent = Math.round(
-		(subscriptionPlans.reduce((sum, plan) => {
-			const annualised = plan.price.monthly * 12
-			return sum + (annualised - plan.price.yearly) / annualised
-		}, 0) /
-			Math.max(subscriptionPlans.length, 1)) *
-			100
-	)
-
+const Welcome: FC<WelcomeProps> = () => {
 	const magnifyHoverClass =
 		"transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.08]"
 
-	const totalUnits = dashboardProperties.units.reduce(
-		(total, units) => total + units,
-		0
-	)
 	const [isCoarsePointer, setIsCoarsePointer] = useState(false)
 	const [cursor, setCursor] = useState({
 		x: 0,
@@ -253,29 +243,30 @@ const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
 
 			{/* START: Hero Section */}
 			<section
-				data-cursor-label="Portfolio overview"
+				data-cursor-label="Inbox overview"
 				className="relative z-10 mx-auto max-w-7xl px-4 pb-18 pt-10 sm:px-6 lg:px-8 lg:pb-24 lg:pt-16">
 				<div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
 					<div className="space-y-8">
 						<div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-4 py-2 text-sm text-primary shadow-sm backdrop-blur-sm">
 							<Sparkles className="size-4" />
-							<span>Built for modern property operations</span>
+							<span>Email that tells you what happened</span>
 						</div>
 
 						<div className="space-y-5">
 							<h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
 								<span className="bg-linear-to-r from-primary via-foreground to-primary bg-clip-text text-transparent dark:via-white">
-									Property management. Beautifully reimagined.
+									Send email. Know it landed.
 								</span>
 							</h1>
 							<p className="max-w-2xl text-lg leading-8 text-muted-foreground sm:text-xl">
-								From tenant onboarding to final billing, experience property
-								management that just works.
+								An email client built around one status icon that tells you
+								exactly where every message stands, from your outbox to
+								their inbox.
 							</p>
 							<p className="max-w-xl text-base leading-7 text-muted-foreground/90">
-								Operate your portfolio with live occupancy insight, cleaner
-								utility tracking, and revenue visibility that feels intentional
-								on both light and dark surfaces.
+								Queued and sent today. Delivery, open, and click tracking are
+								rolling out next, powered by Mailgun's webhooks and tracking
+								pixels.
 							</p>
 						</div>
 
@@ -293,53 +284,35 @@ const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
 								variant="outline"
 								size="lg"
 								className={`border-border/70 bg-background/70 backdrop-blur-sm ${magnifyHoverClass}`}>
-								explore the platform
+								see how it works
 							</Link>
 						</div>
 
 						<div className="grid gap-3 sm:grid-cols-3">
-							<GlassCard
-								className={`p-4 ${magnifyHoverClass}`}>
-								<p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
-									Portfolio coverage
-								</p>
-								<p className="mt-2 text-3xl font-semibold text-primary">
-									{dashboardProperties.total}
-								</p>
-								<p className="mt-1 text-sm text-muted-foreground">
-									properties in one view
-								</p>
-							</GlassCard>
-							<GlassCard
-								className={`p-4 ${magnifyHoverClass}`}>
-								<p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
-									Occupancy health
-								</p>
-								<p className="mt-2 text-3xl font-semibold text-primary">
-									{dashboard.units.percentage}%
-								</p>
-								<p className="mt-1 text-sm text-muted-foreground">
-									occupied units right now
-								</p>
-							</GlassCard>
-							<GlassCard
-								className={`p-4 ${magnifyHoverClass}`}>
-								<p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
-									Collections rate
-								</p>
-								<p className="mt-2 text-3xl font-semibold text-primary">
-									{dashboard.rent.percentage}%
-								</p>
-								<p className="mt-1 text-sm text-muted-foreground">
-									rent paid this year
-								</p>
-							</GlassCard>
+							{heroStatusLegend.map((entry) => (
+								<GlassCard
+									key={entry.label}
+									className={`p-4 ${magnifyHoverClass}`}>
+									<div className="flex items-center gap-2">
+										<MailStatusIcon
+											status={entry.status}
+											isRead={entry.isRead}
+											className="size-4"
+										/>
+										<p className="text-sm font-semibold">{entry.label}</p>
+										{entry.comingSoon && <ComingSoonBadge />}
+									</div>
+									<p className="mt-2 text-sm text-muted-foreground">
+										{entry.description}
+									</p>
+								</GlassCard>
+							))}
 						</div>
 					</div>
 
 					<div
 						className="relative"
-						data-cursor-label="Live property overview">
+						data-cursor-label="Live inbox preview">
 						{/* START: First Card Local Backdrop Elements */}
 						<div className="pointer-events-none absolute -inset-x-8 -inset-y-10 z-0 overflow-visible">
 							<div className="bg-motion-float bg-motion-delay-1 absolute left-[2%] top-[8%] h-32 w-32 rounded-[1.6rem] bg-white/62 dark:bg-white/24" />
@@ -355,56 +328,47 @@ const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
 								<div className="flex items-center justify-between gap-3">
 									<div>
 										<p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
-											Live overview
+											Live inbox
 										</p>
-										<CardTitle className="mt-2 text-2xl">
-											Property Overview
-										</CardTitle>
+										<CardTitle className="mt-2 text-2xl">Inbox</CardTitle>
 									</div>
 									<div className="rounded-2xl border border-primary/20 bg-primary/10 p-3 text-primary">
-										<BarChart3 className="size-6" />
+										<Mail className="size-6" />
 									</div>
 								</div>
-								<div className="grid gap-3 sm:grid-cols-2">
-									<GlassInner className="p-4">
-										<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-											Total properties
-										</p>
-										<p className="mt-2 text-3xl font-semibold text-primary">
-											{dashboardProperties.total}
-										</p>
-									</GlassInner>
-									<GlassInner className="p-4">
-										<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-											Total units
-										</p>
-										<p className="mt-2 text-3xl font-semibold text-emerald-600 dark:text-emerald-400">
-											{totalUnits}
-										</p>
-									</GlassInner>
-								</div>
 							</CardHeader>
-							<CardContent className="relative z-10 space-y-5">
-								<GlassInner className="rounded-3xl p-4">
-									<PropertyDoughnut dashboardProperties={dashboardProperties} />
-								</GlassInner>
-								<div className="grid gap-3 sm:grid-cols-2">
-									<GlassInner className="p-4">
-										<p className="text-sm font-medium">Active properties</p>
-										<p className="mt-2 text-sm leading-6 text-muted-foreground">
-											{dashboardProperties.names.join(", ")}
-										</p>
+							<CardContent className="relative z-10 space-y-3 pb-20">
+								{mockInbox.map((message) => (
+									<GlassInner
+										key={message.subject}
+										className="flex items-center gap-3 p-3">
+										<div className="relative shrink-0">
+											<div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+												{message.from.slice(0, 2).toUpperCase()}
+											</div>
+											<span className="absolute -bottom-0.5 -left-0.5 flex items-center justify-center rounded-full bg-background p-0.5 ring-1 ring-background">
+												<MailStatusIcon
+													status={message.status}
+													isRead={message.isRead}
+													className="size-2.5"
+												/>
+											</span>
+										</div>
+										<div className="min-w-0 flex-1">
+											<div className="flex items-center justify-between gap-2">
+												<span className="truncate text-sm font-medium">
+													{message.from}
+												</span>
+												<span className="shrink-0 text-xs text-muted-foreground">
+													{message.time}
+												</span>
+											</div>
+											<p className="truncate text-sm text-muted-foreground">
+												{message.subject}
+											</p>
+										</div>
 									</GlassInner>
-									<GlassInner className="p-4">
-										<p className="text-sm font-medium">Occupancy snapshot</p>
-										<p className="mt-2 text-2xl font-semibold text-primary">
-											{dashboard.units.totalOccupied}
-										</p>
-										<p className="text-sm text-muted-foreground">
-											occupied units across the portfolio
-										</p>
-									</GlassInner>
-								</div>
+								))}
 							</CardContent>
 						</Card>
 
@@ -415,9 +379,9 @@ const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
 									<ShieldCheck className="size-5" />
 								</div>
 								<div>
-									<p className="text-sm font-medium">Operator clarity</p>
+									<p className="text-sm font-medium">Read receipt clarity</p>
 									<p className="mt-1 text-sm text-muted-foreground">
-										Metrics and charts stay readable in both light and dark
+										Every status icon stays legible in both light and dark
 										mode.
 									</p>
 								</div>
@@ -430,23 +394,39 @@ const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
 
 			{/* START: Feature Highlights Section */}
 			<section
-				data-cursor-label="Property feature intelligence"
+				data-cursor-label="Read receipt intelligence"
 				className="relative z-10 border-y border-white/25 bg-white/38 py-16 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/28">
 				<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 					<div className="mx-auto max-w-3xl text-center">
 						<p className="text-sm font-medium uppercase tracking-[0.28em] text-primary">
-							Everything Property Management. One Platform
+							Everything Email. One Inbox
 						</p>
 						<h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-							Designed for the realities of running property portfolios.
+							Designed around one question: did they see it?
 						</h2>
 						<p className="mt-4 text-lg leading-8 text-muted-foreground">
-							Take inspiration from product-grade landing pages without losing
-							the practical focus a property management system needs.
+							Every message carries a status icon that answers that question
+							at a glance, before you ever have to ask.
 						</p>
 					</div>
 
 					<div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-5">
+						<GlassCard className="group p-6 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 hover:scale-[1.08] hover:shadow-lg">
+							<div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+								<MailStatusIcon
+									status="opened"
+									className="size-4"
+								/>
+							</div>
+							<h3 className="mt-5 flex items-center gap-2 text-lg font-semibold">
+								Read receipts, done right
+								<ComingSoonBadge />
+							</h3>
+							<p className="mt-3 text-sm leading-6 text-muted-foreground">
+								The moment someone opens your email, the triple check will
+								turn primary — rolling out next, powered by Mailgun.
+							</p>
+						</GlassCard>
 						{featureHighlights.map(({ icon: Icon, title, description }) => (
 							<GlassCard
 								key={title}
@@ -467,115 +447,84 @@ const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
 
 			{/* START: Platform Walkthrough Section */}
 			<section
-				data-cursor-label="Workflow analytics"
+				data-cursor-label="Delivery status walkthrough"
 				id="platform"
 				className="relative z-10 mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
-				<div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-					<div className="max-w-3xl">
-						<p className="text-sm font-medium uppercase tracking-[0.28em] text-primary">
-							Platform walkthrough
-						</p>
-						<h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-							Five workflows, one coherent property operating system.
-						</h2>
-						<p className="mt-4 text-lg leading-8 text-muted-foreground">
-							Each area keeps the same visual language while surfacing the
-							numbers that matter most to property teams.
-						</p>
-					</div>
-					<GlassCard
-						className={`px-5 py-4 ${magnifyHoverClass}`}>
-						<p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-							Portfolio metrics
-						</p>
-						<p className="mt-2 text-2xl font-semibold text-primary">
-							{dashboard.serviceCharge.percentage}%
-						</p>
-						<p className="text-sm text-muted-foreground">
-							service charge collection performance
-						</p>
-					</GlassCard>
+				<div className="mb-10 max-w-3xl">
+					<p className="text-sm font-medium uppercase tracking-[0.28em] text-primary">
+						Platform walkthrough
+					</p>
+					<h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+						Every stage of a message, one status icon at a time.
+					</h2>
+					<p className="mt-4 text-lg leading-8 text-muted-foreground">
+						No dashboards to dig through. The icon at the bottom-left of
+						every message already tells the story.
+					</p>
 				</div>
 
-				<div className="grid gap-6 xl:grid-cols-2">
-					<Card className={`overflow-hidden ${magnifyHoverClass}`}>
-						<CardHeader className="pb-4">
-							<div className="flex items-center gap-3">
-								<div className="rounded-2xl bg-primary/10 p-3 text-primary">
-									<Building2 className="size-5" />
-								</div>
-								<div>
-									<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-										Foundation
-									</p>
-									<CardTitle className="mt-1">Property Management</CardTitle>
-								</div>
-							</div>
-						</CardHeader>
-						<CardContent className="space-y-6">
-							<PropertyTabInfo />
-							<GlassInner className="rounded-3xl p-4">
-								<IncomeBar dashboard={dashboard} />
-							</GlassInner>
-						</CardContent>
-					</Card>
-
-					<Card className={`overflow-hidden ${magnifyHoverClass}`}>
-						<CardHeader className="pb-4">
-							<div className="flex items-center gap-3">
-								<div className="rounded-2xl bg-primary/10 p-3 text-primary">
-									<Users className="size-5" />
-								</div>
-								<div>
-									<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-										Occupancy
-									</p>
-									<CardTitle className="mt-1">Occupancy Management</CardTitle>
-								</div>
-							</div>
-						</CardHeader>
-						<CardContent className="space-y-6">
-							<OccupancyTabInfo />
-							<GlassInner className="rounded-3xl p-4">
-								<TenancyBar dashboard={dashboard} />
-							</GlassInner>
-							<GlassInner className="rounded-3xl p-4">
-								<TenancyDoughnut
-									dashboard={dashboard}
-									dashboardProperties={dashboardProperties}
+				<Card className={`overflow-hidden ${magnifyHoverClass}`}>
+					<CardHeader className="pb-4">
+						<div className="flex items-center gap-3">
+							<div className="rounded-2xl bg-primary/10 p-3 text-primary">
+								<MailStatusIcon
+									status="clicked"
+									className="size-5"
 								/>
-							</GlassInner>
-						</CardContent>
-					</Card>
+							</div>
+							<div>
+								<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+									Status legend
+								</p>
+								<CardTitle className="mt-1">From queued to clicked</CardTitle>
+							</div>
+						</div>
+					</CardHeader>
+					<CardContent>
+						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+							{fullStatusLegend.map((entry) => (
+								<GlassInner
+									key={`${entry.status}-${entry.isRead ?? ""}`}
+									className="p-4">
+									<div className="flex items-center gap-2">
+										<MailStatusIcon
+											status={entry.status}
+											isRead={entry.isRead}
+											className="size-4"
+										/>
+										<p className="text-sm font-semibold">{entry.label}</p>
+										{entry.comingSoon && <ComingSoonBadge />}
+									</div>
+									<p className="mt-2 text-sm leading-6 text-muted-foreground">
+										{entry.description}
+									</p>
+								</GlassInner>
+							))}
+						</div>
+					</CardContent>
+				</Card>
 
-					<Card
-						className={`overflow-hidden xl:col-span-2 ${magnifyHoverClass}`}>
+				<div className="mt-6 grid gap-6 lg:grid-cols-3">
+					<Card className={`overflow-hidden ${magnifyHoverClass}`}>
 						<CardHeader className="pb-4">
 							<div className="flex items-center gap-3">
 								<div className="rounded-2xl bg-primary/10 p-3 text-primary">
-									<Receipt className="size-5" />
+									<Inbox className="size-5" />
 								</div>
 								<div>
 									<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-										Revenue
+										Organize
 									</p>
-									<CardTitle className="mt-1">Billing</CardTitle>
+									<CardTitle className="mt-1">Threaded inbox</CardTitle>
 								</div>
 							</div>
 						</CardHeader>
-						<CardContent className="space-y-6">
-							<BillingTabInfo />
-							<div className="grid gap-4 lg:grid-cols-3">
-								<GlassInner className="rounded-3xl p-4">
-									<RentDoughnut dashboard={dashboard} />
-								</GlassInner>
-								<GlassInner className="rounded-3xl p-4">
-									<WaterDoughnut dashboard={dashboard} />
-								</GlassInner>
-								<GlassInner className="rounded-3xl p-4">
-									<ServiceChargeDoughnut dashboard={dashboard} />
-								</GlassInner>
-							</div>
+						<CardContent>
+							<p className="text-sm leading-6 text-muted-foreground">
+								Replies collapse into a single thread with starred, sent, and
+								archive views, so a conversation never gets lost across a
+								dozen replies.
+							</p>
 						</CardContent>
 					</Card>
 
@@ -583,21 +532,24 @@ const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
 						<CardHeader className="pb-4">
 							<div className="flex items-center gap-3">
 								<div className="rounded-2xl bg-primary/10 p-3 text-primary">
-									<Droplets className="size-5" />
+									<ShieldCheck className="size-5" />
 								</div>
 								<div>
 									<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-										Utilities
+										Reliability
 									</p>
-									<CardTitle className="mt-1">Water Management</CardTitle>
+									<CardTitle className="mt-1 flex items-center gap-2">
+										Bounce handling
+										<ComingSoonBadge />
+									</CardTitle>
 								</div>
 							</div>
 						</CardHeader>
-						<CardContent className="space-y-6">
-							<WaterTabInfo />
-							<GlassInner className="rounded-3xl p-4">
-								<WaterUsagePie dashboard={dashboard} />
-							</GlassInner>
+						<CardContent>
+							<p className="text-sm leading-6 text-muted-foreground">
+								Failed sends are flagged the moment they happen today.
+								Bounce detection straight from Mailgun's webhook is next.
+							</p>
 						</CardContent>
 					</Card>
 
@@ -605,72 +557,64 @@ const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
 						<CardHeader className="pb-4">
 							<div className="flex items-center gap-3">
 								<div className="rounded-2xl bg-primary/10 p-3 text-primary">
-									<UserPlus className="size-5" />
+									<Globe className="size-5" />
 								</div>
 								<div>
 									<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-										Growth
+										Identity
 									</p>
-									<CardTitle className="mt-1">Tenant Acquisition</CardTitle>
+									<CardTitle className="mt-1">Your own domain</CardTitle>
 								</div>
 							</div>
 						</CardHeader>
-						<CardContent className="space-y-6">
-							<TenantTabInfo />
-							<GlassInner className="rounded-3xl p-4">
-								<TenancyDoughnut
-									dashboard={dashboard}
-									dashboardProperties={dashboardProperties}
-								/>
-							</GlassInner>
+						<CardContent>
+							<p className="text-sm leading-6 text-muted-foreground">
+								Send and receive as you@yourdomain, backed by verified
+								Mailgun credentials, not a shared, generic address.
+							</p>
 						</CardContent>
 					</Card>
 				</div>
 			</section>
 			{/* END: Platform Walkthrough Section */}
 
-			{/* START: Pricing Section */}
+			{/* START: Closing CTA Section */}
 			<section
-				data-cursor-label="Subscription plans"
+				data-cursor-label="Get started"
 				className="relative z-10 mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
-				<div className="mb-8 max-w-3xl">
-					<p className="text-sm font-medium uppercase tracking-[0.28em] text-primary">
-						Pricing
-					</p>
-					<h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-						Choose a plan that fits the way you manage property.
-					</h2>
-					<p className="mt-4 text-lg leading-8 text-muted-foreground">
-						Simple, transparent pricing for landlords, agents, and property
-						managers. No hidden fees, just the tools you need to run a tighter
-						portfolio.
-					</p>
-				</div>
-
 				<Card
 					className={`overflow-hidden bg-linear-to-br from-primary/18 via-white/52 to-white/36 shadow-xl dark:from-primary/20 dark:via-slate-950/40 dark:to-slate-950/28 ${magnifyHoverClass}`}>
 					<CardContent className="grid gap-8 p-8 lg:grid-cols-[1fr_auto] lg:items-center lg:p-10">
 						<div>
 							<p className="text-sm font-medium uppercase tracking-[0.28em] text-primary">
-								Everything in one place
+								Everything in one inbox
 							</p>
 							<h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-								Manage your properties with confidence, from rent collection to
-								tenant screening.
+								Send with confidence, and know exactly what happened next.
 							</h2>
 							<p className="mt-4 max-w-2xl text-lg leading-8 text-muted-foreground">
-								Whether you own one unit or a hundred, Black Property gives you
-								the tools to stay organised, collect on time, and keep your
-								tenants happy.
+								Whether you're sending a handful of emails a day or running a
+								team inbox, Black Mail gives you the status clarity to stop
+								guessing and start knowing.
 							</p>
 							<div className="mt-6 grid gap-3 sm:grid-cols-2">
 								{workflowBenefits.map((benefit) => (
 									<GlassInner
-										key={benefit}
+										key={benefit.text}
 										className={`flex items-start gap-3 p-4 ${magnifyHoverClass}`}>
-										<CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />
+										{benefit.comingSoon ? (
+											<Clock className="mt-0.5 size-5 shrink-0 text-primary" />
+										) : (
+											<CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />
+										)}
 										<p className="text-sm leading-6 text-foreground/90">
-											{benefit}
+											{benefit.text}
+											{benefit.comingSoon && (
+												<>
+													{" "}
+													<ComingSoonBadge />
+												</>
+											)}
 										</p>
 									</GlassInner>
 								))}
@@ -683,7 +627,7 @@ const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
 								variant="solid"
 								size="lg"
 								className={`w-full justify-center capitalize ${magnifyHoverClass}`}>
-								launch dashboard
+								open inbox
 								<ArrowRight className="size-4" />
 							</Link>
 							<Link
@@ -691,55 +635,13 @@ const Welcome: FC<WelcomeProps> = ({ activeSubscription = null }) => {
 								variant="outline"
 								size="lg"
 								className={`w-full justify-center capitalize ${magnifyHoverClass}`}>
-								review modules
+								review status icons
 							</Link>
 						</div>
 					</CardContent>
 				</Card>
-
-				<div className="mt-8 flex flex-col items-center gap-6">
-					<div className="inline-flex items-center rounded-full border border-border/60 bg-muted/50 p-1">
-						<button
-							onClick={() => setBillingCycle("monthly")}
-							className={cn(
-								"cursor-pointer rounded-full px-5 py-1.5 text-sm font-medium transition-colors",
-								billingCycle === "monthly"
-									? "bg-background text-foreground shadow-sm"
-									: "text-muted-foreground hover:text-foreground"
-							)}>
-							Monthly
-						</button>
-						<button
-							onClick={() => setBillingCycle("yearly")}
-							className={cn(
-								"flex cursor-pointer items-center gap-2 rounded-full px-5 py-1.5 text-sm font-medium transition-colors",
-								billingCycle === "yearly"
-									? "bg-background text-foreground shadow-sm"
-									: "text-muted-foreground hover:text-foreground"
-							)}>
-							Yearly
-							<span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-								Save {yearlyDiscountPercent}%
-							</span>
-						</button>
-					</div>
-
-					<div className="grid w-full gap-6 xl:grid-cols-3">
-						{subscriptionPlans.map((subscriptionPlan, planIndex) => (
-							<SubscriptionPlan
-								key={subscriptionPlan.name}
-								auth={{ activeSubscription }}
-								subscriptionPlan={subscriptionPlan}
-								billingCycle={billingCycle}
-								featured={planIndex === 1}
-								label={planIndex === 1 ? "start growing" : "choose plan"}
-								href="/register"
-							/>
-						))}
-					</div>
-				</div>
 			</section>
-			{/* END: Pricing Section */}
+			{/* END: Closing CTA Section */}
 		</div>
 	)
 }

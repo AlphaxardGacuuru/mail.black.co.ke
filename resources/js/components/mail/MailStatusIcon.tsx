@@ -1,4 +1,4 @@
-import { Check, Clock } from "lucide-react"
+import { Check, Clock, MousePointerClick } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { MailMessageStatus } from "@/types/mail"
 
@@ -10,7 +10,7 @@ type Props = {
 
 function Ticks({ count, className }: { count: number; className?: string }) {
 	return (
-		<span className="flex items-center">
+		<span className="flex items-center gap-0.5">
 			{Array.from({ length: count }).map((_, index) => (
 				<Check
 					key={index}
@@ -22,12 +22,15 @@ function Ticks({ count, className }: { count: number; className?: string }) {
 }
 
 /**
- * There is no distinct "opened" status in MailStatus — an opened message is a
- * received one the recipient has read, so `received` + `isRead` renders the
- * triple tick in primary color instead of muted.
+ * Statuses track a Mailgun-backed outbound lifecycle: queued -> sent ->
+ * delivered -> opened -> clicked (with failed/bounced as terminal error
+ * states). `received` is unrelated — it marks an inbound message, whose
+ * `isRead` flag reflects only whether the mailbox owner has read it locally.
  */
 export default function MailStatusIcon({ status, isRead, className }: Props) {
-	if (!status) return null
+	if (!status) {
+		return null
+	}
 
 	const size = cn("size-3.5", className)
 
@@ -38,12 +41,16 @@ export default function MailStatusIcon({ status, isRead, className }: Props) {
 			return <Ticks count={1} className={cn(size, "text-muted-foreground")} />
 		case "delivered":
 			return <Ticks count={2} className={cn(size, "text-muted-foreground")} />
+		case "opened":
+			return <Ticks count={2} className={cn(size, "text-primary")} />
+		case "clicked":
+			return <MousePointerClick className={cn(size, "text-primary")} />
 		case "received":
 			return <Ticks count={3} className={cn(size, isRead ? "text-primary" : "text-muted-foreground")} />
 		case "failed":
-			return <Ticks count={2} className={cn(size, "text-destructive")} />
+			return <Ticks count={1} className={cn(size, "text-destructive")} />
 		case "bounced":
-			return <Ticks count={3} className={cn(size, "text-destructive")} />
+			return <Ticks count={2} className={cn(size, "text-destructive")} />
 		default:
 			return null
 	}

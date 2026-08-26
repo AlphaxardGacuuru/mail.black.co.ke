@@ -38,7 +38,7 @@ return new class extends Migration
             $table->string('in_reply_to')->nullable();
             $table->text('references')->nullable();
             $table->string('mailgun_message_id')->nullable();
-            $table->string('status')->nullable(); // queued, sent, delivered, failed, bounced, received
+            $table->string('status')->nullable(); // queued, sent, delivered, opened, clicked, failed, bounced, received
             $table->text('error_message')->nullable();
             $table->boolean('is_read')->default(false);
             $table->boolean('is_starred')->default(false);

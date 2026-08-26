@@ -18,7 +18,15 @@ export type MailLabel = {
 	color: string | null
 }
 
-export type MailMessageStatus = "queued" | "sent" | "delivered" | "failed" | "bounced" | "received"
+export type MailMessageStatus =
+	| "queued"
+	| "sent"
+	| "delivered"
+	| "opened"
+	| "clicked"
+	| "failed"
+	| "bounced"
+	| "received"
 
 export type MailMessage = {
 	id: string

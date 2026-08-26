@@ -5,14 +5,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="application-name" content="{{ config('app.name', 'Money Black') }}">
+    <meta name="application-name" content="{{ config('app.name', 'Black Mail') }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="{{ config('app.name', 'Money Black') }}">
+    <meta name="apple-mobile-web-app-title" content="{{ config('app.name', 'Black Mail') }}">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#171717">
     <meta name="description"
-        content="Track accounts, categories, transactions, and budget totals from one installable app.">
+        content="An email client with read receipts built in — see when every message is queued, sent, delivered, and opened.">
 
     {{-- Inline script to detect system dark mode preference and apply it immediately --}}
     <script>

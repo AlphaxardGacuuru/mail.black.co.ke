@@ -14,7 +14,6 @@ import {
 import { QueryClientProvider } from "@tanstack/react-query"
 import { queryClient } from "@/lib/query-client"
 import { requireAuth, requireGuest, requireSuperAdmin } from "@/middleware/auth"
-// import { requireSubscribed } from "@/middleware/subscribed"
 import { AppPageProvider, useLayoutProps, usePage } from "@/lib/spa"
 import { Toaster, FlashToastHandler } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -133,7 +132,6 @@ const tanstackRoutes = discoveredRoutes.map((discoveredRoute) => {
 				: async (ctx) => {
 						await requireAuth()
 						await requireSuperAdmin(ctx)
-						// await requireSubscribed(ctx)
 					},
 	})
 

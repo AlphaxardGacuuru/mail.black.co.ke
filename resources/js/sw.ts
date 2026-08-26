@@ -82,7 +82,6 @@ const NETWORK_ONLY_APIS = [
 	"/api/auth",
 	"/api/payments",
 	"/api/billing",
-	"/api/subscriptions",
 	"/api/broadcasting",
 ]
 

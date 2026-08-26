@@ -1,29 +1,21 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useInitials } from "@/hooks/use-initials"
-import { cn } from "@/lib/utils"
 import type { User } from "@/types"
 
 export function UserInfo({
 	user,
 	showEmail = false,
 	showRole = false,
-	isSubscribed = false,
 }: {
 	user: User
 	showEmail?: boolean
 	showRole?: boolean
-	isSubscribed?: boolean
 }) {
 	const getInitials = useInitials()
 
 	return (
 		<>
-			<div
-				className={cn(
-					"relative shrink-0",
-					isSubscribed &&
-						"after:pointer-events-none after:absolute after:-inset-1 after:rounded-full after:bg-linear-to-r after:from-primary after:to-secondary after:animate-[spin_3s_linear_infinite] after:content-['']"
-				)}>
+			<div className="relative shrink-0">
 				<Avatar className="relative z-10 h-8 w-8 overflow-hidden rounded-full cursor-pointer">
 					<AvatarImage
 						src={user.avatar}
