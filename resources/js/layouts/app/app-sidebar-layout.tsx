@@ -1,4 +1,4 @@
-import { AppBottomNav } from "@/components/app-bottom-nav"
+// import { AppBottomNav } from "@/components/app-bottom-nav"
 import { AppContent } from "@/components/app-content"
 import { AppShell } from "@/components/app-shell"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -18,7 +18,7 @@ export default function AppSidebarLayout({
 				<AppSidebarHeader breadcrumbs={breadcrumbs} variant="floating" />
 				<div className="flex flex-1 flex-col gap-4 overflow-x-hidden p-4">{children}</div>
 			</AppContent>
-			<AppBottomNav />
+			{/* <AppBottomNav /> */}
 		</AppShell>
 	)
 }

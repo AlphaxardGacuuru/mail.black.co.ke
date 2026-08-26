@@ -32,6 +32,41 @@ function threadsQueryKey(filters: MailThreadFilters) {
 	return ["mail", "threads", filters] as const
 }
 
+function updateThreadLists(
+	queryClient: ReturnType<typeof useQueryClient>,
+	threadId: string,
+	shouldInclude: (filters: MailThreadFilters) => boolean,
+	patch: (thread: MailThreadSummary) => MailThreadSummary
+) {
+	const queries = queryClient.getQueriesData<Paginated<MailThreadSummary>>({
+		queryKey: ["mail", "threads"],
+	})
+	const sourceThread = queries
+		.map(([, existing]) => existing?.data.find((thread) => thread.id === threadId))
+		.find((thread): thread is MailThreadSummary => !!thread)
+
+	queries.forEach(([key, existing]) => {
+		if (!existing) {
+			return
+		}
+
+		const filters = key[2] as MailThreadFilters
+		const shouldBeIncluded = shouldInclude(filters)
+		const hasThread = existing.data.some((thread) => thread.id === threadId)
+		let data = existing.data
+
+		if (shouldBeIncluded && !hasThread && sourceThread) {
+			data = [patch(sourceThread), ...data]
+		} else if (!shouldBeIncluded) {
+			data = data.filter((thread) => thread.id !== threadId)
+		} else {
+			data = data.map((thread) => (thread.id === threadId ? patch(thread) : thread))
+		}
+
+		queryClient.setQueryData(key, { ...existing, data })
+	})
+}
+
 export function useMailThreads(filters: MailThreadFilters) {
 	return useQuery({
 		queryKey: threadsQueryKey(filters),
@@ -60,7 +95,9 @@ export function useMailThread(threadId: string | null) {
 				queryClient.setQueriesData<Paginated<MailThreadSummary>>(
 					{ queryKey: ["mail", "threads"] },
 					(existing) => {
-						if (!existing) return existing
+						if (!existing) {
+							return existing
+						}
 
 						return {
 							...existing,
@@ -87,7 +124,8 @@ export function useLabels() {
 
 function useOptimisticThreadMutation(
 	mutationFn: (threadId: string) => Promise<AxiosResponse>,
-	patch: (thread: MailThreadSummary) => MailThreadSummary
+	patch: (thread: MailThreadSummary) => MailThreadSummary,
+	shouldInclude: (filters: MailThreadFilters) => boolean = () => true
 ) {
 	const queryClient = useQueryClient()
 
@@ -100,14 +138,7 @@ function useOptimisticThreadMutation(
 				queryKey: ["mail", "threads"],
 			})
 
-			queryClient.setQueriesData<Paginated<MailThreadSummary>>({ queryKey: ["mail", "threads"] }, (existing) => {
-				if (!existing) return existing
-
-				return {
-					...existing,
-					data: existing.data.map((thread) => (thread.id === threadId ? patch(thread) : thread)),
-				}
-			})
+			updateThreadLists(queryClient, threadId, shouldInclude, patch)
 
 			return { previous }
 		},
@@ -125,7 +156,8 @@ function useOptimisticThreadMutation(
 export function useStarMailThread(starred: boolean) {
 	return useOptimisticThreadMutation(
 		(id) => Axios.patch((starred ? MailThreadController.star : MailThreadController.unstar).url(id)),
-		(thread) => ({ ...thread, isStarred: starred })
+		(thread) => ({ ...thread, isStarred: starred }),
+		(filters) => filters.folder !== "starred" || starred
 	)
 }
 
@@ -136,7 +168,10 @@ export function useMarkMailThreadRead(read: boolean) {
 	)
 }
 
-function useRemoveFromListMutation(mutationFn: (threadId: string) => Promise<AxiosResponse>) {
+function useMoveThreadMutation(
+	mutationFn: (threadId: string) => Promise<AxiosResponse>,
+	destinationFolder: string | null
+) {
 	const queryClient = useQueryClient()
 
 	return useMutation({
@@ -148,11 +183,14 @@ function useRemoveFromListMutation(mutationFn: (threadId: string) => Promise<Axi
 				queryKey: ["mail", "threads"],
 			})
 
-			queryClient.setQueriesData<Paginated<MailThreadSummary>>({ queryKey: ["mail", "threads"] }, (existing) => {
-				if (!existing) return existing
-
-				return { ...existing, data: existing.data.filter((thread) => thread.id !== threadId) }
-			})
+			updateThreadLists(
+				queryClient,
+				threadId,
+				(filters) =>
+					destinationFolder !== null &&
+					(filters.folder === destinationFolder || filters.folder === "starred"),
+				(thread) => thread
+			)
 
 			return { previous }
 		},
@@ -168,22 +206,24 @@ function useRemoveFromListMutation(mutationFn: (threadId: string) => Promise<Axi
 }
 
 export function useArchiveMailThread() {
-	return useRemoveFromListMutation((id) => Axios.patch(MailThreadController.archive.url(id)))
+	return useMoveThreadMutation(
+		(id) => Axios.patch(MailThreadController.archive.url(id)),
+		"archive"
+	)
 }
 
 export function useTrashMailThread() {
-	return useRemoveFromListMutation((id) => Axios.patch(MailThreadController.trash.url(id)))
+	return useMoveThreadMutation(
+		(id) => Axios.patch(MailThreadController.trash.url(id)),
+		"trash"
+	)
 }
 
 export function useRestoreMailThread() {
-	const queryClient = useQueryClient()
-
-	return useMutation({
-		mutationFn: (threadId: string) => Axios.patch(MailThreadController.restore.url(threadId)),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
-		},
-	})
+	return useMoveThreadMutation(
+		(threadId) => Axios.patch(MailThreadController.restore.url(threadId)),
+		null
+	)
 }
 
 export function useDeleteMailThreadPermanently() {

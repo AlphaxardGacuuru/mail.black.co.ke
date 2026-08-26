@@ -30,17 +30,9 @@ export default function MailThreadList({
 	const meta = data?.meta
 
 	return (
-		<div className="flex h-full flex-col">
+		<div className="relative flex h-full flex-col">
 			<div className="flex items-center gap-2 border-b px-3 py-2">
 				<h1 className="flex-1 font-semibold capitalize">{title}</h1>
-
-				<Button
-					size="sm"
-					className="gap-2"
-					onClick={onCompose}>
-					<Pencil className="size-4" />
-					Compose
-				</Button>
 			</div>
 
 			<MailSearchBar
@@ -58,7 +50,9 @@ export default function MailThreadList({
 				)}
 
 				{!isLoading && threads.length === 0 && (
-					<MailEmptyState variant={filters.q ? "search-no-results" : "no-threads"} />
+					<MailEmptyState
+						variant={filters.q ? "search-no-results" : "no-threads"}
+					/>
 				)}
 
 				{!isLoading &&
@@ -66,6 +60,7 @@ export default function MailThreadList({
 						<MailThreadListRow
 							key={thread.id}
 							thread={thread}
+							folder={filters.folder}
 							isSelected={thread.id === selectedThreadId}
 							onSelect={() => onSelectThread(thread.id)}
 						/>
@@ -78,7 +73,9 @@ export default function MailThreadList({
 						variant="outline"
 						size="sm"
 						disabled={meta.current_page <= 1}
-						onClick={() => onFiltersChange({ ...filters, page: meta.current_page - 1 })}>
+						onClick={() =>
+							onFiltersChange({ ...filters, page: meta.current_page - 1 })
+						}>
 						Previous
 					</Button>
 					<span className="text-xs text-muted-foreground">
@@ -88,11 +85,22 @@ export default function MailThreadList({
 						variant="outline"
 						size="sm"
 						disabled={meta.current_page >= meta.last_page}
-						onClick={() => onFiltersChange({ ...filters, page: meta.current_page + 1 })}>
+						onClick={() =>
+							onFiltersChange({ ...filters, page: meta.current_page + 1 })
+						}>
 						Next
 					</Button>
 				</div>
 			)}
+
+			<Button
+				size="icon"
+				aria-label="Compose"
+				title="Compose"
+				className="absolute right-4 bottom-4 z-10 size-14 rounded-full shadow-lg"
+				onClick={onCompose}>
+				<Pencil className="size-6" strokeWidth={1.5} />
+			</Button>
 		</div>
 	)
 }

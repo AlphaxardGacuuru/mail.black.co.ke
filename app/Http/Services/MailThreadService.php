@@ -85,7 +85,7 @@ class MailThreadService extends Service
 
     public function unarchive(string $id)
     {
-        return $this->moveFolder($id, MailFolder::INBOX->value, 'Thread Moved to Inbox');
+        return $this->restoreOriginalFolders($id, 'Thread Restored');
     }
 
     public function trash(string $id)
@@ -95,7 +95,21 @@ class MailThreadService extends Service
 
     public function restore(string $id)
     {
-        return $this->moveFolder($id, MailFolder::INBOX->value, 'Thread Restored');
+        return $this->restoreOriginalFolders($id, 'Thread Restored');
+    }
+
+    protected function restoreOriginalFolders(string $id, string $message)
+    {
+        $thread = MailThread::ownedBy($this->id)->with('messages')->findOrFail($id);
+
+        $thread->messages()
+            ->where('direction', 'outbound')
+            ->update(['folder' => MailFolder::SENT->value]);
+        $thread->messages()
+            ->where('direction', 'inbound')
+            ->update(['folder' => MailFolder::INBOX->value]);
+
+        return [true, $message, $thread];
     }
 
     protected function moveFolder(string $id, string $folder, string $message)

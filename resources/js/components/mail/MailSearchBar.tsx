@@ -25,7 +25,7 @@ export default function MailSearchBar({ value, onChange }: Props) {
 	}, [local])
 
 	return (
-		<div className="flex items-center gap-2 border-b px-3 py-2">
+		<div className="flex items-center gap-2 px-3 py-2">
 			<Search className="size-4 text-muted-foreground shrink-0" />
 			<Input
 				type="text"

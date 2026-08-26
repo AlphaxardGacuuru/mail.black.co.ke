@@ -35,6 +35,7 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         'mailgun_domain',
         'mailgun_api_key',
         'mailgun_endpoint',
+        'active_mailgun_account_id',
     ];
 
     /**
@@ -143,6 +144,20 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
      */
     public function hasMailgunCredentials(): bool
     {
-        return filled($this->mailgun_domain) && filled($this->mailgun_api_key);
+        $account = $this->activeMailgunAccount;
+
+        return $account
+            ? filled($account->mailgun_domain) && filled($account->mailgun_api_key)
+            : filled($this->mailgun_domain) && filled($this->mailgun_api_key);
+    }
+
+    public function mailgunAccounts()
+    {
+        return $this->hasMany(MailgunAccount::class);
+    }
+
+    public function activeMailgunAccount()
+    {
+        return $this->belongsTo(MailgunAccount::class, 'active_mailgun_account_id');
     }
 }

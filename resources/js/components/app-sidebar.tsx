@@ -5,6 +5,7 @@ import { MailNav } from "@/components/mail-nav"
 import { NavFooter } from "@/components/nav-footer"
 import { NavNotifications } from "@/components/nav-notifications"
 import { NavUser } from "@/components/nav-user"
+import { usePwaInstall } from "@/hooks/use-pwa-install"
 import {
 	Sidebar,
 	SidebarContent,
@@ -29,13 +30,14 @@ export const mainNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [
 	{
 		title: "Get App",
-		href: "/admin/properties",
+		href: "/get-app",
 		icon: Download,
 	},
 ]
 
 export function AppSidebar() {
 	const { state } = useSidebar()
+	const { isInstalled } = usePwaInstall()
 
 	return (
 		<Sidebar
@@ -67,10 +69,12 @@ export function AppSidebar() {
 			</SidebarContent>
 
 			<SidebarFooter>
-				<NavFooter
-					items={footerNavItems}
-					className="mt-auto"
-				/>
+				{!isInstalled && (
+					<NavFooter
+						items={footerNavItems}
+						className="mt-auto"
+					/>
+				)}
 				<NavNotifications />
 				<NavUser />
 			</SidebarFooter>

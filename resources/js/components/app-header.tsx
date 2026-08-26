@@ -1,6 +1,15 @@
 import { Link } from "@/components/ui/link"
 import { useApp } from "@/contexts/AppContext"
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from "lucide-react"
+import {
+	BookOpen,
+	Check,
+	ChevronDown,
+	Folder,
+	LayoutGrid,
+	Menu,
+	Search,
+} from "lucide-react"
+import MailgunAccountController from "@/actions/App/Http/Controllers/Settings/MailgunAccountController"
 import AppLogo from "@/components/app-logo"
 import AppLogoIcon from "@/components/app-logo-icon"
 import { Breadcrumbs } from "@/components/breadcrumbs"
@@ -9,6 +18,9 @@ import { Button } from "@/components/ui/button"
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -33,8 +45,10 @@ import { UserMenuContent } from "@/components/user-menu-content"
 import { useCurrentUrl } from "@/hooks/use-current-url"
 import { useInitials } from "@/hooks/use-initials"
 import { cn, toUrl } from "@/lib/utils"
+import Axios from "@/lib/axios"
+import toast from "@/lib/toast"
 const DASHBOARD_URL = "/admin/dashboard"
-import type { BreadcrumbItem, NavItem } from "@/types"
+import type { BreadcrumbItem, MailgunAccount, NavItem } from "@/types"
 
 type Props = {
 	breadcrumbs?: BreadcrumbItem[]
@@ -68,6 +82,18 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 	const { auth } = useApp()
 	const getInitials = useInitials()
 	const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl()
+	const accounts = auth?.mailgunAccounts ?? []
+	const activeAccount = accounts.find((account) => account.isActive)
+
+	function activateAccount(account: MailgunAccount): void {
+		if (account.isActive) {
+			return
+		}
+
+		Axios.post(MailgunAccountController.activate.url(account.id))
+			.then(() => window.location.reload())
+			.catch(() => toast.error("Unable to switch mail account."))
+	}
 
 	return (
 		<>
@@ -187,6 +213,37 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 								))}
 							</div>
 						</div>
+						{activeAccount && (
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button
+										variant="ghost"
+										className="max-w-56 gap-1 px-2 text-sm">
+										<span className="truncate">
+											{activeAccount.mailboxAddress}
+										</span>
+										<ChevronDown className="size-4 shrink-0" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent
+									align="end"
+									className="w-72">
+									<DropdownMenuLabel>Mail accounts</DropdownMenuLabel>
+									<DropdownMenuSeparator />
+									{accounts.map((account) => (
+										<DropdownMenuItem
+											key={account.id}
+											onClick={() => activateAccount(account)}
+											className="cursor-pointer">
+											<span className="min-w-0 flex-1 truncate">
+												{account.mailboxAddress}
+											</span>
+											{account.isActive && <Check className="size-4" />}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+						)}
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
 								<Button

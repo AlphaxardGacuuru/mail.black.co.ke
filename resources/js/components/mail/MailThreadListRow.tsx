@@ -1,10 +1,11 @@
-import { Archive, Paperclip, Star, Trash2 } from "lucide-react"
+import { Archive, ArchiveRestore, Paperclip, Star, Trash2 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import MailStatusIcon from "@/components/mail/MailStatusIcon"
 import { cn } from "@/lib/utils"
 import {
 	useArchiveMailThread,
+	useRestoreMailThread,
 	useStarMailThread,
 	useTrashMailThread,
 } from "@/queries/mail"
@@ -12,6 +13,7 @@ import type { MailThreadSummary } from "@/types/mail"
 
 type Props = {
 	thread: MailThreadSummary
+	folder: string
 	isSelected: boolean
 	onSelect: () => void
 }
@@ -22,7 +24,9 @@ function initials(name?: string | null, address?: string | null): string {
 }
 
 function formatDate(value: string | null): string {
-	if (!value) return ""
+	if (!value) {
+		return ""
+	}
 	const date = new Date(value)
 	const now = new Date()
 	if (date.toDateString() === now.toDateString()) {
@@ -36,12 +40,14 @@ function formatDate(value: string | null): string {
 
 export default function MailThreadListRow({
 	thread,
+	folder,
 	isSelected,
 	onSelect,
 }: Props) {
 	const starMutation = useStarMailThread(true)
 	const unstarMutation = useStarMailThread(false)
 	const archiveMutation = useArchiveMailThread()
+	const restoreMutation = useRestoreMailThread()
 	const trashMutation = useTrashMailThread()
 
 	return (
@@ -66,7 +72,7 @@ export default function MailThreadListRow({
 					</span>
 					{/* Name End */}
 					{/* Timestamp Start */}
-					<span className="text-xs text-muted-foreground shrink-0">
+					<span className="text-xs text-muted-foreground shrink-0 group-hover:hidden">
 						{formatDate(thread.lastMessageAt)}
 					</span>
 					{/* Timestamp End */}
@@ -98,7 +104,7 @@ export default function MailThreadListRow({
 						{/* Attachments End */}
 					</div>
 					{/* Status Start */}
-					<div>
+					<div className="group-hover:hidden">
 						{thread.status && (
 							<MailStatusIcon
 								status={thread.status}
@@ -136,9 +142,14 @@ export default function MailThreadListRow({
 					className="size-7"
 					onClick={(event) => {
 						event.stopPropagation()
-						archiveMutation.mutate(thread.id)
+						const mutation = folder === "archive" ? restoreMutation : archiveMutation
+						mutation.mutate(thread.id)
 					}}>
-					<Archive className="size-3.5" />
+						{folder === "archive" ? (
+							<ArchiveRestore className="size-3.5" />
+						) : (
+							<Archive className="size-3.5" />
+						)}
 				</Button>
 				<Button
 					variant="ghost"

@@ -1,7 +1,7 @@
 import { isCancel } from "axios"
 import type { FilePondFile } from "filepond"
 import FilePondPluginFileValidateSize from "filepond-plugin-file-validate-size"
-import { Paperclip, Send } from "lucide-react"
+import { Copy, EyeOff, Paperclip, Send } from "lucide-react"
 import { useRef, useState } from "react"
 import type { FormEvent } from "react"
 import { FilePond, registerPlugin } from "react-filepond"
@@ -45,9 +45,7 @@ export default function MailComposeForm({
 	const [showBcc, setShowBcc] = useState(false)
 	const [subject, setSubject] = useState(initialSubject)
 	const [body, setBody] = useState("")
-	const [attachmentIds, setAttachmentIds] = useState<Record<string, number>>(
-		{}
-	)
+	const [attachmentIds, setAttachmentIds] = useState<Record<string, number>>({})
 	const [pendingUploads, setPendingUploads] = useState(0)
 	const [showAttachments, setShowAttachments] = useState(false)
 	const pondRef = useRef<FilePond>(null)
@@ -131,33 +129,15 @@ export default function MailComposeForm({
 	return (
 		<form
 			onSubmit={handleSubmit}
-			className="flex flex-col gap-2 rounded-lg border bg-background p-3">
+			className="flex flex-col gap-2 rounded-lg bg-background p-2">
 			{showToField && (
-				<div className="flex items-center gap-2">
-					<div className="flex-1">
-						<MailRecipientInput
-							label="To"
-							value={to}
-							onChange={setTo}
-							placeholder="Recipients"
-						/>
-					</div>
-					{!showCc && (
-						<button
-							type="button"
-							onClick={() => setShowCc(true)}
-							className="text-xs text-muted-foreground hover:text-foreground shrink-0 cursor-pointer">
-							Cc
-						</button>
-					)}
-					{!showBcc && (
-						<button
-							type="button"
-							onClick={() => setShowBcc(true)}
-							className="text-xs text-muted-foreground hover:text-foreground shrink-0 cursor-pointer">
-							Bcc
-						</button>
-					)}
+				<div className="flex flex-col gap-1">
+					<MailRecipientInput
+						label="To"
+						value={to}
+						onChange={setTo}
+						placeholder="Recipients"
+					/>
 				</div>
 			)}
 
@@ -179,6 +159,31 @@ export default function MailComposeForm({
 					placeholder="Blind carbon copy"
 					onRemove={removeBcc}
 				/>
+			)}
+
+			{showToField && (!showCc || !showBcc) && (
+				<div className="flex items-center gap-3 px-1">
+					{!showCc && (
+						<Button
+							type="button"
+							size="sm"
+							variant="ghost"
+							onClick={() => setShowCc(true)}
+							className="text-xs text-muted-foreground hover:text-foreground">
+							Cc
+						</Button>
+					)}
+					{!showBcc && (
+						<Button
+							type="button"
+							size="sm"
+							variant="ghost"
+							onClick={() => setShowBcc(true)}
+							className="text-xs text-muted-foreground hover:text-foreground">
+							Bcc
+						</Button>
+					)}
+				</div>
 			)}
 
 			{mode === "new" && (
@@ -209,19 +214,31 @@ export default function MailComposeForm({
 					credits={false}
 					labelIdle='<span class="filepond--label-action">Attach files</span> or drag and drop'
 					server={{
-						process: (fieldName, file, _metadata, load, error, progress, abort) => {
+						process: (
+							fieldName,
+							file,
+							_metadata,
+							load,
+							error,
+							progress,
+							abort
+						) => {
 							const controller = new AbortController()
 							const formData = new FormData()
 							formData.append(fieldName, file, file.name)
 
-							Axios.post(FilePondController.storeMailAttachment.url(), formData, {
-								signal: controller.signal,
-								onUploadProgress: (event) => {
-									if (event.total) {
-										progress(true, event.loaded, event.total)
-									}
-								},
-							})
+							Axios.post(
+								FilePondController.storeMailAttachment.url(),
+								formData,
+								{
+									signal: controller.signal,
+									onUploadProgress: (event) => {
+										if (event.total) {
+											progress(true, event.loaded, event.total)
+										}
+									},
+								}
+							)
 								.then((response) => load(String(response.data)))
 								.catch((requestError) => {
 									if (isCancel(requestError)) {

@@ -16,9 +16,7 @@ class ComposedMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public MailMessage $mailMessage)
-    {
-    }
+    public function __construct(public MailMessage $mailMessage, public ?string $signature = null) {}
 
     public function envelope(): Envelope
     {
@@ -32,9 +30,10 @@ class ComposedMail extends Mailable
 
     public function content(): Content
     {
-        return new Content(
-            htmlString: $this->mailMessage->body_html ?? nl2br(e($this->mailMessage->body_text ?? '')),
-        );
+        $body = $this->mailMessage->body_html ?? nl2br(e($this->mailMessage->body_text ?? ''));
+        $signature = $this->signature ? '<br><br>' . nl2br(e($this->signature)) : '';
+
+        return new Content(htmlString: $body . $signature);
     }
 
     /**
@@ -43,7 +42,7 @@ class ComposedMail extends Mailable
     public function attachments(): array
     {
         return $this->mailMessage->attachments->map(
-            fn ($attachment) => Attachment::fromStorageDisk($attachment->disk, $attachment->path)
+            fn($attachment) => Attachment::fromStorageDisk($attachment->disk, $attachment->path)
                 ->as($attachment->original_name ?? basename($attachment->path))
                 ->withMime($attachment->mime_type ?? 'application/octet-stream')
         )->all();

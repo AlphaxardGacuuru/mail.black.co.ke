@@ -38,11 +38,12 @@ class SendMailMessageJob implements ShouldQueue
         $cc = collect($mailMessage->cc ?? [])->pluck('address')->filter()->all();
         $bcc = collect($mailMessage->bcc ?? [])->pluck('address')->filter()->all();
 
+        $account = $mailMessage->user?->activeMailgunAccount;
         $sentMessage = $this->mailer($mailMessage->user)
             ->to($to)
             ->cc($cc)
             ->bcc($bcc)
-            ->send(new ComposedMail($mailMessage));
+            ->send(new ComposedMail($mailMessage, $account?->signature));
 
         $messageId = $sentMessage ? trim((string) $sentMessage->getMessageId(), '<>') : null;
 
@@ -60,19 +61,29 @@ class SendMailMessageJob implements ShouldQueue
      */
     protected function mailer(?User $user): Mailer
     {
-        if (! $user?->hasMailgunCredentials()) {
+        $account = $user?->activeMailgunAccount;
+
+        if ($account && filled($account->mailgun_domain) && filled($account->mailgun_api_key)) {
+            $domain = $account->mailgun_domain;
+            $secret = $account->mailgun_api_key;
+            $endpoint = $account->mailgun_endpoint;
+        } elseif (! $user?->hasMailgunCredentials()) {
             return Mail::mailer(config('mail.default'));
+        } else {
+            $domain = $user->mailgun_domain;
+            $secret = $user->mailgun_api_key;
+            $endpoint = $user->mailgun_endpoint;
         }
 
-        $mailerName = "mailgun-user-{$user->id}";
+        $mailerName = "mailgun-user-{$user->id}-account-" . ($account?->id ?? 'legacy');
 
         Mail::purge($mailerName);
 
         config(["mail.mailers.{$mailerName}" => [
             'transport' => 'mailgun',
-            'domain' => $user->mailgun_domain,
-            'secret' => $user->mailgun_api_key,
-            'endpoint' => $user->mailgun_endpoint ?: 'api.mailgun.net',
+            'domain' => $domain,
+            'secret' => $secret,
+            'endpoint' => $endpoint ?: 'api.mailgun.net',
             'scheme' => 'https',
         ]]);
 
