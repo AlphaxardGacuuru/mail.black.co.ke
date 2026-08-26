@@ -25,7 +25,7 @@ return new class extends Migration
         });
 
         Schema::table('users', function (Blueprint $table): void {
-            $table->uuid('active_mailgun_account_id')->nullable()->after('mailgun_endpoint');
+            $table->uuid('active_mailgun_account_id')->nullable()->after('avatar');
         });
     }
 

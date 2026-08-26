@@ -26,7 +26,6 @@ return new class extends Migration
             $table->string('gender')->nullable();
             $table->string('google_id')->nullable()->unique();
             $table->string('avatar', 4096)->default('avatars/male-avatar.png');
-            $table->string('account_type')->nullable();
             $table->jsonb('settings')->nullable();
             $table->timestamps();
         });
