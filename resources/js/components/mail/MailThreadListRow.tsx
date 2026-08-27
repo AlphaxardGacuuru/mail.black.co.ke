@@ -1,6 +1,7 @@
 import { Archive, ArchiveRestore, Paperclip, Star, Trash2 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { useRef, useState } from "react"
 import MailStatusIcon from "@/components/mail/MailStatusIcon"
 import { cn } from "@/lib/utils"
 import {
@@ -49,15 +50,86 @@ export default function MailThreadListRow({
 	const archiveMutation = useArchiveMailThread()
 	const restoreMutation = useRestoreMailThread()
 	const trashMutation = useTrashMailThread()
+	const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+	const swipeOffsetRef = useRef(0)
+	const swipedRef = useRef(false)
+	const [swipeOffset, setSwipeOffset] = useState(0)
+
+	function handleTouchStart(event: React.TouchEvent<HTMLDivElement>): void {
+		if ((event.target as HTMLElement).closest("button")) {
+			return
+		}
+
+		const touch = event.touches[0]
+		touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+		swipedRef.current = false
+	}
+
+	function handleTouchMove(event: React.TouchEvent<HTMLDivElement>): void {
+		if (!touchStartRef.current) {
+			return
+		}
+
+		const touch = event.touches[0]
+		const deltaX = touch.clientX - touchStartRef.current.x
+		const deltaY = touch.clientY - touchStartRef.current.y
+
+		if (Math.abs(deltaY) > Math.abs(deltaX)) {
+			return
+		}
+
+		const offset = Math.max(-120, Math.min(120, deltaX))
+		swipeOffsetRef.current = offset
+		setSwipeOffset(offset)
+	}
+
+	function handleTouchEnd(): void {
+		if (!touchStartRef.current) {
+			return
+		}
+
+		if (swipeOffsetRef.current <= -72) {
+			trashMutation.mutate(thread.id)
+			swipedRef.current = true
+		} else if (swipeOffsetRef.current >= 72) {
+			archiveMutation.mutate(thread.id)
+			swipedRef.current = true
+		}
+
+		touchStartRef.current = null
+		swipeOffsetRef.current = 0
+		setSwipeOffset(0)
+	}
 
 	return (
 		<div
-			onClick={onSelect}
+			onClick={() => {
+				if (swipedRef.current) {
+					swipedRef.current = false
+					return
+				}
+
+				onSelect()
+			}}
+			onTouchStart={handleTouchStart}
+			onTouchMove={handleTouchMove}
+			onTouchEnd={handleTouchEnd}
+			onTouchCancel={handleTouchEnd}
 			className={cn(
-				"group flex items-center gap-3 border-b px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors",
+				"group relative overflow-hidden border-b cursor-pointer hover:bg-muted/50",
 				isSelected && "bg-muted",
 				thread.hasUnread && "bg-background"
 			)}>
+			<div className="absolute inset-y-0 left-0 flex w-24 items-center bg-muted px-4 text-muted-foreground">
+				<Archive className="size-5" />
+			</div>
+			<div className="absolute inset-y-0 right-0 flex w-24 items-center justify-end bg-destructive px-4 text-destructive-foreground">
+				<Trash2 className="size-5" />
+			</div>
+
+			<div
+				className="relative flex items-center gap-3 bg-background px-3 py-2.5 transition-transform duration-200 ease-out"
+				style={{ transform: `translateX(${swipeOffset}px)` }}>
 			<Avatar className="size-9 shrink-0">
 				<AvatarFallback>
 					{initials(thread.from?.name, thread.from?.address)}
@@ -117,7 +189,7 @@ export default function MailThreadListRow({
 				</div>
 			</div>
 
-			<div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+			<div className="hidden items-center gap-0.5 shrink-0 group-hover:flex">
 				<Button
 					variant="ghost"
 					size="icon"
@@ -161,6 +233,7 @@ export default function MailThreadListRow({
 					}}>
 					<Trash2 className="size-3.5" />
 				</Button>
+			</div>
 			</div>
 		</div>
 	)

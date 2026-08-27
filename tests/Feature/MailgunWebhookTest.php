@@ -33,9 +33,11 @@ class MailgunWebhookTest extends TestCase
         $timestamp = (string) now()->timestamp;
         $token = 'unique-webhook-token';
         $response = $this->postJson('/api/webhooks/mailgun/events', [
-            'timestamp' => $timestamp,
-            'token' => $token,
-            'signature' => hash_hmac('sha256', $timestamp . $token, 'webhook-secret'),
+            'signature' => [
+                'timestamp' => $timestamp,
+                'token' => $token,
+                'signature' => hash_hmac('sha256', $timestamp . $token, 'webhook-secret'),
+            ],
             'event-data' => [
                 'event' => 'delivered',
                 'message' => ['headers' => ['message-id' => '<mailgun-message@example.com>']],

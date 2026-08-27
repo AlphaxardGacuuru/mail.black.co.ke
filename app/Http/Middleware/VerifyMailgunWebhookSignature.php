@@ -11,9 +11,9 @@ class VerifyMailgunWebhookSignature
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $timestamp = $request->input('timestamp');
-        $token = $request->input('token');
-        $signature = $request->input('signature');
+        $timestamp = $request->input('signature.timestamp') ?? $request->input('timestamp');
+        $token = $request->input('signature.token') ?? $request->input('token');
+        $signature = $request->input('signature.signature') ?? $request->input('signature');
 
         $secret = config('services.mailgun.webhook_signing_secret') ?: config('services.mailgun.secret');
 
