@@ -1,15 +1,15 @@
 import { isCancel } from "axios"
 import type { FilePondFile } from "filepond"
 import FilePondPluginFileValidateSize from "filepond-plugin-file-validate-size"
-import { Copy, EyeOff, Paperclip, Send } from "lucide-react"
+import { Paperclip, Send } from "lucide-react"
 import { useRef, useState } from "react"
 import type { FormEvent } from "react"
 import { FilePond, registerPlugin } from "react-filepond"
 import FilePondController from "@/actions/App/Http/Controllers/FilePondController"
 import MailRecipientInput from "@/components/mail/MailRecipientInput"
+import RichTextEditor from "@/components/rich-text-editor"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { Textarea } from "@/components/ui/textarea"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 import { useReplyMail, useSendMail } from "@/queries/mail"
@@ -106,7 +106,7 @@ export default function MailComposeForm({
 			...(cc.length > 0 ? { cc } : {}),
 			...(bcc.length > 0 ? { bcc } : {}),
 			subject,
-			bodyHtml: body.replace(/\n/g, "<br>"),
+			bodyHtml: body,
 			temporaryUploadIds: Object.values(attachmentIds),
 		}
 
@@ -196,12 +196,10 @@ export default function MailComposeForm({
 				/>
 			)}
 
-			<Textarea
+			<RichTextEditor
 				value={body}
-				onChange={(event) => setBody(event.target.value)}
-				label="Write your message"
-				rows={mode === "new" ? 8 : 5}
-				className="resize-none border-none shadow-none focus-visible:ring-0"
+				onChange={setBody}
+				placeholder="Write your message"
 			/>
 
 			{/* Attachments Start */}

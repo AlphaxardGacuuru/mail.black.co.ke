@@ -10,6 +10,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useApp } from "@/contexts/AppContext"
+import { useQueryClient } from "@tanstack/react-query"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 import { invalidateAuth } from "@/middleware/auth"
@@ -17,6 +18,7 @@ import type { MailgunAccount } from "@/types"
 
 export function MailgunAccountSwitcher() {
 	const { auth } = useApp()
+	const queryClient = useQueryClient()
 	const accounts = auth?.mailgunAccounts ?? []
 	const activeAccount =
 		accounts.find((account) => account.isActive) ?? accounts[0]
@@ -27,7 +29,11 @@ export function MailgunAccountSwitcher() {
 		}
 
 		Axios.post(MailgunAccountController.activate.url(account.id))
-			.then(() => invalidateAuth())
+			.then(() => {
+				invalidateAuth()
+				queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
+				queryClient.invalidateQueries({ queryKey: ["mail", "thread"] })
+			})
 			.catch(() => toast.error("Unable to switch mail account."))
 	}
 

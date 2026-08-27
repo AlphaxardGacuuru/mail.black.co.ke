@@ -17,7 +17,7 @@ export default function MailCompose() {
 					<MailComposePane
 						variant="page"
 						onBack={() => navigate({ to: "/mail" })}
-						onSent={() => navigate({ to: "/mail" })}
+						onSent={() => navigate({ to: "/mail/sent" })}
 					/>
 				</div>
 			</>
@@ -30,6 +30,7 @@ export default function MailCompose() {
 			<MailShell
 				folder="inbox"
 				initialPane={{ type: "compose" }}
+				onComposeSent={() => navigate({ to: "/mail/sent" })}
 			/>
 		</>
 	)

@@ -15,9 +15,10 @@ type Props = {
 	folder: MailFolderKey
 	labelId?: string
 	initialPane?: MailPane
+	onComposeSent?: () => void
 }
 
-export default function MailShell({ folder, labelId, initialPane }: Props) {
+export default function MailShell({ folder, labelId, initialPane, onComposeSent }: Props) {
 	const isMobile = useIsMobile()
 	const navigate = useNavigate()
 	const { data: labels } = useLabels()
@@ -96,7 +97,7 @@ export default function MailShell({ folder, labelId, initialPane }: Props) {
 					<MailComposePane
 						variant="pane"
 						onClose={closePane}
-						onSent={closePane}
+						onSent={onComposeSent ?? closePane}
 					/>
 				</section>
 			)}

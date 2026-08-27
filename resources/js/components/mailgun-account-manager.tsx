@@ -1,9 +1,9 @@
 import { Plus } from "lucide-react"
 import { useState } from "react"
 import MailgunAccountController from "@/actions/App/Http/Controllers/Settings/MailgunAccountController"
+import RichTextEditor from "@/components/rich-text-editor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { SelectField, SelectItem } from "@/components/ui/select"
 import type { MailgunAccount } from "@/types"
 import Axios from "@/lib/axios"
@@ -121,81 +121,91 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 			)}
 
 			{showForm && (
-			<form
-				onSubmit={submit}
-				className="space-y-4 rounded-md border p-4">
-				<h3 className="font-medium">
-					{editingId ? "Edit mail account" : "Add mail account"}
-				</h3>
-				<Input
-					label="Mail address"
-					type="email"
-					required
-					value={form.mailbox_address}
-					onChange={(event) =>
-						setForm({ ...form, mailbox_address: event.target.value })
-					}
-				/>
-				<Input
-					label="From name"
-					value={form.mail_from_name}
-					onChange={(event) =>
-						setForm({ ...form, mail_from_name: event.target.value })
-					}
-				/>
-				<Input
-					label="Mailgun domain"
-					required
-					value={form.mailgun_domain}
-					onChange={(event) =>
-						setForm({ ...form, mailgun_domain: event.target.value })
-					}
-				/>
-				<Input
-					label="Mailgun API key"
-					type="password"
-					required={!editingId}
-					value={form.mailgun_api_key}
-					onChange={(event) =>
-						setForm({ ...form, mailgun_api_key: event.target.value })
-					}
-				/>
-				<SelectField
-					label="Region"
-					value={form.mailgun_endpoint}
-					onValueChange={(value) =>
-						setForm({ ...form, mailgun_endpoint: value })
-					}>
-					{ENDPOINTS.map((endpoint) => (
-						<SelectItem
-							key={endpoint.value}
-							value={endpoint.value}>
-							{endpoint.label}
-						</SelectItem>
-					))}
-				</SelectField>
-				<Textarea
-					label="Default signature"
-					value={form.signature}
-					onChange={(event) =>
-						setForm({ ...form, signature: event.target.value })
-					}
-					rows={4}
-				/>
-				<div className="flex justify-end gap-2">
-					{editingId && (
-						<Button
-							type="button"
-							variant="outline"
-							onClick={reset}>
-							Cancel
+				<form
+					onSubmit={submit}
+					className="space-y-4 rounded-md border p-4">
+					<h3 className="font-medium">
+						{editingId ? "Edit mail account" : "Add mail account"}
+					</h3>
+					{/* Mail From Name Start */}
+					<Input
+						label="From name"
+						value={form.mail_from_name}
+						onChange={(event) =>
+							setForm({ ...form, mail_from_name: event.target.value })
+						}
+					/>
+					{/* Mail From Name End */}
+					{/* Mail Address Start */}
+					<Input
+						label="Mail address"
+						type="email"
+						required
+						value={form.mailbox_address}
+						onChange={(event) =>
+							setForm({ ...form, mailbox_address: event.target.value })
+						}
+					/>
+					{/* Mail Address End */}
+					{/* Mailgun Domain Start */}
+					<Input
+						label="Mailgun domain"
+						required
+						value={form.mailgun_domain}
+						onChange={(event) =>
+							setForm({ ...form, mailgun_domain: event.target.value })
+						}
+					/>
+					{/* Mailgun Domain End */}
+					{/* Mailgun API Key Start */}
+					<Input
+						label="Mailgun API key"
+						type="password"
+						required={!editingId}
+						value={form.mailgun_api_key}
+						onChange={(event) =>
+							setForm({ ...form, mailgun_api_key: event.target.value })
+						}
+					/>
+					{/* Mailgun API Key End */}
+					{/* Mailgun Region Start */}
+					<SelectField
+						label="Region"
+						value={form.mailgun_endpoint}
+						onValueChange={(value) =>
+							setForm({ ...form, mailgun_endpoint: value })
+						}>
+						{ENDPOINTS.map((endpoint) => (
+							<SelectItem
+								key={endpoint.value}
+								value={endpoint.value}>
+								{endpoint.label}
+							</SelectItem>
+						))}
+					</SelectField>
+					{/* Mailgun Region End */}
+					{/* Default Signature Start */}
+					<label className="text-sm font-medium">Signature</label>
+					<RichTextEditor
+						value={form.signature}
+						onChange={(signature) => setForm({ ...form, signature })}
+						placeholder="Write your signature"
+					/>
+					{/* Default Signature End */}
+					<div className="flex justify-end gap-2">
+						{editingId && (
+							<Button
+								type="button"
+								variant="outline"
+								onClick={reset}>
+								Cancel
+							</Button>
+						)}
+						<Button disabled={processing}>
+							{editingId ? "Update account" : "Add account"}
 						</Button>
-					)}
-					<Button disabled={processing}>
-						{editingId ? "Update account" : "Add account"}
-					</Button>
-				</div>
-			</form>
+					</div>
+				</form>
 			)}
 		</div>
 	)

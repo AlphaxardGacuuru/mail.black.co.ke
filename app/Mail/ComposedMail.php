@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\MailMessage;
+use App\Http\Services\MailSanitizerService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
@@ -38,7 +39,9 @@ class ComposedMail extends Mailable
     public function content(): Content
     {
         $body = $this->mailMessage->body_html ?? nl2br(e($this->mailMessage->body_text ?? ''));
-        $signature = $this->signature ? '<br><br>' . nl2br(e($this->signature)) : '';
+        $signature = $this->signature
+            ? '<br><br>'.app(MailSanitizerService::class)->sanitize($this->signature)
+            : '';
 
         return new Content(htmlString: $body . $signature);
     }

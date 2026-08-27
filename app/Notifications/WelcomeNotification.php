@@ -41,10 +41,10 @@ class WelcomeNotification extends Notification implements ShouldQueue
     public function toMail($notifiable)
     {
         return (new MailMessage)
-            ->from("al@property.black.co.ke", "Alphaxard from Black Property")
-            ->subject('Welcome to Black Property!')
+            ->from("al@mail.black.co.ke", "Alphaxard from Black Mail")
+            ->subject('Welcome to Black Mail!')
             ->greeting('Hello '.$notifiable->name.',')
-            ->line("Thank you for joining Black Property. We are excited to have you on board!")
+            ->line("Thank you for joining Black Mail. We are excited to have you on board!")
             ->action('Go To Inbox', url('/mail'));
     }
 
@@ -59,7 +59,7 @@ class WelcomeNotification extends Notification implements ShouldQueue
         return [
             'url' => '/',
             'from' => 'Admin',
-            'message' => 'Welcome '.$notifiable->name.', to Black Property.',
+            'message' => 'Welcome '.$notifiable->name.', to Black Mail.',
         ];
     }
 }

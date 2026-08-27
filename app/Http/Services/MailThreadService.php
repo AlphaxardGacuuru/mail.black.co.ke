@@ -6,6 +6,7 @@ use App\Enums\MailFolder;
 use App\Http\Services\Concerns\ResolvesMailThread;
 use App\Models\MailLabel;
 use App\Models\MailThread;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -20,7 +21,9 @@ class MailThreadService extends Service
         $labelId = $request->input('label');
         $q = trim((string) $request->input('q', ''));
 
-        $query = MailThread::query()->ownedBy($this->id);
+        $query = MailThread::query()
+            ->ownedBy($this->id)
+            ->whereHas('messages', fn ($messageQuery) => $this->scopeToAccount($messageQuery));
 
         if ($request->boolean('starred') || $folder === 'starred') {
             $query->starred();
@@ -47,6 +50,7 @@ class MailThreadService extends Service
     public function show(string $id)
     {
         $thread = MailThread::ownedBy($this->id)
+            ->whereHas('messages', fn ($messageQuery) => $this->scopeToAccount($messageQuery))
             ->with(['messages.attachments', 'messages.labels'])
             ->findOrFail($id);
 
@@ -123,6 +127,28 @@ class MailThreadService extends Service
     public function markRead(string $id)
     {
         return $this->toggleRead($id, true);
+    }
+
+    protected function scopeToAccount($query): void
+    {
+        $account = User::find($this->id)?->activeMailgunAccount;
+
+        if (! $account) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $query->where(function ($messageQuery) use ($account) {
+            $messageQuery
+                ->where('direction', 'inbound')
+                ->whereJsonContains('to', [['address' => $account->mailbox_address]])
+                ->orWhere(function ($outboundQuery) use ($account) {
+                    $outboundQuery
+                        ->where('direction', 'outbound')
+                        ->where('from_address->address', $account->mailbox_address);
+                });
+        });
     }
 
     public function markUnread(string $id)
