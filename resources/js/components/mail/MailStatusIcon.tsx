@@ -1,4 +1,4 @@
-import { Check, Clock, MousePointerClick } from "lucide-react"
+import { AlertTriangle, Ban, Check, Clock, MousePointerClick } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { MailMessageStatus } from "@/types/mail"
 
@@ -51,6 +51,14 @@ export default function MailStatusIcon({ status, isRead, className }: Props) {
 			return <Ticks count={1} className={cn(size, "text-destructive")} />
 		case "bounced":
 			return <Ticks count={2} className={cn(size, "text-destructive")} />
+		case "temporary_failed":
+			return <Clock className={cn(size, "text-destructive")} />
+		case "permanent_failed":
+			return <AlertTriangle className={cn(size, "text-destructive")} />
+		case "complained":
+			return <Ban className={cn(size, "text-destructive")} />
+		case "unsubscribed":
+			return <Ban className={cn(size, "text-muted-foreground")} />
 		default:
 			return null
 	}

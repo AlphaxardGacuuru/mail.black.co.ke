@@ -11,6 +11,10 @@ enum MailStatus: string
     case CLICKED = 'clicked';
     case FAILED = 'failed';
     case BOUNCED = 'bounced';
+    case TEMPORARY_FAILED = 'temporary_failed';
+    case PERMANENT_FAILED = 'permanent_failed';
+    case COMPLAINED = 'complained';
+    case UNSUBSCRIBED = 'unsubscribed';
     case RECEIVED = 'received';
 
     public static function values(): array

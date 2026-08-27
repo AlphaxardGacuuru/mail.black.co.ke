@@ -95,3 +95,5 @@ Route::middleware('auth:sanctum')->prefix('mail')->group(function () {
 
 Route::post('mail/webhooks/mailgun', [MailWebhookController::class, 'mailgunInbound'])
     ->middleware('verify.mailgun.webhook');
+Route::post('webhooks/mailgun/events', [MailWebhookController::class, 'mailgunEvents'])
+    ->middleware('verify.mailgun.webhook');

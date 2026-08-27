@@ -26,6 +26,10 @@ export type MailMessageStatus =
 	| "clicked"
 	| "failed"
 	| "bounced"
+	| "temporary_failed"
+	| "permanent_failed"
+	| "complained"
+	| "unsubscribed"
 	| "received"
 
 export type MailMessage = {
