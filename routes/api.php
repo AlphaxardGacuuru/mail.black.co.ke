@@ -61,6 +61,12 @@ Route::prefix('filepond')->group(function () {
     });
 });
 
+// Mailgun account avatars require an authenticated owner check.
+Route::middleware('auth:sanctum')->post(
+    'filepond/mailgun-accounts/{account}/avatar',
+    [FilePondController::class, 'updateMailgunAccountAvatar']
+);
+
 /*
  * Mail
  */

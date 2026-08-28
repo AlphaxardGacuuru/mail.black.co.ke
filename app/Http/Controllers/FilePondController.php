@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MailgunAccount;
 use App\Models\Submission;
 use App\Models\TemporaryUpload;
 use App\Models\User;
@@ -60,6 +61,34 @@ class FilePondController extends Controller
     }
 
     /*
+     * Handle Mailgun Account Profile Picture Upload */
+    public function updateMailgunAccountAvatar(Request $request, MailgunAccount $account): Response
+    {
+        abort_unless($account->user_id === $request->user()->id, 404);
+
+        $this->validate($request, [
+            'filepond-mailgun-account-avatar' => 'required|image|max:5120',
+        ]);
+
+        $avatar = $request
+            ->file('filepond-mailgun-account-avatar')
+            ->store('public/mailgun-avatars');
+            
+        $avatar = substr($avatar, 7);
+
+        $oldAvatar = $account->getRawOriginal('avatar');
+
+        if ($oldAvatar) {
+            Storage::disk('public')->delete($oldAvatar);
+        }
+
+        $account->avatar = $avatar;
+        $account->save();
+
+        return response(['avatar' => $account->avatar], 200);
+    }
+
+    /*
      * Handle Material Upload */
     public function storeMaterial(Request $request): string
     {
@@ -79,7 +108,7 @@ class FilePondController extends Controller
      * Handle Material Delete */
     public function destoryMaterial(int|string $id): Response
     {
-        Storage::delete('public/materials/'.$id);
+        Storage::delete('public/materials/' . $id);
 
         return response("Material deleted", 200);
     }
@@ -108,7 +137,7 @@ class FilePondController extends Controller
      * Handle Attachment Delete */
     public function destoryAttachment(int|string $id): Response
     {
-        Storage::delete('public/attachments/'.$id);
+        Storage::delete('public/attachments/' . $id);
 
         return response("Attachment deleted", 200);
     }
@@ -146,7 +175,7 @@ class FilePondController extends Controller
             $submission->attachment = $attachment;
             $submission->save();
 
-            $message = $type." saved";
+            $message = $type . " saved";
         } else {
             $submission = $submissionQuery->first();
 
@@ -159,7 +188,7 @@ class FilePondController extends Controller
             $submission->attachment = $attachment;
             $submission->save();
 
-            $message = $type." updated";
+            $message = $type . " updated";
         }
 
         return response($message, 200);

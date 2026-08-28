@@ -116,7 +116,7 @@ export default function MailThreadListRow({
 			onTouchEnd={handleTouchEnd}
 			onTouchCancel={handleTouchEnd}
 			className={cn(
-				"group relative overflow-hidden border-b cursor-pointer hover:bg-muted/50",
+				"group relative overflow-hidden rounded-lg border cursor-pointer shadow-sm transition-shadow hover:shadow-md hover:bg-muted/50",
 				isSelected && "bg-muted",
 				thread.hasUnread && "bg-background"
 			)}>

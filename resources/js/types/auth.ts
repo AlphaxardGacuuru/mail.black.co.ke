@@ -1,10 +1,11 @@
 export type MailgunAccount = {
 	id: string
-	mailboxAddress: string
 	mailFromName: string | null
+	mailboxAddress: string
 	mailgunDomain: string
 	mailgunEndpoint: string
 	signature: string | null
+	avatar: string | null
 	isActive: boolean
 }
 

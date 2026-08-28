@@ -1,4 +1,16 @@
-import { AlertTriangle, Ban, Check, Clock, MousePointerClick } from "lucide-react"
+import {
+	AlertTriangle,
+	Ban,
+	Check,
+	Clock,
+	MousePointerClick,
+} from "lucide-react"
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip"
+import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import type { MailMessageStatus } from "@/types/mail"
 
@@ -33,33 +45,101 @@ export default function MailStatusIcon({ status, isRead, className }: Props) {
 	}
 
 	const size = cn("size-3.5", className)
+	let label: string
+	let icon: ReactNode
 
 	switch (status) {
 		case "queued":
-			return <Clock className={cn(size, "text-muted-foreground")} />
+			label = "Queued"
+			icon = <Clock className={cn(size, "text-muted-foreground")} />
+			break
 		case "sent":
-			return <Ticks count={1} className={cn(size, "text-muted-foreground")} />
+			label = "Sent"
+			icon = (
+				<Ticks
+					count={1}
+					className={cn(size, "text-muted-foreground")}
+				/>
+			)
+			break
 		case "delivered":
-			return <Ticks count={2} className={cn(size, "text-muted-foreground")} />
+			label = "Delivered"
+			icon = (
+				<Ticks
+					count={2}
+					className={cn(size, "text-muted-foreground")}
+				/>
+			)
+			break
 		case "opened":
-			return <Ticks count={2} className={cn(size, "text-primary")} />
+			label = "Opened"
+			icon = (
+				<Ticks
+					count={2}
+					className={cn(size, "text-primary")}
+				/>
+			)
+			break
 		case "clicked":
-			return <MousePointerClick className={cn(size, "text-primary")} />
+			label = "Link clicked"
+			icon = <MousePointerClick className={cn(size, "text-primary")} />
+			break
 		case "received":
-			return <Ticks count={3} className={cn(size, isRead ? "text-primary" : "text-muted-foreground")} />
+			label = isRead ? "Received and read" : "Received and unread"
+			icon = (
+				<Ticks
+					count={3}
+					className={cn(
+						size,
+						isRead ? "text-primary" : "text-muted-foreground"
+					)}
+				/>
+			)
+			break
 		case "failed":
-			return <Ticks count={1} className={cn(size, "text-destructive")} />
+			label = "Failed"
+			icon = (
+				<Ticks
+					count={1}
+					className={cn(size, "text-destructive")}
+				/>
+			)
+			break
 		case "bounced":
-			return <Ticks count={2} className={cn(size, "text-destructive")} />
+			label = "Bounced"
+			icon = (
+				<Ticks
+					count={2}
+					className={cn(size, "text-destructive")}
+				/>
+			)
+			break
 		case "temporary_failed":
-			return <Clock className={cn(size, "text-destructive")} />
+			label = "Temporary failure"
+			icon = <Clock className={cn(size, "text-destructive")} />
+			break
 		case "permanent_failed":
-			return <AlertTriangle className={cn(size, "text-destructive")} />
+			label = "Permanent failure"
+			icon = <AlertTriangle className={cn(size, "text-destructive")} />
+			break
 		case "complained":
-			return <Ban className={cn(size, "text-destructive")} />
+			label = "Spam complaint"
+			icon = <Ban className={cn(size, "text-destructive")} />
+			break
 		case "unsubscribed":
-			return <Ban className={cn(size, "text-muted-foreground")} />
+			label = "Unsubscribed"
+			icon = <Ban className={cn(size, "text-muted-foreground")} />
+			break
 		default:
 			return null
 	}
+
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<span aria-label={label}>{icon}</span>
+			</TooltipTrigger>
+			<TooltipContent>{label}</TooltipContent>
+		</Tooltip>
+	)
 }

@@ -5,11 +5,13 @@ import MailEmptyState from "@/components/mail/MailEmptyState"
 import MailThreadList from "@/components/mail/MailThreadList"
 import MailThreadView from "@/components/mail/MailThreadView"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useLabels } from "@/queries/mail"
 import type { MailThreadFilters } from "@/queries/mail"
 import type { MailFolderKey } from "@/types/mail"
 
-type MailPane = { type: "none" } | { type: "thread"; id: string } | { type: "compose" }
+type MailPane =
+	| { type: "none" }
+	| { type: "thread"; id: string }
+	| { type: "compose" }
 
 type Props = {
 	folder: MailFolderKey
@@ -18,10 +20,14 @@ type Props = {
 	onComposeSent?: () => void
 }
 
-export default function MailShell({ folder, labelId, initialPane, onComposeSent }: Props) {
+export default function MailShell({
+	folder,
+	labelId,
+	initialPane,
+	onComposeSent,
+}: Props) {
 	const isMobile = useIsMobile()
 	const navigate = useNavigate()
-	const { data: labels } = useLabels()
 
 	const [filters, setFilters] = useState<MailThreadFilters>({
 		folder,
@@ -51,9 +57,6 @@ export default function MailShell({ folder, labelId, initialPane, onComposeSent 
 		setPane({ type: "none" })
 	}
 
-	const activeLabel = labelId ? labels?.find((label) => label.id === labelId) : undefined
-	const title = labelId ? (activeLabel?.name ?? "Label") : folder
-
 	if (isMobile) {
 		return (
 			<div className="flex h-[calc(100vh-4rem)] flex-col">
@@ -63,14 +66,13 @@ export default function MailShell({ folder, labelId, initialPane, onComposeSent 
 					selectedThreadId={null}
 					onSelectThread={handleSelectThread}
 					onCompose={openCompose}
-					title={title}
 				/>
 			</div>
 		)
 	}
 
 	return (
-		<div className="flex h-[calc(100vh-6rem)] gap-4">
+		<div className="flex h-[calc(100vh-6rem)] gap-2">
 			<section className="w-1/4 shrink-0 overflow-hidden rounded-lg border bg-card shadow-sm">
 				<MailThreadList
 					filters={filters}
@@ -78,7 +80,6 @@ export default function MailShell({ folder, labelId, initialPane, onComposeSent 
 					selectedThreadId={pane.type === "thread" ? pane.id : null}
 					onSelectThread={handleSelectThread}
 					onCompose={openCompose}
-					title={title}
 				/>
 			</section>
 

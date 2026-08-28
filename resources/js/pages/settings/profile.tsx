@@ -6,7 +6,7 @@ import ProfileController from "@/actions/App/Http/Controllers/Settings/ProfileCo
 import DeleteUser from "@/components/delete-user"
 import Heading from "@/components/heading"
 import InputError from "@/components/input-error"
-import MailgunAccountManager from "@/components/mailgun-account-manager"
+import MailgunAccountManager from "@/components/mailgun/MailgunAccountManager"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Axios from "@/lib/axios"

@@ -13,7 +13,6 @@ type Props = {
 	selectedThreadId: string | null
 	onSelectThread: (threadId: string) => void
 	onCompose: () => void
-	title: string
 }
 
 export default function MailThreadList({
@@ -22,7 +21,6 @@ export default function MailThreadList({
 	selectedThreadId,
 	onSelectThread,
 	onCompose,
-	title,
 }: Props) {
 	const { data, isLoading } = useMailThreads(filters)
 
@@ -31,18 +29,14 @@ export default function MailThreadList({
 
 	return (
 		<div className="relative flex h-full flex-col">
-			<div className="flex items-center gap-2 border-b px-3 py-2">
-				<h1 className="flex-1 font-semibold capitalize">{title}</h1>
-			</div>
-
 			<MailSearchBar
 				value={filters.q ?? ""}
 				onChange={(q) => onFiltersChange({ ...filters, q, page: 1 })}
 			/>
 
-			<div className="flex-1 overflow-y-auto">
+			<div className="flex-1 overflow-y-auto lg:p-3">
 				{isLoading && (
-					<div className="space-y-3 p-3">
+					<div className="space-y-3">
 						<Skeleton className="h-12 w-full" />
 						<Skeleton className="h-12 w-full" />
 						<Skeleton className="h-12 w-full" />
@@ -55,16 +49,19 @@ export default function MailThreadList({
 					/>
 				)}
 
-				{!isLoading &&
-					threads.map((thread) => (
-						<MailThreadListRow
-							key={thread.id}
-							thread={thread}
-							folder={filters.folder}
-							isSelected={thread.id === selectedThreadId}
-							onSelect={() => onSelectThread(thread.id)}
-						/>
-					))}
+				{!isLoading && threads.length > 0 && (
+					<div className="space-y-2">
+						{threads.map((thread) => (
+							<MailThreadListRow
+								key={thread.id}
+								thread={thread}
+								folder={filters.folder}
+								isSelected={thread.id === selectedThreadId}
+								onSelect={() => onSelectThread(thread.id)}
+							/>
+						))}
+					</div>
+				)}
 			</div>
 
 			{meta && meta.last_page > 1 && (
@@ -97,7 +94,7 @@ export default function MailThreadList({
 				size="icon"
 				aria-label="Compose"
 				title="Compose"
-				className="absolute right-4 bottom-4 z-10 size-14 rounded-full shadow-lg"
+				className="fixed right-6 bottom-6 z-50 size-14 rounded-full shadow-lg"
 				onClick={onCompose}>
 				<Pencil className="size-6" strokeWidth={1.5} />
 			</Button>

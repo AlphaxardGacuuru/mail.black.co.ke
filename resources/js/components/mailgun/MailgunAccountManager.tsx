@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react"
 import { useState } from "react"
 import MailgunAccountController from "@/actions/App/Http/Controllers/Settings/MailgunAccountController"
+import MailgunAccountAvatarUpload from "@/components/mailgun/MailgunAccountAvatarUpload"
 import RichTextEditor from "@/components/rich-text-editor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -61,6 +62,15 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 		setShowForm(false)
 	}
 
+	function handleAvatarUploaded(accountId: string, avatar: string): void {
+		setAccounts((current) =>
+			current.map((account) =>
+				account.id === accountId ? { ...account, avatar } : account
+			)
+		)
+		invalidateAuth()
+	}
+
 	function submit(event: React.FormEvent<HTMLFormElement>): void {
 		event.preventDefault()
 		setProcessing(true)
@@ -90,6 +100,12 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 					<div
 						key={account.id}
 						className="flex items-center gap-3 rounded-md border p-3">
+						<MailgunAccountAvatarUpload
+							accountId={account.id}
+							avatar={account.avatar}
+							label={account.mailboxAddress}
+							onUploaded={(avatar) => handleAvatarUploaded(account.id, avatar)}
+						/>
 						<div className="min-w-0 flex-1">
 							<p className="truncate font-medium">{account.mailboxAddress}</p>
 							<p className="text-sm text-muted-foreground">
@@ -97,7 +113,7 @@ export default function MailgunAccountManager({ initialAccounts }: Props) {
 							</p>
 						</div>
 						{account.isActive && (
-							<span className="text-xs text-muted-foreground">Active</span>
+							<span className="text-xs text-primary">Active</span>
 						)}
 						<Button
 							type="button"

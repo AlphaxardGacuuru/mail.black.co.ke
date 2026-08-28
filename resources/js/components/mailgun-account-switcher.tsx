@@ -1,5 +1,6 @@
 import { Check, ChevronDown } from "lucide-react"
 import MailgunAccountController from "@/actions/App/Http/Controllers/Settings/MailgunAccountController"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
 	DropdownMenu,
@@ -15,6 +16,20 @@ import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 import { invalidateAuth } from "@/middleware/auth"
 import type { MailgunAccount } from "@/types"
+
+function AccountAvatar({ account }: { account: MailgunAccount }) {
+	return (
+		<Avatar className="size-10 shrink-0">
+			<AvatarImage
+				src={account.avatar ?? undefined}
+				alt={account.mailboxAddress}
+			/>
+			<AvatarFallback className="text-[16px] uppercase">
+				{account.mailboxAddress.slice(0, 2)}
+			</AvatarFallback>
+		</Avatar>
+	)
+}
 
 export function MailgunAccountSwitcher() {
 	const { auth } = useApp()
@@ -46,9 +61,9 @@ export function MailgunAccountSwitcher() {
 			<DropdownMenuTrigger asChild>
 				<Button
 					variant="ghost"
-					className="max-w-56 gap-1 px-2 text-sm normal-case">
-					<span className="truncate">{activeAccount.mailboxAddress}</span>
-					<ChevronDown className="size-4 shrink-0" />
+					size="lg"
+					className="max-w-56 gap-1 p-2 text-sm normal-case">
+					<AccountAvatar account={activeAccount} />
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
@@ -60,11 +75,17 @@ export function MailgunAccountSwitcher() {
 					<DropdownMenuItem
 						key={account.id}
 						onClick={() => activateAccount(account)}
-						className="cursor-pointer">
-						<span className="min-w-0 flex-1 truncate">
-							{account.mailboxAddress}
-						</span>
-						{account.isActive && <Check className="size-4" />}
+						className="cursor-pointer gap-2">
+						<AccountAvatar account={account} />
+						<div className="flex flex-col gap-0.5 overflow-hidden">
+							<div className="min-w-0 flex-1 truncate">
+								{account.mailFromName}
+							</div>
+							<div className="min-w-0 flex-1 truncate">
+								{account.mailboxAddress}
+							</div>
+						</div>
+						{account.isActive && <Check className="size-4 text-primary" />}
 					</DropdownMenuItem>
 				))}
 			</DropdownMenuContent>

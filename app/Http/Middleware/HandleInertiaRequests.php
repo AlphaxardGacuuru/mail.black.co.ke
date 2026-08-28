@@ -52,6 +52,7 @@ class HandleInertiaRequests extends Middleware
                         'mailgunDomain' => $account->mailgun_domain,
                         'mailgunEndpoint' => $account->mailgun_endpoint,
                         'signature' => $account->signature,
+                        'avatar' => $account->avatar,
                         'isActive' => $account->id === $user->active_mailgun_account_id,
                     ])->values(),
                 ] : null,

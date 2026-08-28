@@ -78,6 +78,7 @@ class MailgunAccountController extends Controller
             'mailgunDomain' => $account->mailgun_domain,
             'mailgunEndpoint' => $account->mailgun_endpoint,
             'signature' => $account->signature,
+            'avatar' => $account->avatar,
             'isActive' => $account->id === $activeId,
         ])->all();
     }
