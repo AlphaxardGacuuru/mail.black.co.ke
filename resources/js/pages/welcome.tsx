@@ -313,7 +313,6 @@ const Welcome: FC<WelcomeProps> = () => {
 									<div className="flex items-center gap-2">
 										<MailStatusIcon
 											status={entry.status}
-											isRead={entry.isRead}
 											className="size-4"
 										/>
 										<p className="text-sm font-semibold">{entry.label}</p>
@@ -374,7 +373,6 @@ const Welcome: FC<WelcomeProps> = () => {
 											<div className="flex items-center gap-1.5">
 												<MailStatusIcon
 													status={message.status}
-													isRead={message.isRead}
 													className="size-3.5 shrink-0"
 												/>
 												<p className="truncate text-sm text-muted-foreground">
@@ -503,7 +501,6 @@ const Welcome: FC<WelcomeProps> = () => {
 									<div className="flex items-center gap-2">
 										<MailStatusIcon
 											status={entry.status}
-											isRead={entry.isRead}
 											className="size-4"
 										/>
 										<p className="text-sm font-semibold">{entry.label}</p>

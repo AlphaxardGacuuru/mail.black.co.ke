@@ -16,7 +16,10 @@ function initials(name?: string | null, address?: string | null): string {
 }
 
 function formatDate(value: string | null): string {
-	if (!value) return ""
+	if (!value) {
+		return ""
+	}
+
 	return new Date(value).toLocaleString(undefined, {
 		month: "short",
 		day: "numeric",
@@ -95,7 +98,6 @@ export default function MailMessageBubble({ message, isExpanded, onToggleExpand 
 				{message.status && (
 					<MailStatusIcon
 						status={message.status}
-						isRead={message.isRead}
 						className="size-3.5"
 					/>
 				)}

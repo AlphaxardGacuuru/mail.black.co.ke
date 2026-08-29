@@ -1,4 +1,13 @@
-import { Archive, ArchiveRestore, ArrowLeft, Star, Trash2, X } from "lucide-react"
+import {
+	Archive,
+	ArchiveRestore,
+	ArrowLeft,
+	MailCheck,
+	MailOpen,
+	Star,
+	Trash2,
+	X,
+} from "lucide-react"
 import { useMemo, useState } from "react"
 import MailComposeInline from "@/components/mail/MailComposeInline"
 import MailMessageBubble from "@/components/mail/MailMessageBubble"
@@ -8,6 +17,7 @@ import { useApp } from "@/contexts/AppContext"
 import toast from "@/lib/toast"
 import {
 	useArchiveMailThread,
+	useMarkMailThreadRead,
 	useMailThread,
 	useRestoreMailThread,
 	useStarMailThread,
@@ -21,15 +31,24 @@ type Props = {
 	onBack?: () => void
 }
 
-export default function MailThreadView({ threadId, variant, onClose, onBack }: Props) {
+export default function MailThreadView({
+	threadId,
+	variant,
+	onClose,
+	onBack,
+}: Props) {
 	const { auth } = useApp()
-	const activeAccount = auth?.mailgunAccounts?.find((account) => account.isActive)
+	const activeAccount = auth?.mailgunAccounts?.find(
+		(account) => account.isActive
+	)
 	const { data: thread, isLoading } = useMailThread(threadId)
 	const starMutation = useStarMailThread(true)
 	const unstarMutation = useStarMailThread(false)
 	const archiveMutation = useArchiveMailThread()
 	const restoreMutation = useRestoreMailThread()
 	const trashMutation = useTrashMailThread()
+	const markReadMutation = useMarkMailThreadRead(true)
+	const markUnreadMutation = useMarkMailThreadRead(false)
 
 	const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -62,7 +81,10 @@ export default function MailThreadView({ threadId, variant, onClose, onBack }: P
 	}
 
 	const lastMessage = thread.messages[thread.messages.length - 1]
-	const isArchived = thread.messages.length > 0 && thread.messages.every((message) => message.folder === "archive")
+	const isArchived =
+		thread.messages.length > 0 &&
+		thread.messages.every((message) => message.folder === "archive")
+	const hasUnread = thread.messages.some((message) => !message.isRead)
 
 	const closeThread = () => {
 		if (variant === "pane") {
@@ -96,6 +118,11 @@ export default function MailThreadView({ threadId, variant, onClose, onBack }: P
 		mutation.mutate(thread.id)
 	}
 
+	const toggleRead = () => {
+		const mutation = hasUnread ? markReadMutation : markUnreadMutation
+		mutation.mutate(thread.id)
+	}
+
 	return (
 		<div className="flex flex-1 flex-col overflow-hidden">
 			<div className="flex items-center gap-2 border-b p-3">
@@ -108,13 +135,34 @@ export default function MailThreadView({ threadId, variant, onClose, onBack }: P
 					</Button>
 				)}
 
-				<h2 className="flex-1 truncate font-medium">{thread.subject || "(no subject)"}</h2>
+				<h2 className="flex-1 truncate font-medium">
+					{thread.subject || "(no subject)"}
+				</h2>
 
 				<Button
 					variant="ghost"
 					size="icon"
 					onClick={toggleStar}>
-					<Star className={thread.isStarred ? "size-4 fill-yellow-400 text-yellow-400" : "size-4"} />
+					<Star
+						className={
+							thread.isStarred
+								? "size-4 fill-yellow-400 text-yellow-400"
+								: "size-4"
+						}
+					/>
+				</Button>
+
+				<Button
+					variant="ghost"
+					size="icon"
+					aria-label={hasUnread ? "Mark as read" : "Mark as unread"}
+					title={hasUnread ? "Mark as read" : "Mark as unread"}
+					onClick={toggleRead}>
+					{hasUnread ? (
+						<MailOpen className="size-4" />
+					) : (
+						<MailCheck className="size-4" />
+					)}
 				</Button>
 
 				<Button
@@ -154,7 +202,9 @@ export default function MailThreadView({ threadId, variant, onClose, onBack }: P
 						message={message}
 						isExpanded={currentlyExpanded === message.id}
 						onToggleExpand={() =>
-							setExpandedId(currentlyExpanded === message.id ? null : message.id)
+							setExpandedId(
+								currentlyExpanded === message.id ? null : message.id
+							)
 						}
 					/>
 				))}

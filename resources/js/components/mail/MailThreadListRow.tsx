@@ -1,4 +1,12 @@
-import { Archive, ArchiveRestore, Paperclip, Star, Trash2 } from "lucide-react"
+import {
+	Archive,
+	ArchiveRestore,
+	MailCheck,
+	MailOpen,
+	Paperclip,
+	Star,
+	Trash2,
+} from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { useRef, useState } from "react"
@@ -6,6 +14,7 @@ import MailStatusIcon from "@/components/mail/MailStatusIcon"
 import { cn } from "@/lib/utils"
 import {
 	useArchiveMailThread,
+	useMarkMailThreadRead,
 	useRestoreMailThread,
 	useStarMailThread,
 	useTrashMailThread,
@@ -50,6 +59,8 @@ export default function MailThreadListRow({
 	const archiveMutation = useArchiveMailThread()
 	const restoreMutation = useRestoreMailThread()
 	const trashMutation = useTrashMailThread()
+	const markReadMutation = useMarkMailThreadRead(true)
+	const markUnreadMutation = useMarkMailThreadRead(false)
 	const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 	const swipeOffsetRef = useRef(0)
 	const swipedRef = useRef(false)
@@ -120,7 +131,7 @@ export default function MailThreadListRow({
 			className={cn(
 				"group relative overflow-hidden rounded-lg border cursor-pointer shadow-sm transition-shadow hover:shadow-md hover:bg-muted/50",
 				isSelected && "bg-muted",
-				thread.hasUnread && "bg-background"
+				thread.hasUnread && "border-l-4 border-l-primary bg-primary/5"
 			)}>
 			<div className="absolute inset-y-0 left-0 flex w-24 items-center bg-muted px-4 text-muted-foreground">
 				{folder === "archive" ? (
@@ -187,7 +198,6 @@ export default function MailThreadListRow({
 							{thread.status && (
 								<MailStatusIcon
 									status={thread.status}
-									isRead={thread.isRead}
 									className="size-3.5 shrink-0"
 								/>
 							)}
@@ -197,6 +207,25 @@ export default function MailThreadListRow({
 				</div>
 
 				<div className="hidden items-center gap-0.5 shrink-0 group-hover:flex">
+					<Button
+						variant="ghost"
+						size="icon"
+						aria-label={thread.hasUnread ? "Mark as read" : "Mark as unread"}
+						title={thread.hasUnread ? "Mark as read" : "Mark as unread"}
+						className="size-7"
+						onClick={(event) => {
+							event.stopPropagation()
+							;(thread.hasUnread
+								? markReadMutation
+								: markUnreadMutation
+							).mutate(thread.id)
+						}}>
+						{thread.hasUnread ? (
+							<MailOpen className="size-3.5" />
+						) : (
+							<MailCheck className="size-3.5" />
+						)}
+					</Button>
 					<Button
 						variant="ghost"
 						size="icon"
