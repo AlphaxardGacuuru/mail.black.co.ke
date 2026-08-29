@@ -40,9 +40,11 @@ class MailInboundService
         $user = MailgunAccount::where('mailbox_address', $recipient)->first()?->user;
 
         if (! $user) {
-            Log::warning('Mailgun inbound: no matching mailbox for recipient', ['recipient' => $recipient]);
+            Log::warning('Mailgun inbound: no matching mailbox for recipient', [
+                'recipient' => $recipient
+            ]);
 
-            return [true, 'No matching mailbox, dropped', null];
+            return [true, 'No Matching Mailbox, Dropped', null];
         }
 
         $messageId = $this->trimMessageId((string) $request->input('Message-Id', ''));
@@ -112,15 +114,16 @@ class MailInboundService
 
     protected function normalizeRecipient(string $recipient): string
     {
-        $recipient = mb_strtolower(trim($recipient));
+        $recipient = Str::of($recipient)->trim()->lower();
 
-        if (str_contains($recipient, '+') && str_contains($recipient, '@')) {
-            [$local, $domain] = explode('@', $recipient, 2);
-            $local = preg_replace('/\+.*$/', '', $local);
-            $recipient = "{$local}@{$domain}";
+        if ($recipient->contains('+') && $recipient->contains('@')) {
+            $local = $recipient->before('@')->before('+');
+            $domain = $recipient->after('@');
+
+            return "{$local}@{$domain}";
         }
 
-        return $recipient;
+        return $recipient->toString();
     }
 
     protected function parseFromHeader(string $from, string $fallbackAddress): array
@@ -140,12 +143,15 @@ class MailInboundService
 
     protected function parseAddressList(string $list): array
     {
-        if (trim($list) === '') {
+        $addresses = Str::of($list)->trim();
+
+        if ($addresses->isEmpty()) {
             return [];
         }
 
-        return collect(explode(',', $list))
-            ->map(fn($entry) => $this->parseFromHeader(trim($entry), ''))
+        return $addresses
+            ->explode(',')
+            ->map(fn($entry) => $this->parseFromHeader(Str::of($entry)->trim()->toString(), ''))
             ->filter(fn($address) => filled($address['address']))
             ->values()
             ->all();
@@ -154,61 +160,61 @@ class MailInboundService
     protected function storeAttachments(Request $request, MailMessage $mailMessage): int
     {
         $count = (int) $request->input('attachment-count', 0);
-        $stored = 0;
 
-        for ($i = 1; $i <= $count; $i++) {
-            $file = $request->file("attachment-{$i}");
-
-            if (! $file || ! $file->isValid()) {
-                continue;
-            }
-
-            if ($file->getSize() > self::MAX_ATTACHMENT_SIZE) {
-                Log::warning('Mailgun inbound: attachment exceeded size cap, skipped', [
-                    'mail_message_id' => $mailMessage->id,
-                    'size' => $file->getSize(),
-                ]);
-
-                continue;
-            }
-
-            $mime = $file->getMimeType() ?? 'application/octet-stream';
-
-            if (! $this->isAllowedMime($mime)) {
-                Log::warning('Mailgun inbound: attachment mime type not allowed, skipped', [
-                    'mail_message_id' => $mailMessage->id,
-                    'mime' => $mime,
-                ]);
-
-                continue;
-            }
-
-            $originalName = $file->getClientOriginalName();
-            $path = $file->storeAs("mail-attachments/{$mailMessage->id}", $originalName, 'public');
-
-            $mailAttachment = new MailAttachment;
-            $mailAttachment->mail_message_id = $mailMessage->id;
-            $mailAttachment->disk = 'public';
-            $mailAttachment->path = $path;
-            $mailAttachment->original_name = $originalName;
-            $mailAttachment->mime_type = $mime;
-            $mailAttachment->size = $file->getSize();
-            $mailAttachment->save();
-
-            $stored++;
+        if ($count < 1) {
+            return 0;
         }
 
-        return $stored;
+        $stored = collect(range(1, $count))
+            ->map(fn(int $index) => $request->file("attachment-{$index}"))
+            ->filter()
+            ->filter(function ($file) use ($mailMessage) {
+                if (! $file->isValid()) {
+                    return false;
+                }
+
+                if ($file->getSize() > self::MAX_ATTACHMENT_SIZE) {
+                    Log::warning('Mailgun inbound: attachment exceeded size cap, skipped', [
+                        'mail_message_id' => $mailMessage->id,
+                        'size' => $file->getSize(),
+                    ]);
+
+                    return false;
+                }
+
+                $mime = $file->getMimeType() ?? 'application/octet-stream';
+
+                if (! $this->isAllowedMime($mime)) {
+                    Log::warning('Mailgun inbound: attachment mime type not allowed, skipped', [
+                        'mail_message_id' => $mailMessage->id,
+                        'mime' => $mime,
+                    ]);
+
+                    return false;
+                }
+
+                return true;
+            })
+            ->each(function ($file) use ($mailMessage) {
+                $originalName = $file->getClientOriginalName();
+                $path = $file->storeAs("mail-attachments/{$mailMessage->id}", $originalName, 'public');
+
+                $mailAttachment = new MailAttachment;
+                $mailAttachment->mail_message_id = $mailMessage->id;
+                $mailAttachment->disk = 'public';
+                $mailAttachment->path = $path;
+                $mailAttachment->original_name = $originalName;
+                $mailAttachment->mime_type = $file->getMimeType() ?? 'application/octet-stream';
+                $mailAttachment->size = $file->getSize();
+                $mailAttachment->save();
+            });
+
+        return $stored->count();
     }
 
     protected function isAllowedMime(string $mime): bool
     {
-        foreach (self::ALLOWED_ATTACHMENT_MIME_PREFIXES as $prefix) {
-            if (str_starts_with($mime, $prefix)) {
-                return true;
-            }
-        }
-
-        return false;
+        return collect(self::ALLOWED_ATTACHMENT_MIME_PREFIXES)
+            ->contains(fn(string $prefix): bool => Str::startsWith($mime, $prefix));
     }
 }
