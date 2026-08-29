@@ -18,7 +18,10 @@ class MailLabelController extends Controller
         [$status, $message, $labels] = $this->service->index();
 
         return MailLabelResource::collection($labels)
-            ->additional(['status' => $status, 'message' => $message]);
+            ->additional([
+                'status' => $status,
+                'message' => $message
+            ]);
     }
 
     public function store(Request $request): MailLabelResource
@@ -30,7 +33,18 @@ class MailLabelController extends Controller
 
         [$saved, $message, $label] = $this->service->store($request);
 
-        return MailLabelResource::make($label)->additional(['saved' => $saved, 'message' => $message]);
+        return MailLabelResource::make($label)
+            ->additional([
+                'saved' => $saved,
+                'message' => $message
+            ]);
+    }
+
+    public function show(): JsonResponse
+    {
+        return response()->json([
+            'message' => 'Individual label retrieval is not supported.',
+        ], 405);
     }
 
     public function update(Request $request, string $id): MailLabelResource
@@ -42,13 +56,20 @@ class MailLabelController extends Controller
 
         [$saved, $message, $label] = $this->service->update($request, $id);
 
-        return MailLabelResource::make($label)->additional(['saved' => $saved, 'message' => $message]);
+        return MailLabelResource::make($label)
+            ->additional([
+                'saved' => $saved,
+                'message' => $message
+            ]);
     }
 
     public function destroy(string $id): JsonResponse
     {
         [$deleted, $message] = $this->service->destroy($id);
 
-        return response()->json(['deleted' => $deleted, 'message' => $message]);
+        return response()->json([
+            'deleted' => $deleted,
+            'message' => $message
+        ]);
     }
 }

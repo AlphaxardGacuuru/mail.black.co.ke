@@ -9,3 +9,7 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 Broadcast::channel('dashboard-narration.{userId}.{streamId}', function ($user, $userId, $streamId) {
     return (int) $user->id === (int) $userId;
 });
+
+Broadcast::channel('mail.{userId}', function ($user, string $userId) {
+    return $user->id === $userId;
+});

@@ -62,71 +62,38 @@ class MailThreadService extends Service
         return [true, 'Thread Retrieved Successfully', $thread];
     }
 
-    public function star(string $id)
-    {
-        return $this->toggleStar($id, true);
-    }
-
-    public function unstar(string $id)
-    {
-        return $this->toggleStar($id, false);
-    }
-
-    protected function toggleStar(string $id, bool $starred)
+    public function update(
+        string $id,
+        ?string $folder,
+        ?bool $isStarred,
+        ?bool $isRead,
+    )
     {
         $thread = MailThread::ownedBy($this->id)->findOrFail($id);
-        $thread->messages()->update(['is_starred' => $starred]);
-        $thread->is_starred = $starred;
-        $thread->save();
 
-        return [true, $starred ? 'Thread Starred' : 'Thread Unstarred', $thread];
-    }
+        if ($folder === MailFolder::INBOX->value) {
+            $thread->messages()
+                ->where('direction', 'outbound')
+                ->update(['folder' => MailFolder::SENT->value]);
+            $thread->messages()
+                ->where('direction', 'inbound')
+                ->update(['folder' => MailFolder::INBOX->value]);
+        } elseif ($folder !== null) {
+            $thread->messages()->update(['folder' => $folder]);
+        }
 
-    public function archive(string $id)
-    {
-        return $this->moveFolder($id, MailFolder::ARCHIVE->value, 'Thread Archived');
-    }
+        if ($isStarred !== null) {
+            $thread->messages()->update(['is_starred' => $isStarred]);
+            $thread->is_starred = $isStarred;
+            $thread->save();
+        }
 
-    public function unarchive(string $id)
-    {
-        return $this->restoreOriginalFolders($id, 'Thread Restored');
-    }
+        if ($isRead !== null) {
+            $thread->messages()->update(['is_read' => $isRead]);
+            $this->refreshThreadAggregates($thread);
+        }
 
-    public function trash(string $id)
-    {
-        return $this->moveFolder($id, MailFolder::TRASH->value, 'Thread Moved to Trash');
-    }
-
-    public function restore(string $id)
-    {
-        return $this->restoreOriginalFolders($id, 'Thread Restored');
-    }
-
-    protected function restoreOriginalFolders(string $id, string $message)
-    {
-        $thread = MailThread::ownedBy($this->id)->with('messages')->findOrFail($id);
-
-        $thread->messages()
-            ->where('direction', 'outbound')
-            ->update(['folder' => MailFolder::SENT->value]);
-        $thread->messages()
-            ->where('direction', 'inbound')
-            ->update(['folder' => MailFolder::INBOX->value]);
-
-        return [true, $message, $thread];
-    }
-
-    protected function moveFolder(string $id, string $folder, string $message)
-    {
-        $thread = MailThread::ownedBy($this->id)->findOrFail($id);
-        $thread->messages()->update(['folder' => $folder]);
-
-        return [true, $message, $thread];
-    }
-
-    public function markRead(string $id)
-    {
-        return $this->toggleRead($id, true);
+        return [true, 'Thread Updated', $thread];
     }
 
     protected function scopeToAccount($query): void
@@ -149,20 +116,6 @@ class MailThreadService extends Service
                         ->where('from_address->address', $account->mailbox_address);
                 });
         });
-    }
-
-    public function markUnread(string $id)
-    {
-        return $this->toggleRead($id, false);
-    }
-
-    protected function toggleRead(string $id, bool $read)
-    {
-        $thread = MailThread::ownedBy($this->id)->findOrFail($id);
-        $thread->messages()->update(['is_read' => $read]);
-        $this->refreshThreadAggregates($thread);
-
-        return [true, $read ? 'Marked as Read' : 'Marked as Unread', $thread];
     }
 
     public function destroy(string $id)

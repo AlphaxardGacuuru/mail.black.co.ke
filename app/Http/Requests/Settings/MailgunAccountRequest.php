@@ -2,15 +2,12 @@
 
 namespace App\Http\Requests\Settings;
 
-use App\Concerns\MailgunCredentialValidationRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class MailgunAccountRequest extends FormRequest
 {
-    use MailgunCredentialValidationRules;
-
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -35,7 +32,7 @@ class MailgunAccountRequest extends FormRequest
             ],
             'mailgun_domain' => ['required', 'string', 'max:255'],
             'mailgun_api_key' => ['nullable', 'string', 'max:255'],
-            'mailgun_endpoint' => $this->mailgunEndpointRules(),
+            'mailgun_endpoint' => ['nullable', 'string', Rule::in(['api.mailgun.net', 'api.eu.mailgun.net'])],
             'signature' => ['nullable', 'string', 'max:10000'],
             'mail_from_name' => ['nullable', 'string', 'max:255'],
         ];

@@ -53,7 +53,10 @@ class MailMessageController extends Controller
         [$saved, $message, $mailMessage] = $this->service->respond($request, $id, 'reply');
 
         return MailMessageResource::make($mailMessage)
-            ->additional(['saved' => $saved, 'message' => $message]);
+            ->additional([
+                'saved' => $saved,
+                'message' => $message
+            ]);
     }
 
     public function replyAll(Request $request, string $id): MailMessageResource
@@ -65,7 +68,10 @@ class MailMessageController extends Controller
         SendMailMessageJob::dispatchIf($saved, $mailMessage->id);
 
         return MailMessageResource::make($mailMessage)
-            ->additional(['saved' => $saved, 'message' => $message]);
+            ->additional([
+                'saved' => $saved,
+                'message' => $message
+            ]);
     }
 
     public function forward(Request $request, string $id): MailMessageResource
@@ -77,6 +83,9 @@ class MailMessageController extends Controller
         SendMailMessageJob::dispatchIf($saved, $mailMessage->id);
 
         return MailMessageResource::make($mailMessage)
-            ->additional(['saved' => $saved, 'message' => $message]);
+            ->additional([
+                'saved' => $saved,
+                'message' => $message
+            ]);
     }
 }

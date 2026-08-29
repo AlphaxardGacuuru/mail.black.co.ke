@@ -4,7 +4,7 @@ import {
 	precacheAndRoute,
 } from "workbox-precaching"
 import { registerRoute } from "workbox-routing"
-import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from "workbox-strategies"
+import { CacheFirst, NetworkFirst, NetworkOnly, StaleWhileRevalidate } from "workbox-strategies"
 import { ExpirationPlugin } from "workbox-expiration"
 import { BackgroundSyncPlugin } from "workbox-background-sync"
 
@@ -122,10 +122,7 @@ registerRoute(
 		url.origin === self.location.origin &&
 		url.pathname.startsWith("/api/") &&
 		["PUT", "DELETE", "POST", "PATCH"].includes(request.method),
-	new NetworkFirst({
-		cacheName: "mutations",
-		plugins: [bgSyncPlugin],
-	}),
+	new NetworkOnly({ plugins: [bgSyncPlugin] }),
 	"PUT"
 )
 
@@ -134,10 +131,7 @@ registerRoute(
 		url.origin === self.location.origin &&
 		url.pathname.startsWith("/api/") &&
 		["PUT", "DELETE", "POST", "PATCH"].includes(request.method),
-	new NetworkFirst({
-		cacheName: "mutations",
-		plugins: [bgSyncPlugin],
-	}),
+	new NetworkOnly({ plugins: [bgSyncPlugin] }),
 	"DELETE"
 )
 
@@ -146,10 +140,7 @@ registerRoute(
 		url.origin === self.location.origin &&
 		url.pathname.startsWith("/api/") &&
 		["PUT", "DELETE", "POST", "PATCH"].includes(request.method),
-	new NetworkFirst({
-		cacheName: "mutations",
-		plugins: [bgSyncPlugin],
-	}),
+	new NetworkOnly({ plugins: [bgSyncPlugin] }),
 	"POST"
 )
 
@@ -158,10 +149,7 @@ registerRoute(
 		url.origin === self.location.origin &&
 		url.pathname.startsWith("/api/") &&
 		["PUT", "DELETE", "POST", "PATCH"].includes(request.method),
-	new NetworkFirst({
-		cacheName: "mutations",
-		plugins: [bgSyncPlugin],
-	}),
+	new NetworkOnly({ plugins: [bgSyncPlugin] }),
 	"PATCH"
 )
 

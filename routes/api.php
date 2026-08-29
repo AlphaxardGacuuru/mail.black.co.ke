@@ -39,7 +39,20 @@ Route::middleware('auth:sanctum')->group(function () {
         "integrations" => IntegrationController::class,
         "support-tickets" => SupportTicketController::class,
         "settings" => SettingController::class,
+        "threads" => MailThreadController::class,
+        "labels" => MailLabelController::class,
     ]);
+
+    Route::post('threads/{id}/labels', [MailThreadController::class, 'attachLabel']);
+    Route::delete('threads/{id}/labels/{labelId}', [MailThreadController::class, 'detachLabel']);
+
+    Route::post('messages', [MailMessageController::class, 'store']);
+    Route::post('messages/{id}/reply', [MailMessageController::class, 'reply']);
+    Route::post('messages/{id}/reply-all', [MailMessageController::class, 'replyAll']);
+    Route::post('messages/{id}/forward', [MailMessageController::class, 'forward']);
+
+    Route::get('attachments/{id}/download', [MailAttachmentController::class, 'download'])
+        ->name('attachments.download');
 
 });
 
@@ -55,9 +68,8 @@ Route::prefix('filepond')->group(function () {
         Route::post('support-tickets/attachments', 'storeSupportTicketAttachment');
         Route::delete('support-tickets/attachments/{id}', 'destroySupportTicketAttachment');
 
-        // Mail
-        Route::post('mail/attachments', 'storeMailAttachment');
-        Route::delete('mail/attachments/{id}', 'destroyMailAttachment');
+        Route::post('attachments', 'storeMailAttachment');
+        Route::delete('attachments/{id}', 'destroyMailAttachment');
     });
 });
 
@@ -67,39 +79,8 @@ Route::middleware('auth:sanctum')->post(
     [FilePondController::class, 'updateMailgunAccountAvatar']
 );
 
-/*
- * Mail
- */
-Route::middleware('auth:sanctum')->prefix('mail')->group(function () {
-    Route::get('threads', [MailThreadController::class, 'index']);
-    Route::get('threads/{id}', [MailThreadController::class, 'show']);
-    Route::patch('threads/{id}/star', [MailThreadController::class, 'star']);
-    Route::patch('threads/{id}/unstar', [MailThreadController::class, 'unstar']);
-    Route::patch('threads/{id}/archive', [MailThreadController::class, 'archive']);
-    Route::patch('threads/{id}/unarchive', [MailThreadController::class, 'unarchive']);
-    Route::patch('threads/{id}/trash', [MailThreadController::class, 'trash']);
-    Route::patch('threads/{id}/restore', [MailThreadController::class, 'restore']);
-    Route::patch('threads/{id}/read', [MailThreadController::class, 'markRead']);
-    Route::patch('threads/{id}/unread', [MailThreadController::class, 'markUnread']);
-    Route::post('threads/{id}/labels', [MailThreadController::class, 'attachLabel']);
-    Route::delete('threads/{id}/labels/{labelId}', [MailThreadController::class, 'detachLabel']);
-    Route::delete('threads/{id}', [MailThreadController::class, 'destroy']);
-
-    Route::post('messages', [MailMessageController::class, 'store']);
-    Route::post('messages/{id}/reply', [MailMessageController::class, 'reply']);
-    Route::post('messages/{id}/reply-all', [MailMessageController::class, 'replyAll']);
-    Route::post('messages/{id}/forward', [MailMessageController::class, 'forward']);
-
-    Route::get('attachments/{id}/download', [MailAttachmentController::class, 'download'])
-        ->name('mail.attachments.download');
-
-    Route::get('labels', [MailLabelController::class, 'index']);
-    Route::post('labels', [MailLabelController::class, 'store']);
-    Route::patch('labels/{id}', [MailLabelController::class, 'update']);
-    Route::delete('labels/{id}', [MailLabelController::class, 'destroy']);
-});
-
-Route::post('mail/webhooks/mailgun', [MailWebhookController::class, 'mailgunInbound'])
+Route::post('webhooks/mailgun', [MailWebhookController::class, 'mailgunInbound'])
     ->middleware('verify.mailgun.webhook');
+    
 Route::post('webhooks/mailgun/events', [MailWebhookController::class, 'mailgunEvents'])
     ->middleware('verify.mailgun.webhook');

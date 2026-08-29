@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Mail;
 
+use App\Enums\MailFolder;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\MailThreadResource;
 use App\Http\Services\MailThreadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 
 class MailThreadController extends Controller
 {
@@ -18,7 +20,10 @@ class MailThreadController extends Controller
         [$status, $message, $threads] = $this->service->index($request);
 
         return MailThreadResource::collection($threads)
-            ->additional(['status' => $status, 'message' => $message]);
+            ->additional([
+                'status' => $status,
+                'message' => $message
+            ]);
     }
 
     public function show(string $id): MailThreadResource
@@ -26,47 +31,37 @@ class MailThreadController extends Controller
         [$status, $message, $thread] = $this->service->show($id);
 
         return MailThreadResource::make($thread)
-            ->additional(['status' => $status, 'message' => $message]);
+            ->additional([
+                'status' => $status,
+                'message' => $message
+            ]);
     }
 
-    public function star(string $id): JsonResponse
+    public function store(): JsonResponse
     {
-        return $this->respondWith($this->service->star($id));
+        return response()->json([
+            'message' => 'Create threads by sending a message.',
+        ], 405);
     }
 
-    public function unstar(string $id): JsonResponse
+    public function update(Request $request, string $id): JsonResponse
     {
-        return $this->respondWith($this->service->unstar($id));
-    }
+        $data = $request->validate([
+            'folder' => ['required_without_all:isStarred,isRead', 'string', Rule::in([
+                MailFolder::ARCHIVE->value,
+                MailFolder::TRASH->value,
+                MailFolder::INBOX->value,
+            ])],
+            'isStarred' => ['sometimes', 'boolean'],
+            'isRead' => ['sometimes', 'boolean'],
+        ]);
 
-    public function archive(string $id): JsonResponse
-    {
-        return $this->respondWith($this->service->archive($id));
-    }
-
-    public function unarchive(string $id): JsonResponse
-    {
-        return $this->respondWith($this->service->unarchive($id));
-    }
-
-    public function trash(string $id): JsonResponse
-    {
-        return $this->respondWith($this->service->trash($id));
-    }
-
-    public function restore(string $id): JsonResponse
-    {
-        return $this->respondWith($this->service->restore($id));
-    }
-
-    public function markRead(string $id): JsonResponse
-    {
-        return $this->respondWith($this->service->markRead($id));
-    }
-
-    public function markUnread(string $id): JsonResponse
-    {
-        return $this->respondWith($this->service->markUnread($id));
+        return $this->respondWith($this->service->update(
+            $id,
+            $data['folder'] ?? null,
+            $data['isStarred'] ?? null,
+            $data['isRead'] ?? null,
+        ));
     }
 
     public function destroy(string $id): JsonResponse

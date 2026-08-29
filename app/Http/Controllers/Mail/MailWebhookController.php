@@ -7,6 +7,7 @@ use App\Http\Services\MailInboundService;
 use App\Http\Services\MailgunWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Throwable;
 use Illuminate\Support\Facades\Log;
 
 class MailWebhookController extends Controller
@@ -20,7 +21,7 @@ class MailWebhookController extends Controller
     {
         try {
             [$status, $message, $data] = $this->service->handleInboundMail($request);
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             Log::error('Mailgun inbound webhook failed', ['error' => $exception->getMessage()]);
 
             $status = false;
@@ -39,9 +40,14 @@ class MailWebhookController extends Controller
     {
         try {
             $result = $this->eventService->handleEvent($request);
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             Log::error('Mailgun event webhook failed', ['error' => $exception->getMessage()]);
-            $result = ['status' => false, 'message' => 'Failed to process event', 'updated' => 0];
+            
+            $result = [
+                'status' => false,
+                'message' => 'Failed to process event',
+                'updated' => 0
+            ];
         }
 
         return response($result, 200);

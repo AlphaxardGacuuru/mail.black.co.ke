@@ -4,6 +4,7 @@ namespace App\Http\Services;
 
 use App\Enums\MailFolder;
 use App\Enums\MailStatus;
+use App\Events\MailMessageReceivedEvent;
 use App\Http\Services\Concerns\ResolvesMailThread;
 use App\Models\MailAttachment;
 use App\Models\MailgunAccount;
@@ -99,6 +100,12 @@ class MailInboundService
         $mailMessage->update(['has_attachments' => $attachmentCount > 0]);
 
         $this->refreshThreadAggregates($thread);
+
+        MailMessageReceivedEvent::dispatch(
+            $user->id,
+            $mailMessage->id,
+            $thread->id,
+        );
 
         return [true, 'Inbound mail stored', $mailMessage];
     }

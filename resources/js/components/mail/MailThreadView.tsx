@@ -1,4 +1,4 @@
-import { Archive, ArrowLeft, Star, Trash2, X } from "lucide-react"
+import { Archive, ArchiveRestore, ArrowLeft, Star, Trash2, X } from "lucide-react"
 import { useMemo, useState } from "react"
 import MailComposeInline from "@/components/mail/MailComposeInline"
 import MailMessageBubble from "@/components/mail/MailMessageBubble"
@@ -9,6 +9,7 @@ import toast from "@/lib/toast"
 import {
 	useArchiveMailThread,
 	useMailThread,
+	useRestoreMailThread,
 	useStarMailThread,
 	useTrashMailThread,
 } from "@/queries/mail"
@@ -27,6 +28,7 @@ export default function MailThreadView({ threadId, variant, onClose, onBack }: P
 	const starMutation = useStarMailThread(true)
 	const unstarMutation = useStarMailThread(false)
 	const archiveMutation = useArchiveMailThread()
+	const restoreMutation = useRestoreMailThread()
 	const trashMutation = useTrashMailThread()
 
 	const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -60,6 +62,7 @@ export default function MailThreadView({ threadId, variant, onClose, onBack }: P
 	}
 
 	const lastMessage = thread.messages[thread.messages.length - 1]
+	const isArchived = thread.messages.length > 0 && thread.messages.every((message) => message.folder === "archive")
 
 	const closeThread = () => {
 		if (variant === "pane") {
@@ -70,9 +73,10 @@ export default function MailThreadView({ threadId, variant, onClose, onBack }: P
 	}
 
 	const handleArchive = () => {
-		archiveMutation.mutate(thread.id, {
+		const mutation = isArchived ? restoreMutation : archiveMutation
+		mutation.mutate(thread.id, {
 			onSuccess: () => {
-				toast.success("Archived")
+				toast.success(isArchived ? "Restored to original folder" : "Archived")
 				closeThread()
 			},
 		})
@@ -116,8 +120,14 @@ export default function MailThreadView({ threadId, variant, onClose, onBack }: P
 				<Button
 					variant="ghost"
 					size="icon"
+					aria-label={isArchived ? "Unarchive" : "Archive"}
+					title={isArchived ? "Unarchive" : "Archive"}
 					onClick={handleArchive}>
-					<Archive className="size-4" />
+					{isArchived ? (
+						<ArchiveRestore className="size-4" />
+					) : (
+						<Archive className="size-4" />
+					)}
 				</Button>
 
 				<Button

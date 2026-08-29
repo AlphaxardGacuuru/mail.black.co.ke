@@ -155,7 +155,7 @@ function useOptimisticThreadMutation(
 
 export function useStarMailThread(starred: boolean) {
 	return useOptimisticThreadMutation(
-		(id) => Axios.patch((starred ? MailThreadController.star : MailThreadController.unstar).url(id)),
+		(id) => Axios.patch(MailThreadController.update.url(id), { isStarred: starred }),
 		(thread) => ({ ...thread, isStarred: starred }),
 		(filters) => filters.folder !== "starred" || starred
 	)
@@ -163,7 +163,7 @@ export function useStarMailThread(starred: boolean) {
 
 export function useMarkMailThreadRead(read: boolean) {
 	return useOptimisticThreadMutation(
-		(id) => Axios.patch((read ? MailThreadController.markRead : MailThreadController.markUnread).url(id)),
+		(id) => Axios.patch(MailThreadController.update.url(id), { isRead: read }),
 		(thread) => ({ ...thread, hasUnread: !read })
 	)
 }
@@ -207,21 +207,21 @@ function useMoveThreadMutation(
 
 export function useArchiveMailThread() {
 	return useMoveThreadMutation(
-		(id) => Axios.patch(MailThreadController.archive.url(id)),
+		(id) => Axios.patch(MailThreadController.update.url(id), { folder: "archive" }),
 		"archive"
 	)
 }
 
 export function useTrashMailThread() {
 	return useMoveThreadMutation(
-		(id) => Axios.patch(MailThreadController.trash.url(id)),
+		(id) => Axios.patch(MailThreadController.update.url(id), { folder: "trash" }),
 		"trash"
 	)
 }
 
 export function useRestoreMailThread() {
 	return useMoveThreadMutation(
-		(threadId) => Axios.patch(MailThreadController.restore.url(threadId)),
+		(threadId) => Axios.patch(MailThreadController.update.url(threadId), { folder: "inbox" }),
 		null
 	)
 }

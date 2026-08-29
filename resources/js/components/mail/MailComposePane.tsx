@@ -6,7 +6,7 @@ type Props = {
 	variant: "pane" | "page"
 	onClose?: () => void
 	onBack?: () => void
-	onSent: () => void
+	onSent: (result: { threadId?: string }) => void
 }
 
 export default function MailComposePane({ variant, onClose, onBack, onSent }: Props) {

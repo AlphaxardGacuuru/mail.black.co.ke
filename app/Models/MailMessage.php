@@ -41,7 +41,7 @@ class MailMessage extends Model
 
             $bodyExcerpt = mb_substr(trim(strip_tags((string) ($message->body_text ?? $message->body_html))), 0, 2000);
 
-            $message->search_index = trim(($message->subject ?? '').' '.$bodyExcerpt.' '.$participants);
+            $message->search_index = trim(($message->subject ?? '') . ' ' . $bodyExcerpt . ' ' . $participants);
         });
     }
 
@@ -58,6 +58,11 @@ class MailMessage extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(MailAttachment::class);
+    }
+
+    public function mailgunEvents(): HasMany
+    {
+        return $this->hasMany(MailgunEvent::class);
     }
 
     public function labels(): BelongsToMany

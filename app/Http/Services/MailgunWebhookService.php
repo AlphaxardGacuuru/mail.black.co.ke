@@ -3,7 +3,10 @@
 namespace App\Http\Services;
 
 use App\Enums\MailStatus;
+use App\Events\MailMessageStatusUpdatedEvent;
+use App\Models\MailgunEvent;
 use App\Models\MailMessage;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class MailgunWebhookService
@@ -19,18 +22,53 @@ class MailgunWebhookService
         $event = (string) (data_get($payload, 'event-data.event') ?? data_get($payload, 'event', ''));
         $status = $this->statusFor($event, $payload);
         $messageId = $this->messageId($payload);
+        $providerEventId = (string) (data_get($payload, 'event-data.id') ?? data_get($payload, 'id', ''));
 
-        if (! $status || $messageId === '') {
-            return ['status' => true, 'message' => 'Event ignored', 'updated' => 0];
+        if ($providerEventId === '') {
+            return [
+                'status' => true,
+                'message' => 'Event ignored',
+                'updated' => 0
+            ];
         }
 
-        $message = MailMessage::query()
+        if (MailgunEvent::where('provider_event_id', $providerEventId)->exists()) {
+            return [
+                'status' => true,
+                'message' => 'Event already processed',
+                'updated' => 0
+            ];
+        }
+
+        $message = $messageId === '' ? null : MailMessage::query()
             ->where('mailgun_message_id', $messageId)
             ->orWhere('message_id', $messageId)
+            ->orWhere('message_id', '<' . $messageId . '>')
             ->first();
 
+        $mailgunEvent = new MailgunEvent;
+        $mailgunEvent->provider_event_id = $providerEventId;
+        $mailgunEvent->mail_message_id = $message?->id;
+        $mailgunEvent->event = $event;
+        $mailgunEvent->status = $status;
+        $mailgunEvent->occurred_at = $this->occurredAt($payload);
+        $mailgunEvent->payload = $payload;
+        $mailgunEvent->save();
+
+        if (! $status || $messageId === '') {
+            return [
+                'status' => true,
+                'message' => 'Event ignored',
+                'updated' => 0
+            ];
+        }
+
         if (! $message) {
-            return ['status' => true, 'message' => 'Message not found', 'updated' => 0];
+            return [
+                'status' => true,
+                'message' => 'Message Not Found',
+                'updated' => 0
+            ];
         }
 
         $errorMessage = data_get($payload, 'event-data.delivery-status.message')
@@ -38,12 +76,27 @@ class MailgunWebhookService
             ?? data_get($payload, 'event-data.reason')
             ?? data_get($payload, 'reason');
 
-        $message->update(array_filter([
-            'status' => $status,
-            'error_message' => $errorMessage,
-        ], static fn ($value): bool => $value !== null));
+        $message->status = $status;
 
-        return ['status' => true, 'message' => 'Event processed', 'updated' => 1];
+        if ($errorMessage !== null) {
+            $message->error_message = $errorMessage;
+        }
+
+        $message->save();
+
+        MailMessageStatusUpdatedEvent::dispatch(
+            $message->user_id,
+            $message->id,
+            $message->mail_thread_id,
+            $status,
+            $errorMessage,
+        );
+
+        return [
+            'status' => true,
+            'message' => 'Event processed',
+            'updated' => 1
+        ];
     }
 
     /**
@@ -57,6 +110,16 @@ class MailgunWebhookService
             ?? data_get($payload, 'message-id');
 
         return trim((string) $messageId, " <>\t\n\r\0\x0B");
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function occurredAt(array $payload): ?Carbon
+    {
+        $timestamp = data_get($payload, 'event-data.timestamp') ?? data_get($payload, 'timestamp');
+
+        return is_numeric($timestamp) ? Carbon::createFromTimestamp((int) $timestamp) : null;
     }
 
     /**

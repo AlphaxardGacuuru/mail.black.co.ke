@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Resources\MailgunAccountResource;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -45,16 +46,9 @@ class HandleInertiaRequests extends Middleware
                     ...$user->toArray(),
                     'avatar' => $user->avatar,
                     'two_factor_enabled' => $user->hasTwoFactorEnabled(),
-                    'mailgunAccounts' => $user->mailgunAccounts()->get()->map(fn ($account) => [
-                        'id' => $account->id,
-                        'mailboxAddress' => $account->mailbox_address,
-                        'mailFromName' => $account->mail_from_name,
-                        'mailgunDomain' => $account->mailgun_domain,
-                        'mailgunEndpoint' => $account->mailgun_endpoint,
-                        'signature' => $account->signature,
-                        'avatar' => $account->avatar,
-                        'isActive' => $account->id === $user->active_mailgun_account_id,
-                    ])->values(),
+                    'mailgunAccounts' => MailgunAccountResource::collection(
+                        $user->mailgunAccounts()->get()
+                    )->resolve(),
                 ] : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

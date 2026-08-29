@@ -1,10 +1,13 @@
 import { useState } from "react"
+import { useEcho } from "@laravel/echo-react"
 import { useNavigate } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
 import MailComposePane from "@/components/mail/MailComposePane"
 import MailEmptyState from "@/components/mail/MailEmptyState"
 import MailThreadList from "@/components/mail/MailThreadList"
 import MailThreadView from "@/components/mail/MailThreadView"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useApp } from "@/contexts/AppContext"
 import type { MailThreadFilters } from "@/queries/mail"
 import type { MailFolderKey } from "@/types/mail"
 
@@ -17,7 +20,11 @@ type Props = {
 	folder: MailFolderKey
 	labelId?: string
 	initialPane?: MailPane
-	onComposeSent?: () => void
+	onComposeSent?: (result: { threadId?: string }) => void
+}
+
+type MailRealtimeEvent = {
+	threadId: string
 }
 
 export default function MailShell({
@@ -28,6 +35,8 @@ export default function MailShell({
 }: Props) {
 	const isMobile = useIsMobile()
 	const navigate = useNavigate()
+	const queryClient = useQueryClient()
+	const { auth } = useApp()
 
 	const [filters, setFilters] = useState<MailThreadFilters>({
 		folder,
@@ -36,6 +45,15 @@ export default function MailShell({
 		q: "",
 	})
 	const [pane, setPane] = useState<MailPane>(initialPane ?? { type: "none" })
+
+	useEcho(
+		`mail.${auth?.id ?? ""}`,
+		["MailMessageStatusUpdatedEvent", "MailMessageReceivedEvent"],
+		(event: MailRealtimeEvent) => {
+			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
+			queryClient.invalidateQueries({ queryKey: ["mail", "thread", event.threadId] })
+		}
+	)
 
 	function handleSelectThread(threadId: string) {
 		if (isMobile) {
