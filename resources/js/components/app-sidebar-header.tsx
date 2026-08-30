@@ -1,4 +1,5 @@
 import { Breadcrumbs } from "@/components/breadcrumbs"
+import MailConnectionStatus from "@/components/mail/MailConnectionStatus"
 import { MailgunAccountSwitcher } from "@/components/mailgun-account-switcher"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useRouterState } from "@tanstack/react-router"
@@ -58,6 +59,7 @@ export function AppSidebarHeader({
 				<div className="min-w-0 flex-1">
 					<Breadcrumbs breadcrumbs={displayedBreadcrumbs} />
 				</div>
+				<MailConnectionStatus />
 				<MailgunAccountSwitcher />
 			</div>
 		</header>
