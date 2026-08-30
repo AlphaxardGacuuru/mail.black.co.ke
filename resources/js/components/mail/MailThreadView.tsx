@@ -195,7 +195,7 @@ export default function MailThreadView({
 				)}
 			</div>
 
-			<div className="flex-1 overflow-y-auto p-3 space-y-2">
+			<div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
 				{thread.messages.map((message) => (
 					<MailMessageBubble
 						key={message.id}
@@ -211,7 +211,7 @@ export default function MailThreadView({
 			</div>
 
 			{lastMessage && (
-				<div className="p-3">
+				<div className="sticky bottom-0 z-10 bg-card p-3">
 					<MailComposeInline
 						parentMessage={lastMessage}
 						currentUserEmail={activeAccount?.mailboxAddress}

@@ -1,5 +1,6 @@
 import { Pencil } from "lucide-react"
 import MailEmptyState from "@/components/mail/MailEmptyState"
+import MailRealtimeBanner from "@/components/mail/MailRealtimeBanner"
 import MailSearchBar from "@/components/mail/MailSearchBar"
 import MailThreadListRow from "@/components/mail/MailThreadListRow"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,8 @@ type Props = {
 	filters: MailThreadFilters
 	onFiltersChange: (filters: MailThreadFilters) => void
 	selectedThreadId: string | null
+	highlightThreadId?: string | null
+	showIncomingBanner?: boolean
 	onSelectThread: (threadId: string) => void
 	onCompose: () => void
 }
@@ -19,6 +22,8 @@ export default function MailThreadList({
 	filters,
 	onFiltersChange,
 	selectedThreadId,
+	highlightThreadId,
+	showIncomingBanner,
 	onSelectThread,
 	onCompose,
 }: Props) {
@@ -29,6 +34,8 @@ export default function MailThreadList({
 
 	return (
 		<div className="relative flex h-full flex-col">
+			<MailRealtimeBanner visible={!!showIncomingBanner} />
+
 			<MailSearchBar
 				value={filters.q ?? ""}
 				onChange={(q) => onFiltersChange({ ...filters, q, page: 1 })}
@@ -57,6 +64,7 @@ export default function MailThreadList({
 								thread={thread}
 								folder={filters.folder}
 								isSelected={thread.id === selectedThreadId}
+								isIncoming={thread.id === highlightThreadId}
 								onSelect={() => onSelectThread(thread.id)}
 							/>
 						))}

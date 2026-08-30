@@ -9,7 +9,7 @@ import {
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import MailStatusIcon from "@/components/mail/MailStatusIcon"
 import { cn } from "@/lib/utils"
 import {
@@ -21,10 +21,13 @@ import {
 } from "@/queries/mail"
 import type { MailThreadSummary } from "@/types/mail"
 
+const HIGHLIGHT_DURATION_MS = 2500
+
 type Props = {
 	thread: MailThreadSummary
 	folder: string
 	isSelected: boolean
+	isIncoming?: boolean
 	onSelect: () => void
 }
 
@@ -52,8 +55,10 @@ export default function MailThreadListRow({
 	thread,
 	folder,
 	isSelected,
+	isIncoming,
 	onSelect,
 }: Props) {
+	const [isHighlighted, setIsHighlighted] = useState(false)
 	const starMutation = useStarMailThread(true)
 	const unstarMutation = useStarMailThread(false)
 	const archiveMutation = useArchiveMailThread()
@@ -65,6 +70,17 @@ export default function MailThreadListRow({
 	const swipeOffsetRef = useRef(0)
 	const swipedRef = useRef(false)
 	const [swipeOffset, setSwipeOffset] = useState(0)
+
+	useEffect(() => {
+		if (!isIncoming) {
+			return
+		}
+
+		setIsHighlighted(true)
+		const timeout = setTimeout(() => setIsHighlighted(false), HIGHLIGHT_DURATION_MS)
+
+		return () => clearTimeout(timeout)
+	}, [isIncoming])
 
 	function handleTouchStart(event: React.TouchEvent<HTMLDivElement>): void {
 		if ((event.target as HTMLElement).closest("button")) {
@@ -129,9 +145,11 @@ export default function MailThreadListRow({
 			onTouchEnd={handleTouchEnd}
 			onTouchCancel={handleTouchEnd}
 			className={cn(
-				"group relative overflow-hidden rounded-lg border cursor-pointer shadow-sm transition-shadow hover:shadow-md hover:bg-muted/50",
+				"group relative overflow-hidden rounded-lg border cursor-pointer shadow-sm transition-shadow duration-700 ease-out hover:shadow-md hover:bg-muted/50",
+				"animate-in fade-in slide-in-from-top-2 duration-500",
 				isSelected && "bg-muted",
-				thread.hasUnread && "border-l-4 border-l-primary bg-primary/5"
+				thread.hasUnread && "border-l-4 border-l-primary bg-primary/5",
+				isHighlighted && "ring-2 ring-primary/60 bg-primary/10"
 			)}>
 			<div className="absolute inset-y-0 left-0 flex w-24 items-center bg-muted px-4 text-muted-foreground">
 				{folder === "archive" ? (

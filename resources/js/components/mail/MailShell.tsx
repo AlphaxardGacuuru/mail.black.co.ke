@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useEcho } from "@laravel/echo-react"
 import { useNavigate } from "@tanstack/react-router"
 import { useQueryClient } from "@tanstack/react-query"
@@ -8,6 +8,7 @@ import MailThreadList from "@/components/mail/MailThreadList"
 import MailThreadView from "@/components/mail/MailThreadView"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useApp } from "@/contexts/AppContext"
+import { playIncomingMailChime } from "@/lib/notification-sound"
 import type { MailThreadFilters } from "@/queries/mail"
 import type { MailFolderKey } from "@/types/mail"
 
@@ -27,6 +28,9 @@ type MailRealtimeEvent = {
 	threadId: string
 }
 
+const INCOMING_BANNER_DURATION_MS = 1800
+const INCOMING_HIGHLIGHT_DURATION_MS = 2500
+
 export default function MailShell({
 	folder,
 	labelId,
@@ -45,15 +49,55 @@ export default function MailShell({
 		q: "",
 	})
 	const [pane, setPane] = useState<MailPane>(initialPane ?? { type: "none" })
+	const [incomingThreadId, setIncomingThreadId] = useState<string | null>(null)
+	const [showIncomingBanner, setShowIncomingBanner] = useState(false)
 
 	useEcho(
 		`mail.${auth?.id ?? ""}`,
-		["MailMessageStatusUpdatedEvent", "MailMessageReceivedEvent"],
+		"MailMessageStatusUpdatedEvent",
 		(event: MailRealtimeEvent) => {
 			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
 			queryClient.invalidateQueries({ queryKey: ["mail", "thread", event.threadId] })
 		}
 	)
+
+	useEcho(
+		`mail.${auth?.id ?? ""}`,
+		"MailMessageReceivedEvent",
+		(event: MailRealtimeEvent) => {
+			playIncomingMailChime()
+			setShowIncomingBanner(true)
+			setIncomingThreadId(event.threadId)
+			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
+			queryClient.invalidateQueries({ queryKey: ["mail", "thread", event.threadId] })
+		}
+	)
+
+	useEffect(() => {
+		if (!showIncomingBanner) {
+			return
+		}
+
+		const timeout = setTimeout(
+			() => setShowIncomingBanner(false),
+			INCOMING_BANNER_DURATION_MS
+		)
+
+		return () => clearTimeout(timeout)
+	}, [showIncomingBanner])
+
+	useEffect(() => {
+		if (!incomingThreadId) {
+			return
+		}
+
+		const timeout = setTimeout(
+			() => setIncomingThreadId(null),
+			INCOMING_HIGHLIGHT_DURATION_MS
+		)
+
+		return () => clearTimeout(timeout)
+	}, [incomingThreadId])
 
 	function handleSelectThread(threadId: string) {
 		if (isMobile) {
@@ -82,6 +126,8 @@ export default function MailShell({
 					filters={filters}
 					onFiltersChange={setFilters}
 					selectedThreadId={null}
+					highlightThreadId={incomingThreadId}
+					showIncomingBanner={showIncomingBanner}
 					onSelectThread={handleSelectThread}
 					onCompose={openCompose}
 				/>
@@ -96,6 +142,8 @@ export default function MailShell({
 					filters={filters}
 					onFiltersChange={setFilters}
 					selectedThreadId={pane.type === "thread" ? pane.id : null}
+					highlightThreadId={incomingThreadId}
+					showIncomingBanner={showIncomingBanner}
 					onSelectThread={handleSelectThread}
 					onCompose={openCompose}
 				/>

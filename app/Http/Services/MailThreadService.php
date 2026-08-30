@@ -90,7 +90,8 @@ class MailThreadService extends Service
 
         if ($isRead !== null) {
             $thread->messages()->update(['is_read' => $isRead]);
-            $this->refreshThreadAggregates($thread);
+            $thread->has_unread = ! $isRead;
+            $thread->save();
         }
 
         return [true, 'Thread Updated', $thread];
