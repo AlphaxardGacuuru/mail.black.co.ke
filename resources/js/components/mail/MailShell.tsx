@@ -28,8 +28,8 @@ type MailRealtimeEvent = {
 	threadId: string
 }
 
-const INCOMING_BANNER_DURATION_MS = 1800
-const INCOMING_HIGHLIGHT_DURATION_MS = 2500
+const INCOMING_BANNER_DURATION_MS = 10000
+const INCOMING_HIGHLIGHT_DURATION_MS = 8000
 
 export default function MailShell({
 	folder,

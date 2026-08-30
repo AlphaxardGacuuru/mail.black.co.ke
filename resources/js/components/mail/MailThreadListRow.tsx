@@ -149,7 +149,7 @@ export default function MailThreadListRow({
 				"animate-in fade-in slide-in-from-top-2 duration-500",
 				isSelected && "bg-muted",
 				thread.hasUnread && "border-l-4 border-l-primary bg-primary/5",
-				isHighlighted && "ring-2 ring-primary/60 bg-primary/10"
+				isHighlighted && "border-4 border-primary bg-primary/5"
 			)}>
 			<div className="absolute inset-y-0 left-0 flex w-24 items-center bg-muted px-4 text-muted-foreground">
 				{folder === "archive" ? (
