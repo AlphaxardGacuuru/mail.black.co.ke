@@ -25,7 +25,7 @@ export default function MailRealtimeBanner({ visible }: Props) {
 					<span className="relative inline-flex size-2 rounded-full bg-primary" />
 				</span>
 				<MailPlus className="size-3.5" />
-				New message arriving…
+				New Email
 			</div>
 		</div>
 	)

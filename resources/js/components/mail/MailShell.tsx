@@ -28,7 +28,7 @@ type MailRealtimeEvent = {
 }
 
 const INCOMING_BANNER_DURATION_MS = 10000
-const INCOMING_HIGHLIGHT_DURATION_MS = 8000
+const INCOMING_HIGHLIGHT_DURATION_MS = 10000
 
 export default function MailShell({
 	folder,
