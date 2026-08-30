@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Mail;
 
+use App\Events\MailMessageReceivedEvent;
 use App\Http\Controllers\Controller;
 use App\Http\Services\MailInboundService;
 use App\Http\Services\MailgunWebhookService;
@@ -20,14 +21,17 @@ class MailWebhookController extends Controller
     public function mailgunInbound(Request $request): Response
     {
         try {
-            [$status, $message, $data] = $this->service->handleInboundMail($request);
+            [$status, $message, $data, $saved] = $this->service->handleInboundMail($request);
         } catch (Throwable $exception) {
             Log::error('Mailgun inbound webhook failed', ['error' => $exception->getMessage()]);
 
             $status = false;
-            $message = 'Failed to process inbound mail';
+            $message = 'Failed To Process Inbound Mail';
             $data = null;
+            $saved = false;
         }
+
+        MailMessageReceivedEvent::dispatchIf($saved, $data);
 
         return response([
             'status' => $status,

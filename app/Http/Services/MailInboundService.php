@@ -4,7 +4,6 @@ namespace App\Http\Services;
 
 use App\Enums\MailFolder;
 use App\Enums\MailStatus;
-use App\Events\MailMessageReceivedEvent;
 use App\Http\Services\Concerns\ResolvesMailThread;
 use App\Models\MailAttachment;
 use App\Models\MailgunAccount;
@@ -44,13 +43,13 @@ class MailInboundService
                 'recipient' => $recipient
             ]);
 
-            return [true, 'No Matching Mailbox, Dropped', null];
+            return [true, 'No Matching Mailbox, Dropped', null, false];
         }
 
         $messageId = $this->trimMessageId((string) $request->input('Message-Id', ''));
 
         if ($messageId !== '' && MailMessage::where('user_id', $user->id)->where('message_id', $messageId)->exists()) {
-            return [true, 'Duplicate delivery, already processed', null];
+            return [true, 'Duplicate Delivery, Already Processed', null, false];
         }
 
         $fromHeader = (string) $request->input('from', $request->input('sender', ''));
@@ -94,7 +93,7 @@ class MailInboundService
         $saved = $mailMessage->save();
 
         if (! $saved) {
-            return [$saved, 'Inbound mail could not be stored', $mailMessage];
+            return [$saved, 'Inbound Mail Could Not Be Stored', $mailMessage, false];
         }
 
         $attachmentCount = $this->storeAttachments($request, $mailMessage);
@@ -103,13 +102,9 @@ class MailInboundService
 
         $this->refreshThreadAggregates($thread);
 
-        MailMessageReceivedEvent::dispatch(
-            $user->id,
-            $mailMessage->id,
-            $thread->id,
-        );
+        $mailMessage->setRelation('user', $user);
 
-        return [true, 'Inbound mail stored', $mailMessage];
+        return [true, 'Inbound Mail Stored', $mailMessage, true];
     }
 
     protected function normalizeRecipient(string $recipient): string

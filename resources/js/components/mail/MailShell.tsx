@@ -8,7 +8,6 @@ import MailThreadList from "@/components/mail/MailThreadList"
 import MailThreadView from "@/components/mail/MailThreadView"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useApp } from "@/contexts/AppContext"
-import { playIncomingMailChime } from "@/lib/notification-sound"
 import type { MailThreadFilters } from "@/queries/mail"
 import type { MailFolderKey } from "@/types/mail"
 
@@ -65,7 +64,6 @@ export default function MailShell({
 		`mail.${auth?.id ?? ""}`,
 		"MailMessageReceivedEvent",
 		(event: MailRealtimeEvent) => {
-			playIncomingMailChime()
 			setShowIncomingBanner(true)
 			setIncomingThreadId(event.threadId)
 			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })

@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Models\MailMessage;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -15,9 +16,7 @@ class MailMessageReceivedEvent implements ShouldBroadcastNow
      * Create a new event instance.
      */
     public function __construct(
-        public string $userId,
-        public string $messageId,
-        public string $threadId,
+        public MailMessage $mailMessage,
     ) {}
 
     /**
@@ -28,15 +27,15 @@ class MailMessageReceivedEvent implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('mail.'.$this->userId),
+            new PrivateChannel('mail.'.$this->mailMessage->user_id),
         ];
     }
 
     public function broadcastWith(): array
     {
         return [
-            'messageId' => $this->messageId,
-            'threadId' => $this->threadId,
+            'messageId' => $this->mailMessage->id,
+            'threadId' => $this->mailMessage->mail_thread_id,
         ];
     }
 }

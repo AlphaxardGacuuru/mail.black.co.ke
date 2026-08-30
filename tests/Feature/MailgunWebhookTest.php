@@ -162,9 +162,9 @@ class MailgunWebhookTest extends TestCase
         $message = MailMessage::where('message_id', 'inbound-message@example.net')->firstOrFail();
 
         Event::assertDispatched(MailMessageReceivedEvent::class, function (MailMessageReceivedEvent $event) use ($message, $user): bool {
-            return $event->userId === $user->id
-                && $event->messageId === $message->id
-                && $event->threadId === $message->mail_thread_id;
+            return $event->mailMessage->id === $message->id
+                && $event->mailMessage->user_id === $user->id
+                && $event->mailMessage->mail_thread_id === $message->mail_thread_id;
         });
     }
 }
