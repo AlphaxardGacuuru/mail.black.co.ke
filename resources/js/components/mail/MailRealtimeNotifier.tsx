@@ -1,6 +1,6 @@
 import { useEcho } from "@laravel/echo-react"
 import { useQueryClient } from "@tanstack/react-query"
-import { useRouterState } from "@tanstack/react-router"
+import { useNavigate, useRouterState } from "@tanstack/react-router"
 import { useApp } from "@/contexts/AppContext"
 import { playIncomingMailChime } from "@/lib/notification-sound"
 import toast from "@/lib/toast"
@@ -15,6 +15,7 @@ type MailRealtimeEvent = {
 export default function MailRealtimeNotifier() {
 	const { auth } = useApp()
 	const queryClient = useQueryClient()
+	const navigate = useNavigate()
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	})
@@ -45,6 +46,10 @@ export default function MailRealtimeNotifier() {
 			if (!onMailPages) {
 				toast.info("New message received", {
 					description: "You have a new email waiting in your inbox.",
+					action: {
+						label: "View Inbox",
+						onClick: () => navigate({ to: "/mail" }),
+					},
 				})
 			}
 		}

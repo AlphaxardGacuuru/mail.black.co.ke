@@ -1,10 +1,12 @@
 /// <reference lib="webworker" />
-import {
-	cleanupOutdatedCaches,
-	precacheAndRoute,
-} from "workbox-precaching"
+import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching"
 import { registerRoute } from "workbox-routing"
-import { CacheFirst, NetworkFirst, NetworkOnly, StaleWhileRevalidate } from "workbox-strategies"
+import {
+	CacheFirst,
+	NetworkFirst,
+	NetworkOnly,
+	StaleWhileRevalidate,
+} from "workbox-strategies"
 import { ExpirationPlugin } from "workbox-expiration"
 import { BackgroundSyncPlugin } from "workbox-background-sync"
 
@@ -153,6 +155,56 @@ registerRoute(
 	"PATCH"
 )
 
+// ─── Web push notifications ───────────────────────────────────────────────────
+
+type PushPayload = {
+	title?: string
+	body?: string
+	icon?: string
+	data?: { url?: string }
+}
+
+self.addEventListener("push", (event) => {
+	if (!event.data) {
+		return
+	}
+
+	const payload: PushPayload = event.data.json()
+
+	event.waitUntil(
+		self.registration.showNotification(payload.title ?? "New notification", {
+			body: payload.body,
+			icon: payload.icon ?? "/favicon.ico",
+			data: payload.data,
+		})
+	)
+})
+
+self.addEventListener("notificationclick", (event) => {
+	event.notification.close()
+
+	const url = (event.notification.data as { url?: string } | undefined)?.url
+
+	if (!url) {
+		return
+	}
+
+	event.waitUntil(
+		self.clients
+			.matchAll({ type: "window", includeUncontrolled: true })
+			.then((clients) => {
+				const target = new URL(url, self.location.origin).href
+				const existing = clients.find((client) => client.url === target)
+
+				if (existing) {
+					return existing.focus()
+				}
+
+				return self.clients.openWindow(target)
+			})
+	)
+})
+
 // ─── SPA navigation fallback ──────────────────────────────────────────────────
 // All navigate requests that don't match a precached URL fall back to /index.php
 // so TanStack Router handles routing on the client side.
@@ -160,8 +212,6 @@ registerRoute(
 	({ request }) => request.mode === "navigate",
 	new NetworkFirst({
 		cacheName: "navigation",
-		plugins: [
-			new ExpirationPlugin({ maxEntries: 1, maxAgeSeconds: 60 }),
-		],
+		plugins: [new ExpirationPlugin({ maxEntries: 1, maxAgeSeconds: 60 })],
 	})
 )

@@ -40,8 +40,7 @@ class FilePondController extends Controller
             'filepond-avatar' => 'required|image',
         ]);
 
-        $avatar = $request->file('filepond-avatar')->store('public/avatars');
-        $avatar = substr($avatar, 7);
+        $avatar = $request->file('filepond-avatar')->store('avatars', 'public');
 
         $user = User::findOrFail($id);
 
@@ -72,9 +71,7 @@ class FilePondController extends Controller
 
         $avatar = $request
             ->file('filepond-mailgun-account-avatar')
-            ->store('public/mailgun-avatars');
-            
-        $avatar = substr($avatar, 7);
+            ->store('mailgun-avatars', 'public');
 
         $oldAvatar = $account->getRawOriginal('avatar');
 

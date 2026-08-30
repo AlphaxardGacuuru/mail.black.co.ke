@@ -8,6 +8,7 @@ use App\Http\Controllers\Mail\MailMessageController;
 use App\Http\Controllers\Mail\MailThreadController;
 use App\Http\Controllers\Mail\MailWebhookController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\UserController;
@@ -42,6 +43,9 @@ Route::middleware('auth:sanctum')->group(function () {
         "threads" => MailThreadController::class,
         "labels" => MailLabelController::class,
     ]);
+
+    Route::post('push-subscriptions', [PushSubscriptionController::class, 'store']);
+    Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy']);
 
     Route::post('threads/{id}/labels', [MailThreadController::class, 'attachLabel']);
     Route::delete('threads/{id}/labels/{labelId}', [MailThreadController::class, 'detachLabel']);

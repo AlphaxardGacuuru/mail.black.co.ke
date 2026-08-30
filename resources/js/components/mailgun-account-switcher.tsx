@@ -104,7 +104,7 @@ export function MailgunAccountSwitcher() {
 				<SheetContent
 					side="bottom"
 					className="inset-x-2 bottom-2 h-auto w-auto rounded-xl border border-white/40 bg-white/34 px-4 pb-6 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/12 dark:bg-slate-950/20">
-					<SheetHeader className="px-0 pt-2">
+					<SheetHeader className="px-0 pt-3">
 						<SheetTitle>Mail accounts</SheetTitle>
 					</SheetHeader>
 					<div className="flex flex-col gap-1">

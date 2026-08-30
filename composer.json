@@ -16,6 +16,7 @@
         "inertiajs/inertia-laravel": "^3.0",
         "kopokopo/k2-connect-php": "^2.0",
         "laragear/two-factor": "^4.0",
+        "laravel-notification-channels/webpush": "^11.0",
         "laravel/ai": "^0.7.2",
         "laravel/fortify": "^1.37",
         "laravel/framework": "^13.0",

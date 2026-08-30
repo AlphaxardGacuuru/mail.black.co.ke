@@ -4,6 +4,8 @@ namespace App\Notifications;
 
 use App\Models\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class NewMailReceivedNotification extends Notification
 {
@@ -20,7 +22,7 @@ class NewMailReceivedNotification extends Notification
 	 */
 	public function via($notifiable)
 	{
-		return ['database', 'broadcast'];
+		return ['database', 'broadcast', WebPushChannel::class];
 	}
 
 	/**
@@ -31,14 +33,37 @@ class NewMailReceivedNotification extends Notification
 	 */
 	public function toArray($notifiable)
 	{
-		$from = $this->mailMessage->from_address['name']
-			?? $this->mailMessage->from_address['address']
-			?? 'Unknown sender';
-
 		return [
-			'url' => '/mail/' . $this->mailMessage->mail_thread_id . '/show',
-			'from' => $from,
+			'url' => $this->url(),
+			'from' => $this->from(),
 			'message' => $this->mailMessage->subject ?: '(no subject)',
 		];
+	}
+
+	/**
+	 * Get the web push representation of the notification.
+	 *
+	 * @param  mixed  $notifiable
+	 */
+	public function toWebPush($notifiable, $notification): WebPushMessage
+	{
+		return (new WebPushMessage)
+			->title($this->from())
+			->icon('/favicon.ico')
+			->body($this->mailMessage->subject ?: '(no subject)')
+			->data(['url' => $this->url()])
+			->options(['TTL' => 300]);
+	}
+
+	protected function from(): string
+	{
+		return $this->mailMessage->from_address['name']
+			?? $this->mailMessage->from_address['address']
+			?? 'Unknown sender';
+	}
+
+	protected function url(): string
+	{
+		return '/mail/' . $this->mailMessage->mail_thread_id . '/show';
 	}
 }

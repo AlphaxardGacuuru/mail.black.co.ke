@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
-import { Bell, Trash2 } from "lucide-react"
+import { Bell, BellPlus, Trash2 } from "lucide-react"
 import { useEffect } from "react"
 import type { MouseEvent } from "react"
 import { useEchoModel } from "@laravel/echo-react"
@@ -22,7 +22,9 @@ import {
 } from "@/components/ui/sidebar"
 import { useApp } from "@/contexts/AppContext"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { usePushNotifications } from "@/hooks/use-push-notifications"
 import Axios from "@/lib/axios"
+import toast from "@/lib/toast"
 import {
 	index as indexRoute,
 	update as updateRoute,
@@ -36,6 +38,12 @@ export function NavNotifications() {
 	const isMobile = useIsMobile()
 	const queryClient = useQueryClient()
 	const { channel } = useEchoModel("App.Models.User", auth?.id ?? 0)
+	const {
+		isSupported: pushSupported,
+		permission: pushPermission,
+		isSubscribed: pushSubscribed,
+		subscribe: subscribeToPush,
+	} = usePushNotifications()
 
 	const { data: notifications = [] } = useQuery<Notification[]>({
 		queryKey: ["notifications"],
@@ -84,6 +92,26 @@ export function NavNotifications() {
 		onDeleteNotifications("0")
 	}
 
+	const handleEnablePush = async (event: Event) => {
+		event.preventDefault()
+
+		const enabled = await subscribeToPush()
+
+		if (enabled) {
+			toast.success("Notifications enabled", {
+				description: "You'll get a native alert when new mail arrives.",
+			})
+		} else if (pushPermission === "denied") {
+			toast.error("Notifications blocked", {
+				description:
+					"Allow notifications for this site in your browser settings.",
+			})
+		}
+	}
+
+	const showEnablePush =
+		pushSupported && !pushSubscribed && pushPermission !== "denied"
+
 	return (
 		<SidebarMenu>
 			<SidebarMenuItem>
@@ -122,6 +150,14 @@ export function NavNotifications() {
 								</button>
 							)}
 						</DropdownMenuLabel>
+						{showEnablePush && (
+							<DropdownMenuItem
+								onSelect={handleEnablePush}
+								className="gap-2">
+								<BellPlus className="size-4" />
+								Enable notifications
+							</DropdownMenuItem>
+						)}
 						<DropdownMenuSeparator />
 						{notifications.length === 0 ? (
 							<div className="px-2 py-4 text-center text-sm text-muted-foreground">
