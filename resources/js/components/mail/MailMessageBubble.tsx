@@ -28,8 +28,13 @@ function formatDate(value: string | null): string {
 	})
 }
 
-export default function MailMessageBubble({ message, isExpanded, onToggleExpand }: Props) {
-	const fromName = message.from?.name ?? message.from?.address ?? "Unknown sender"
+export default function MailMessageBubble({
+	message,
+	isExpanded,
+	onToggleExpand,
+}: Props) {
+	const fromName =
+		message.from?.name ?? message.from?.address ?? "Unknown sender"
 
 	return (
 		<div className="rounded-lg border">
@@ -38,13 +43,22 @@ export default function MailMessageBubble({ message, isExpanded, onToggleExpand 
 				onClick={onToggleExpand}
 				className="flex w-full items-center gap-3 p-3 text-left hover:bg-muted/40">
 				<Avatar className="size-8 shrink-0">
-					<AvatarFallback>{initials(message.from?.name, message.from?.address)}</AvatarFallback>
+					<AvatarFallback>
+						{initials(message.from?.name, message.from?.address)}
+					</AvatarFallback>
 				</Avatar>
 
 				<div className="flex-1 min-w-0">
 					<span className="font-medium truncate block">{fromName}</span>
+					<span className="font-medium truncate block">
+						{message.from?.address}
+					</span>
 
-					{!isExpanded && <p className="text-sm text-muted-foreground truncate">{message.snippet}</p>}
+					{!isExpanded && (
+						<p className="text-sm text-muted-foreground truncate">
+							{message.snippet}
+						</p>
+					)}
 
 					{!isExpanded && message.hasAttachments && (
 						<Paperclip className="mt-1 size-3.5 text-muted-foreground" />
@@ -56,10 +70,18 @@ export default function MailMessageBubble({ message, isExpanded, onToggleExpand 
 				<div className="border-t p-4 space-y-3">
 					<div className="text-xs text-muted-foreground space-y-0.5">
 						<div>
-							To: {message.to.map((address) => address.name ?? address.address).join(", ")}
+							To:{" "}
+							{message.to
+								.map((address) => address.name ?? address.address)
+								.join(", ")}
 						</div>
 						{message.cc.length > 0 && (
-							<div>Cc: {message.cc.map((address) => address.name ?? address.address).join(", ")}</div>
+							<div>
+								Cc:{" "}
+								{message.cc
+									.map((address) => address.name ?? address.address)
+									.join(", ")}
+							</div>
 						)}
 					</div>
 
@@ -85,7 +107,8 @@ export default function MailMessageBubble({ message, isExpanded, onToggleExpand 
 
 					{message.status === "failed" && (
 						<p className="text-sm text-destructive">
-							Failed to send{message.errorMessage ? `: ${message.errorMessage}` : ""}
+							Failed to send
+							{message.errorMessage ? `: ${message.errorMessage}` : ""}
 						</p>
 					)}
 				</div>
@@ -93,7 +116,9 @@ export default function MailMessageBubble({ message, isExpanded, onToggleExpand 
 
 			<div className="flex items-center justify-end gap-1 px-3 pb-2">
 				<span className="text-xs text-muted-foreground">
-					{formatDate(message.sentAt ?? message.receivedAt ?? message.createdAt)}
+					{formatDate(
+						message.sentAt ?? message.receivedAt ?? message.createdAt
+					)}
 				</span>
 				{message.status && (
 					<MailStatusIcon

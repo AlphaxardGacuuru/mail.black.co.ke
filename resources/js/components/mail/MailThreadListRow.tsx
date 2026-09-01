@@ -187,32 +187,34 @@ export default function MailThreadListRow({
 					</div>
 
 					<div className="flex items-center justify-between gap-2">
-						<div>
+						<div className="min-w-0 flex-1 pr-2">
 							{/* Subject Start */}
-							<span
-								className={cn(
-									"truncate text-sm",
-									thread.hasUnread ? "font-medium" : "text-muted-foreground"
-								)}>
-								{thread.subject || "(no subject)"}
-								{thread.snippet ? ` — ${thread.snippet}` : ""}
-							</span>
-							{/* Subject End */}
-							{/* Message Count Start */}
-							{thread.messageCount > 1 && (
-								<span className="text-xs text-muted-foreground shrink-0">
-									({thread.messageCount})
+							<div className="flex min-w-0 items-center gap-1">
+								<span
+									className={cn(
+										"min-w-0 truncate text-sm",
+										thread.hasUnread ? "font-medium" : "text-muted-foreground"
+									)}>
+									{thread.subject || "(no subject)"}
+									{thread.snippet ? ` — ${thread.snippet}` : ""}
 								</span>
-							)}
-							{/* Message Count End */}
-							{/* Attachments Start */}
-							{thread.hasAttachments && (
-								<Paperclip className="size-3 text-muted-foreground shrink-0" />
-							)}
-							{/* Attachments End */}
+								{/* Message Count Start */}
+								{thread.messageCount > 1 && (
+									<span className="shrink-0 text-xs text-muted-foreground">
+										({thread.messageCount})
+									</span>
+								)}
+								{/* Message Count End */}
+								{/* Attachments Start */}
+								{thread.hasAttachments && (
+									<Paperclip className="size-3 shrink-0 text-muted-foreground" />
+								)}
+								{/* Attachments End */}
+							</div>
+							{/* Subject End */}
 						</div>
 						{/* Status Start */}
-						<div className="group-hover:hidden">
+						<div className="shrink-0 group-hover:hidden">
 							{thread.status && (
 								<MailStatusIcon
 									status={thread.status}

@@ -8,6 +8,8 @@ import {
 	Trash2,
 	X,
 } from "lucide-react"
+import { useEcho } from "@laravel/echo-react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
 import MailComposeInline from "@/components/mail/MailComposeInline"
 import MailMessageBubble from "@/components/mail/MailMessageBubble"
@@ -38,10 +40,26 @@ export default function MailThreadView({
 	onBack,
 }: Props) {
 	const { auth } = useApp()
+	const queryClient = useQueryClient()
 	const activeAccount = auth?.mailgunAccounts?.find(
 		(account) => account.isActive
 	)
 	const { data: thread, isLoading } = useMailThread(threadId)
+
+	useEcho(
+		`mail.${auth?.id ?? ""}`,
+		"MailMessageStatusUpdatedEvent",
+		(event: { threadId: string }) => {
+			if (event.threadId !== threadId) {
+				return
+			}
+
+			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
+			queryClient.invalidateQueries({
+				queryKey: ["mail", "thread", event.threadId],
+			})
+		}
+	)
 	const starMutation = useStarMailThread(true)
 	const unstarMutation = useStarMailThread(false)
 	const archiveMutation = useArchiveMailThread()
@@ -211,7 +229,7 @@ export default function MailThreadView({
 			</div>
 
 			{lastMessage && (
-				<div className="sticky bottom-0 z-10 bg-card p-3">
+				<div className="bg-card p-3">
 					<MailComposeInline
 						parentMessage={lastMessage}
 						currentUserEmail={activeAccount?.mailboxAddress}
