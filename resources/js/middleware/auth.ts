@@ -100,6 +100,22 @@ export async function requireSuperAdmin({
 	}
 }
 
+/** The only account allowed into /admin/ routes. Server-side enforcement lives in the `admin` middleware. */
+export const ADMIN_EMAIL = "alphaxardgacuuru47@gmail.com"
+
+/** Restrict /admin/ routes to the single admin account. */
+export async function requireAdmin({ location }: { location: RouteLocation }) {
+	if (!location.pathname.includes("/admin/")) {
+		return
+	}
+
+	const auth = await getAuth()
+
+	if (!auth || auth.email !== ADMIN_EMAIL) {
+		throw redirect({ to: "/mail" })
+	}
+}
+
 /** Clear the auth cache — call this after logout. */
 export function clearAuth() {
 	localStorage.removeItem("sanctumToken")

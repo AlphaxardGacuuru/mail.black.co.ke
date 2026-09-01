@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminWebhookController;
 use App\Http\Controllers\FilePondController;
 use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\Mail\MailAttachmentController;
@@ -58,6 +60,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('attachments/{id}/download', [MailAttachmentController::class, 'download'])
         ->name('attachments.download');
 
+});
+
+Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('webhooks', [AdminWebhookController::class, 'index'])->name('webhooks');
 });
 
 /*

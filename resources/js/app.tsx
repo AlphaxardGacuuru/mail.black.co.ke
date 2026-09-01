@@ -13,7 +13,7 @@ import {
 } from "@tanstack/react-router"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { queryClient } from "@/lib/query-client"
-import { requireAuth, requireGuest, requireSuperAdmin } from "@/middleware/auth"
+import { requireAdmin, requireAuth, requireGuest, requireSuperAdmin } from "@/middleware/auth"
 import { AppPageProvider, useLayoutProps, usePage } from "@/lib/spa"
 import { Toaster, FlashToastHandler } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -21,6 +21,7 @@ import { initializeTheme } from "@/hooks/use-appearance"
 import AppLayout from "@/layouts/app-layout"
 import AuthLayout from "@/layouts/auth-layout"
 import SettingsLayout from "@/layouts/settings/layout"
+import AdminLayout from "@/layouts/admin/layout"
 import { AppProvider } from "@/contexts/AppContext"
 import { discoverPageRoutes } from "@/router/page-routes"
 import NotFound from "@/components/not-found"
@@ -132,6 +133,7 @@ const tanstackRoutes = discoveredRoutes.map((discoveredRoute) => {
 				: async (ctx) => {
 						await requireAuth()
 						await requireSuperAdmin(ctx)
+						await requireAdmin(ctx)
 					},
 	})
 
@@ -175,6 +177,12 @@ function applyLayout(
 			return (
 				<AppLayout {...layoutProps}>
 					<SettingsLayout>{element}</SettingsLayout>
+				</AppLayout>
+			)
+		case componentName.startsWith("admin/"):
+			return (
+				<AppLayout {...layoutProps}>
+					<AdminLayout>{element}</AdminLayout>
 				</AppLayout>
 			)
 		default:

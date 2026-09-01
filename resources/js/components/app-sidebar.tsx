@@ -1,12 +1,15 @@
 import { Link } from "@/components/ui/link"
 import { Download, Mail } from "lucide-react"
+import { AdminNav } from "@/components/admin/AdminNav"
 import AppLogo from "@/components/app-logo"
 import { MailNav } from "@/components/mail-nav"
 import MailRealtimeNotifier from "@/components/mail/MailRealtimeNotifier"
 import { NavFooter } from "@/components/nav-footer"
 import { NavNotifications } from "@/components/nav-notifications"
 import { NavUser } from "@/components/nav-user"
+import { useApp } from "@/contexts/AppContext"
 import { usePwaInstall } from "@/hooks/use-pwa-install"
+import { ADMIN_EMAIL } from "@/middleware/auth"
 import {
 	Sidebar,
 	SidebarContent,
@@ -39,6 +42,8 @@ const footerNavItems: NavItem[] = [
 export function AppSidebar() {
 	const { state } = useSidebar()
 	const { isInstalled } = usePwaInstall()
+	const { auth } = useApp()
+	const isAdmin = auth?.email === ADMIN_EMAIL
 
 	return (
 		<Sidebar
@@ -72,6 +77,7 @@ export function AppSidebar() {
 			</SidebarContent>
 
 			<SidebarFooter>
+				{isAdmin && <AdminNav />}
 				{!isInstalled && (
 					<NavFooter
 						items={footerNavItems}
