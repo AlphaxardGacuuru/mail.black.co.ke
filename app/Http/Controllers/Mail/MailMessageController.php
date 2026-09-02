@@ -88,4 +88,17 @@ class MailMessageController extends Controller
                 'message' => $message
             ]);
     }
+
+    public function retry(string $id): MailMessageResource
+    {
+        $mailMessage = $this->service->retry($id);
+
+        SendMailMessageJob::dispatch($mailMessage->id);
+
+        return MailMessageResource::make($mailMessage)
+            ->additional([
+                'saved' => true,
+                'message' => 'Message Queued for Sending',
+            ]);
+    }
 }

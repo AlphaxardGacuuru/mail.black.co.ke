@@ -248,6 +248,21 @@ export function useSendMail() {
 	})
 }
 
+export function useRetryMailMessage(threadId: string | null) {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (messageId: string) => Axios.post(MailMessageController.retry.url(messageId)),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
+
+			if (threadId) {
+				queryClient.invalidateQueries({ queryKey: ["mail", "thread", threadId] })
+			}
+		},
+	})
+}
+
 function respondAction(mode: MailComposeMode) {
 	switch (mode) {
 		case "reply":

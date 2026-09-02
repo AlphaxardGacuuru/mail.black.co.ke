@@ -100,6 +100,29 @@ class MailMessageService extends Service
         return [$saved, 'Message Queued for Sending', $mailMessage];
     }
 
+    /**
+     * Reset a failed outbound message so it can be re-queued for sending.
+     */
+    public function retry(string $id): MailMessage
+    {
+        $mailMessage = MailMessage::where('user_id', $this->id)
+            ->where('direction', 'outbound')
+            ->whereIn('status', [
+                MailStatus::FAILED->value,
+                MailStatus::TEMPORARY_FAILED->value,
+                MailStatus::PERMANENT_FAILED->value,
+            ])
+            ->findOrFail($id);
+
+        $mailMessage->update([
+            'status' => MailStatus::QUEUED->value,
+            'error_message' => null,
+            'job_id' => null,
+        ]);
+
+        return $mailMessage;
+    }
+
     protected function ensureMailboxConfigured(User $user): void
     {
         if (! $user->activeMailgunAccount?->mailbox_address) {

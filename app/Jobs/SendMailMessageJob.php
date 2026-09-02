@@ -12,8 +12,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 class SendMailMessageJob implements ShouldQueue
 {
@@ -28,6 +30,32 @@ class SendMailMessageJob implements ShouldQueue
 
     public function handle(): void
     {
+        $jobId = $this->currentJobId();
+
+        $claimed = DB::transaction(function () use ($jobId) {
+            $message = MailMessage::where('id', $this->mailMessageId)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $message || $message->status === MailStatus::SENT->value) {
+                return false;
+            }
+
+            if ($message->job_id !== null && $message->job_id !== $jobId) {
+                // Another job instance (a stale Horizon retry, a concurrent
+                // dispatch, etc.) already claimed this message.
+                return false;
+            }
+
+            $message->forceFill(['job_id' => $jobId])->save();
+
+            return true;
+        });
+
+        if (! $claimed) {
+            return;
+        }
+
         $mailMessage = MailMessage::with('attachments')->find($this->mailMessageId);
 
         if (! $mailMessage || $mailMessage->status === MailStatus::SENT->value) {
@@ -57,6 +85,16 @@ class SendMailMessageJob implements ShouldQueue
             'mailgun_message_id' => $messageId,
             'sent_at' => now(),
         ]);
+    }
+
+    /**
+     * The underlying queue job's id, used to claim a message so only one
+     * job instance ever sends it. Null outside a real queue worker (e.g.
+     * the sync driver, or a job invoked directly in a test).
+     */
+    protected function currentJobId(): ?string
+    {
+        return $this->job?->getJobId();
     }
 
     /**
@@ -90,7 +128,7 @@ class SendMailMessageJob implements ShouldQueue
         return Mail::mailer($mailerName);
     }
 
-    public function failed(\Throwable $exception): void
+    public function failed(Throwable $exception): void
     {
         Log::error('Failed to send mail message', [
             'mail_message_id' => $this->mailMessageId,

@@ -32,6 +32,8 @@ import {
 } from "@/routes/notifications"
 import type { Notification } from "@/types"
 
+const AUTO_PUSH_PROMPT_KEY = "pushNotificationsAutoPrompted"
+
 export function NavNotifications() {
 	const { auth } = useApp()
 	const { state } = useSidebar()
@@ -57,6 +59,26 @@ export function NavNotifications() {
 			queryClient.invalidateQueries({ queryKey: ["notifications"] })
 		})
 	}, [auth?.id, channel, queryClient])
+
+	useEffect(() => {
+		if (!auth || !pushSupported || pushSubscribed || pushPermission !== "default") {
+			return
+		}
+
+		if (localStorage.getItem(AUTO_PUSH_PROMPT_KEY)) {
+			return
+		}
+
+		localStorage.setItem(AUTO_PUSH_PROMPT_KEY, "1")
+
+		subscribeToPush().then((enabled) => {
+			if (enabled) {
+				toast.success("Notifications enabled", {
+					description: "You'll get a native alert when new mail arrives.",
+				})
+			}
+		})
+	}, [auth, pushSupported, pushSubscribed, pushPermission, subscribeToPush])
 
 	const unreadCount = notifications.filter(
 		(notification) => !notification.readAt

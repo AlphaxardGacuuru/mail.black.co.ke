@@ -58,22 +58,26 @@ export function usePushNotifications() {
 			return false
 		}
 
-		const registration = await navigator.serviceWorker.ready
-		const subscription = await registration.pushManager.subscribe({
-			userVisibleOnly: true,
-			applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-		})
+		try {
+			const registration = await navigator.serviceWorker.ready
+			const subscription = await registration.pushManager.subscribe({
+				userVisibleOnly: true,
+				applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+			})
 
-		const json = subscription.toJSON()
+			const json = subscription.toJSON()
 
-		await Axios.post(PushSubscriptionController.store.url(), {
-			endpoint: json.endpoint,
-			keys: json.keys,
-		})
+			await Axios.post(PushSubscriptionController.store.url(), {
+				endpoint: json.endpoint,
+				keys: json.keys,
+			})
 
-		setIsSubscribed(true)
+			setIsSubscribed(true)
 
-		return true
+			return true
+		} catch {
+			return false
+		}
 	}, [isSupported])
 
 	const unsubscribe = useCallback(async (): Promise<void> => {

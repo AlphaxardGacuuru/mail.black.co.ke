@@ -1,13 +1,22 @@
-import { Paperclip } from "lucide-react"
+import { Paperclip, RotateCw } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import MailAttachmentChip from "@/components/mail/MailAttachmentChip"
 import MailStatusIcon from "@/components/mail/MailStatusIcon"
-import type { MailMessage } from "@/types/mail"
+import { Button } from "@/components/ui/button"
+import type { MailMessage, MailMessageStatus } from "@/types/mail"
+
+const FAILED_STATUSES: MailMessageStatus[] = [
+	"failed",
+	"temporary_failed",
+	"permanent_failed",
+]
 
 type Props = {
 	message: MailMessage
 	isExpanded: boolean
 	onToggleExpand: () => void
+	onRetry: () => void
+	isRetrying: boolean
 }
 
 function initials(name?: string | null, address?: string | null): string {
@@ -32,6 +41,8 @@ export default function MailMessageBubble({
 	message,
 	isExpanded,
 	onToggleExpand,
+	onRetry,
+	isRetrying,
 }: Props) {
 	const fromName =
 		message.from?.name ?? message.from?.address ?? "Unknown sender"
@@ -105,12 +116,29 @@ export default function MailMessageBubble({
 						</div>
 					)}
 
-					{message.status === "failed" && (
-						<p className="text-sm text-destructive">
-							Failed to send
-							{message.errorMessage ? `: ${message.errorMessage}` : ""}
-						</p>
-					)}
+					{message.direction === "outbound" &&
+						message.status &&
+						FAILED_STATUSES.includes(message.status) && (
+							<div className="flex items-center gap-2">
+								<p className="flex-1 text-sm text-destructive">
+									Failed to send
+									{message.errorMessage ? `: ${message.errorMessage}` : ""}
+								</p>
+								<Button
+									variant="outline"
+									size="sm"
+									disabled={isRetrying}
+									onClick={(event) => {
+										event.stopPropagation()
+										onRetry()
+									}}>
+									<RotateCw
+										className={`size-3.5 ${isRetrying ? "animate-spin" : ""}`}
+									/>
+									Retry
+								</Button>
+							</div>
+						)}
 				</div>
 			)}
 

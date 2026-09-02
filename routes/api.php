@@ -56,6 +56,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('messages/{id}/reply', [MailMessageController::class, 'reply']);
     Route::post('messages/{id}/reply-all', [MailMessageController::class, 'replyAll']);
     Route::post('messages/{id}/forward', [MailMessageController::class, 'forward']);
+    Route::post('messages/{id}/retry', [MailMessageController::class, 'retry']);
 
     Route::get('attachments/{id}/download', [MailAttachmentController::class, 'download'])
         ->name('attachments.download');

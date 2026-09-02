@@ -22,6 +22,7 @@ import {
 	useMarkMailThreadRead,
 	useMailThread,
 	useRestoreMailThread,
+	useRetryMailMessage,
 	useStarMailThread,
 	useTrashMailThread,
 } from "@/queries/mail"
@@ -67,6 +68,7 @@ export default function MailThreadView({
 	const trashMutation = useTrashMailThread()
 	const markReadMutation = useMarkMailThreadRead(true)
 	const markUnreadMutation = useMarkMailThreadRead(false)
+	const retryMutation = useRetryMailMessage(threadId)
 
 	const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -223,6 +225,15 @@ export default function MailThreadView({
 							setExpandedId(
 								currentlyExpanded === message.id ? null : message.id
 							)
+						}
+						onRetry={() => {
+							retryMutation.mutate(message.id, {
+								onSuccess: () => toast.success("Message queued for sending"),
+								onError: () => toast.error("Couldn't retry sending"),
+							})
+						}}
+						isRetrying={
+							retryMutation.isPending && retryMutation.variables === message.id
 						}
 					/>
 				))}

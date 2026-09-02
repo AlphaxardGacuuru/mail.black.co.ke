@@ -40,6 +40,7 @@ return new class extends Migration
             $table->string('mailgun_message_id')->nullable();
             $table->string('status')->nullable(); // queued, sent, delivered, opened, clicked, failed, bounced, received
             $table->text('error_message')->nullable();
+            $table->string('job_id')->nullable();
             $table->boolean('is_read')->default(false);
             $table->boolean('is_starred')->default(false);
             $table->boolean('has_attachments')->default(false);
