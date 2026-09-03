@@ -221,7 +221,7 @@ export function useTrashMailThread() {
 
 export function useRestoreMailThread() {
 	return useMoveThreadMutation(
-		(threadId) => Axios.patch(MailThreadController.update.url(threadId), { folder: "inbox" }),
+		(threadId) => Axios.patch(MailThreadController.update.url(threadId), { restore: true }),
 		null
 	)
 }

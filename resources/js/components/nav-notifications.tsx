@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
-import { Bell, BellPlus, Trash2 } from "lucide-react"
+import { Bell, Trash2 } from "lucide-react"
 import { useEffect } from "react"
 import type { MouseEvent } from "react"
 import { useEchoModel } from "@laravel/echo-react"
@@ -22,9 +22,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useApp } from "@/contexts/AppContext"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { usePushNotifications } from "@/hooks/use-push-notifications"
 import Axios from "@/lib/axios"
-import toast from "@/lib/toast"
 import {
 	index as indexRoute,
 	update as updateRoute,
@@ -32,20 +30,12 @@ import {
 } from "@/routes/notifications"
 import type { Notification } from "@/types"
 
-const AUTO_PUSH_PROMPT_KEY = "pushNotificationsAutoPrompted"
-
 export function NavNotifications() {
 	const { auth } = useApp()
 	const { state } = useSidebar()
 	const isMobile = useIsMobile()
 	const queryClient = useQueryClient()
 	const { channel } = useEchoModel("App.Models.User", auth?.id ?? 0)
-	const {
-		isSupported: pushSupported,
-		permission: pushPermission,
-		isSubscribed: pushSubscribed,
-		subscribe: subscribeToPush,
-	} = usePushNotifications()
 
 	const { data: notifications = [] } = useQuery<Notification[]>({
 		queryKey: ["notifications"],
@@ -59,26 +49,6 @@ export function NavNotifications() {
 			queryClient.invalidateQueries({ queryKey: ["notifications"] })
 		})
 	}, [auth?.id, channel, queryClient])
-
-	useEffect(() => {
-		if (!auth || !pushSupported || pushSubscribed || pushPermission !== "default") {
-			return
-		}
-
-		if (localStorage.getItem(AUTO_PUSH_PROMPT_KEY)) {
-			return
-		}
-
-		localStorage.setItem(AUTO_PUSH_PROMPT_KEY, "1")
-
-		subscribeToPush().then((enabled) => {
-			if (enabled) {
-				toast.success("Notifications enabled", {
-					description: "You'll get a native alert when new mail arrives.",
-				})
-			}
-		})
-	}, [auth, pushSupported, pushSubscribed, pushPermission, subscribeToPush])
 
 	const unreadCount = notifications.filter(
 		(notification) => !notification.readAt
@@ -113,26 +83,6 @@ export function NavNotifications() {
 		event.stopPropagation()
 		onDeleteNotifications("0")
 	}
-
-	const handleEnablePush = async (event: Event) => {
-		event.preventDefault()
-
-		const enabled = await subscribeToPush()
-
-		if (enabled) {
-			toast.success("Notifications enabled", {
-				description: "You'll get a native alert when new mail arrives.",
-			})
-		} else if (pushPermission === "denied") {
-			toast.error("Notifications blocked", {
-				description:
-					"Allow notifications for this site in your browser settings.",
-			})
-		}
-	}
-
-	const showEnablePush =
-		pushSupported && !pushSubscribed && pushPermission !== "denied"
 
 	return (
 		<SidebarMenu>
@@ -172,14 +122,6 @@ export function NavNotifications() {
 								</button>
 							)}
 						</DropdownMenuLabel>
-						{showEnablePush && (
-							<DropdownMenuItem
-								onSelect={handleEnablePush}
-								className="gap-2">
-								<BellPlus className="size-4" />
-								Enable notifications
-							</DropdownMenuItem>
-						)}
 						<DropdownMenuSeparator />
 						{notifications.length === 0 ? (
 							<div className="px-2 py-4 text-center text-sm text-muted-foreground">

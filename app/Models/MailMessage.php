@@ -23,6 +23,7 @@ class MailMessage extends Model
         'bcc' => 'array',
         'reply_to' => 'array',
         'headers' => 'array',
+        'folder_history' => 'array',
         'is_read' => 'boolean',
         'is_starred' => 'boolean',
         'has_attachments' => 'boolean',

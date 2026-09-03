@@ -5,6 +5,7 @@ namespace App\Http\Services;
 use App\Enums\MailFolder;
 use App\Http\Services\Concerns\ResolvesMailThread;
 use App\Models\MailLabel;
+use App\Models\MailMessage;
 use App\Models\MailThread;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -67,19 +68,26 @@ class MailThreadService extends Service
         ?string $folder,
         ?bool $isStarred,
         ?bool $isRead,
+        ?bool $restore = false,
     )
     {
         $thread = MailThread::ownedBy($this->id)->findOrFail($id);
 
-        if ($folder === MailFolder::INBOX->value) {
-            $thread->messages()
-                ->where('direction', 'outbound')
-                ->update(['folder' => MailFolder::SENT->value]);
-            $thread->messages()
-                ->where('direction', 'inbound')
-                ->update(['folder' => MailFolder::INBOX->value]);
+        if ($restore) {
+            foreach ($thread->messages as $message) {
+                $this->restoreMessageFolder($message);
+            }
+        } elseif ($folder === MailFolder::INBOX->value) {
+            foreach ($thread->messages as $message) {
+                $target = $message->direction === 'outbound'
+                    ? MailFolder::SENT->value
+                    : MailFolder::INBOX->value;
+                $this->moveMessageFolder($message, $target);
+            }
         } elseif ($folder !== null) {
-            $thread->messages()->update(['folder' => $folder]);
+            foreach ($thread->messages as $message) {
+                $this->moveMessageFolder($message, $folder);
+            }
         }
 
         if ($isStarred !== null) {
@@ -95,6 +103,31 @@ class MailThreadService extends Service
         }
 
         return [true, 'Thread Updated', $thread];
+    }
+
+    protected function moveMessageFolder(MailMessage $message, string $targetFolder): void
+    {
+        if ($message->folder === $targetFolder) {
+            return;
+        }
+
+        $history = $message->folder_history ?? [];
+        $history[] = ['folder' => $message->folder, 'at' => now()->toIso8601String()];
+
+        $message->folder_history = $history;
+        $message->folder = $targetFolder;
+        $message->save();
+    }
+
+    protected function restoreMessageFolder(MailMessage $message): void
+    {
+        $history = $message->folder_history ?? [];
+        $previous = array_pop($history);
+        $targetFolder = $previous['folder'] ?? MailFolder::INBOX->value;
+
+        $message->folder_history = $history;
+        $message->folder = $targetFolder;
+        $message->save();
     }
 
     protected function scopeToAccount($query): void

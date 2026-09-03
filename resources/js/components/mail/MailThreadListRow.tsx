@@ -6,6 +6,7 @@ import {
 	Paperclip,
 	Star,
 	Trash2,
+	Undo2,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -116,7 +117,9 @@ export default function MailThreadListRow({
 		}
 
 		if (swipeOffsetRef.current <= -72) {
-			trashMutation.mutate(thread.id)
+			;(folder === "trash" ? restoreMutation : trashMutation).mutate(
+				thread.id
+			)
 			swipedRef.current = true
 		} else if (swipeOffsetRef.current >= 72) {
 			;(folder === "archive" ? restoreMutation : archiveMutation).mutate(
@@ -158,8 +161,18 @@ export default function MailThreadListRow({
 					<Archive className="size-5" />
 				)}
 			</div>
-			<div className="absolute inset-y-0 right-0 flex w-24 items-center justify-end bg-destructive px-4 text-destructive-foreground">
-				<Trash2 className="size-5" />
+			<div
+				className={cn(
+					"absolute inset-y-0 right-0 flex w-24 items-center justify-end px-4",
+					folder === "trash"
+						? "bg-muted text-muted-foreground"
+						: "bg-destructive text-destructive-foreground"
+				)}>
+				{folder === "trash" ? (
+					<Undo2 className="size-5" />
+				) : (
+					<Trash2 className="size-5" />
+				)}
 			</div>
 
 			<div
@@ -175,7 +188,10 @@ export default function MailThreadListRow({
 					<div className="flex items-center justify-between gap-2">
 						{/* Name Start */}
 						<span
-							className={cn("truncate", thread.hasUnread && "font-semibold")}>
+							className={cn(
+								"min-w-0 flex-1 truncate",
+								thread.hasUnread && "font-semibold"
+							)}>
 							{thread.from?.name ?? thread.from?.address ?? "Unknown"}
 						</span>
 						{/* Name End */}
@@ -192,7 +208,7 @@ export default function MailThreadListRow({
 							<div className="flex min-w-0 items-center gap-1">
 								<span
 									className={cn(
-										"min-w-0 truncate text-sm",
+										"min-w-0 flex-1 truncate text-sm",
 										thread.hasUnread ? "font-medium" : "text-muted-foreground"
 									)}>
 									{thread.subject || "(no subject)"}

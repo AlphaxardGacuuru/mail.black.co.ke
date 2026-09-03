@@ -2,6 +2,7 @@ import { Link } from "@/components/ui/link"
 import { Download, Mail } from "lucide-react"
 import { AdminNav } from "@/components/admin/AdminNav"
 import AppLogo from "@/components/app-logo"
+import AutoPushPrompt from "@/components/auto-push-prompt"
 import { MailNav } from "@/components/mail-nav"
 import MailRealtimeNotifier from "@/components/mail/MailRealtimeNotifier"
 import { NavFooter } from "@/components/nav-footer"
@@ -51,6 +52,7 @@ export function AppSidebar() {
 			collapsible="icon"
 			variant="floating">
 			<MailRealtimeNotifier />
+			<AutoPushPrompt />
 
 			<SidebarHeader>
 				<div className="flex items-center">

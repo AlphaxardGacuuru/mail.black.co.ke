@@ -25,6 +25,7 @@ return new class extends Migration
                 ->onDelete('cascade');
             $table->string('direction'); // inbound, outbound
             $table->string('folder')->default('inbox'); // inbox, sent, draft, trash, archive, spam
+            $table->jsonb('folder_history')->nullable();
             $table->jsonb('from_address')->nullable();
             $table->jsonb('to')->nullable();
             $table->jsonb('cc')->nullable();

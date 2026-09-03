@@ -47,11 +47,12 @@ class MailThreadController extends Controller
     public function update(Request $request, string $id): JsonResponse
     {
         $data = $request->validate([
-            'folder' => ['required_without_all:isStarred,isRead', 'string', Rule::in([
+            'folder' => ['required_without_all:isStarred,isRead,restore', 'string', Rule::in([
                 MailFolder::ARCHIVE->value,
                 MailFolder::TRASH->value,
                 MailFolder::INBOX->value,
             ])],
+            'restore' => ['sometimes', 'boolean'],
             'isStarred' => ['sometimes', 'boolean'],
             'isRead' => ['sometimes', 'boolean'],
         ]);
@@ -61,6 +62,7 @@ class MailThreadController extends Controller
             $data['folder'] ?? null,
             $data['isStarred'] ?? null,
             $data['isRead'] ?? null,
+            $data['restore'] ?? false,
         ));
     }
 

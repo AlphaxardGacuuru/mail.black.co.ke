@@ -41,6 +41,38 @@ class MailThreadUpdateTest extends TestCase
         $this->assertSame('sent', $outboundMessage->refresh()->folder);
     }
 
+    public function test_restore_returns_thread_to_its_previous_folder_through_the_history_stack(): void
+    {
+        $user = User::factory()->create();
+        $thread = MailThread::create(['user_id' => $user->id, 'subject' => 'Bounced around']);
+        $message = $this->createMessage($thread, 'inbound', 'inbox');
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson("/api/threads/{$thread->id}", ['folder' => 'archive'])
+            ->assertOk();
+        $this->assertSame('archive', $message->refresh()->folder);
+        $this->assertSame([['folder' => 'inbox']], array_map(
+            fn ($entry) => ['folder' => $entry['folder']],
+            $message->folder_history
+        ));
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson("/api/threads/{$thread->id}", ['folder' => 'trash'])
+            ->assertOk();
+        $this->assertSame('trash', $message->refresh()->folder);
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson("/api/threads/{$thread->id}", ['restore' => true])
+            ->assertOk();
+        $this->assertSame('archive', $message->refresh()->folder);
+
+        $this->actingAs($user, 'sanctum')
+            ->patchJson("/api/threads/{$thread->id}", ['restore' => true])
+            ->assertOk();
+        $this->assertSame('inbox', $message->refresh()->folder);
+        $this->assertSame([], $message->folder_history);
+    }
+
     public function test_thread_star_and_read_state_can_be_updated_through_the_update_endpoint(): void
     {
         $user = User::factory()->create();
