@@ -4,10 +4,12 @@ import { usePushNotifications } from "@/hooks/use-push-notifications"
 import toast from "@/lib/toast"
 
 const AUTO_PUSH_PROMPT_KEY = "pushNotificationsAutoPrompted"
+const MAX_AUTO_PUSH_PROMPTS = 2
 
 /**
- * Mounted app-wide (in AppSidebar) to silently prompt for push permission once per browser,
- * regardless of which page the user lands on first.
+ * Mounted app-wide (in AppSidebar) to silently prompt for push permission up to
+ * MAX_AUTO_PUSH_PROMPTS times per browser, regardless of which page the user lands
+ * on first.
  */
 export default function AutoPushPrompt() {
 	const { auth } = useApp()
@@ -19,11 +21,13 @@ export default function AutoPushPrompt() {
 			return
 		}
 
-		if (localStorage.getItem(AUTO_PUSH_PROMPT_KEY)) {
+		const promptCount = Number(localStorage.getItem(AUTO_PUSH_PROMPT_KEY) ?? 0)
+
+		if (promptCount >= MAX_AUTO_PUSH_PROMPTS) {
 			return
 		}
 
-		localStorage.setItem(AUTO_PUSH_PROMPT_KEY, "1")
+		localStorage.setItem(AUTO_PUSH_PROMPT_KEY, String(promptCount + 1))
 
 		subscribe().then((enabled) => {
 			if (enabled) {

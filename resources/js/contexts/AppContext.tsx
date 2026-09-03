@@ -71,10 +71,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 		window.localStorage.setItem(key, JSON.stringify(value))
 	}
 
-	const [selectedPropertyId, setSelectedPropertyId] = useState<string>(() => {
-		return getLocalStorage("selectedPropertyId", "All")
-	})
-
 	const withLoading = (
 		endpoint: string,
 		fn: () => Promise<void>
@@ -217,10 +213,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 		}
 	}, [auth])
 
-	useEffect(() => {
-		setLocalStorage("selectedPropertyId", selectedPropertyId)
-	}, [selectedPropertyId])
-
 	const value: AppContextValue = {
 		messages,
 		setMessages,
@@ -237,8 +229,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 		setAdminMenu,
 		page,
 		setPage,
-		selectedPropertyId,
-		setSelectedPropertyId,
 		loadingItems,
 		setLoadingItems,
 		downloadLink,

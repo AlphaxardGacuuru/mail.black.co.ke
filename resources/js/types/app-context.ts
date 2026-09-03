@@ -46,8 +46,6 @@ export type AppContextValue = {
 	setAdminMenu: Dispatch<SetStateAction<string>>
 	page: PageState
 	setPage: Dispatch<SetStateAction<PageState>>
-	selectedPropertyId: string
-	setSelectedPropertyId: Dispatch<SetStateAction<string>>
 	loadingItems: number
 	setLoadingItems: Dispatch<SetStateAction<number>>
 	downloadLink: string | null

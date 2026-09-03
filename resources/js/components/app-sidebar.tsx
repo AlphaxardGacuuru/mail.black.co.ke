@@ -76,10 +76,10 @@ export function AppSidebar() {
 
 			<SidebarContent>
 				<MailNav />
+				{isAdmin && <AdminNav />}
 			</SidebarContent>
 
 			<SidebarFooter>
-				{isAdmin && <AdminNav />}
 				{!isInstalled && (
 					<NavFooter
 						items={footerNavItems}
