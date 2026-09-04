@@ -61,8 +61,10 @@ class FilePondController extends Controller
 
     /*
      * Handle Mailgun Account Profile Picture Upload */
-    public function updateMailgunAccountAvatar(Request $request, MailgunAccount $account): Response
-    {
+    public function updateMailgunAccountAvatar(
+        Request $request,
+        MailgunAccount $account
+    ): Response {
         abort_unless($account->user_id === $request->user()->id, 404);
 
         $this->validate($request, [

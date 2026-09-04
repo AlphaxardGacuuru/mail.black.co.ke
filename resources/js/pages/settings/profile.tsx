@@ -6,7 +6,6 @@ import ProfileController from "@/actions/App/Http/Controllers/Settings/ProfileCo
 import DeleteUser from "@/components/delete-user"
 import Heading from "@/components/heading"
 import InputError from "@/components/input-error"
-import MailgunAccountManager from "@/components/mailgun/MailgunAccountManager"
 import PushNotificationSettings from "@/components/push-notification-settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -155,15 +154,6 @@ export default function Profile({
 						</Button>
 					</div>
 				</form>
-			</div>
-
-			<div className="space-y-6">
-				<Heading
-					variant="small"
-					title="Mail accounts"
-					description="Connect multiple Mailgun accounts and choose a default signature for each one."
-				/>
-				<MailgunAccountManager initialAccounts={auth?.mailgunAccounts ?? []} />
 			</div>
 
 			<div className="space-y-6">
