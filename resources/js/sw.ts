@@ -174,7 +174,7 @@ self.addEventListener("push", (event) => {
 	event.waitUntil(
 		self.registration.showNotification(payload.title ?? "New notification", {
 			body: payload.body,
-			icon: payload.icon ?? "/favicon.ico",
+			icon: payload.icon ?? "/android-chrome-192x192.png",
 			data: payload.data,
 		})
 	)

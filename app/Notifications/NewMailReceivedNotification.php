@@ -49,7 +49,7 @@ class NewMailReceivedNotification extends Notification
 	{
 		return (new WebPushMessage)
 			->title($this->from())
-			->icon('/favicon.ico')
+			->icon('/android-chrome-192x192.png')
 			->body($this->mailMessage->subject ?: '(no subject)')
 			->data(['url' => $this->url()])
 			->options(['TTL' => 300]);
