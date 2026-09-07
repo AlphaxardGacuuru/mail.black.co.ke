@@ -15,7 +15,7 @@ class MailAttachmentResource extends JsonResource
             'mimeType' => $this->mime_type,
             'size' => $this->size,
             'isInline' => $this->is_inline,
-            'downloadUrl' => route('mail.attachments.download', $this->id),
+            'downloadUrl' => route('attachments.download', $this->id),
         ];
     }
 }

@@ -1,60 +1,99 @@
-import { useEffect, useState } from "react"
+import { useSyncExternalStore } from "react"
 
 type BeforeInstallPromptEvent = Event & {
 	prompt: () => Promise<void>
 	userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
 }
 
-export function usePwaInstall() {
-	const [installPrompt, setInstallPrompt] =
-		useState<BeforeInstallPromptEvent | null>(null)
-	const [isInstalled, setIsInstalled] = useState(false)
+// `beforeinstallprompt` fires once per page load, at a moment Chrome decides
+// on its own. Module-level (not per-component) state means whichever
+// component happens to be mounted first — AppSidebar on every authenticated
+// page, in practice — captures it, and every other usePwaInstall() caller
+// (e.g. the get-app page, mounted later or never) still sees it via this
+// shared store instead of missing the event entirely.
+let deferredPrompt: BeforeInstallPromptEvent | null = null
+let installed = false
+const listeners = new Set<() => void>()
 
-	useEffect(() => {
-		const isStandalone =
-			window.matchMedia("(display-mode: standalone)").matches ||
-			("standalone" in navigator &&
-				Boolean((navigator as Navigator & { standalone?: boolean }).standalone))
-		setIsInstalled(isStandalone)
+function notify(): void {
+	listeners.forEach((listener) => listener())
+}
 
-		const handleBeforeInstallPrompt = (event: Event) => {
-			event.preventDefault()
-			setInstallPrompt(event as BeforeInstallPromptEvent)
-		}
+function computeIsInstalled(): boolean {
+	return (
+		window.matchMedia("(display-mode: standalone)").matches ||
+		("standalone" in navigator &&
+			Boolean((navigator as Navigator & { standalone?: boolean }).standalone))
+	)
+}
 
-		const handleAppInstalled = () => {
-			setInstallPrompt(null)
-			setIsInstalled(true)
-		}
+if (typeof window !== "undefined") {
+	installed = computeIsInstalled()
 
-		window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
-		window.addEventListener("appinstalled", handleAppInstalled)
+	window.addEventListener("beforeinstallprompt", (event) => {
+		event.preventDefault()
+		deferredPrompt = event as BeforeInstallPromptEvent
+		notify()
+	})
 
-		return () => {
-			window.removeEventListener(
-				"beforeinstallprompt",
-				handleBeforeInstallPrompt
-			)
-			window.removeEventListener("appinstalled", handleAppInstalled)
-		}
-	}, [])
+	window.addEventListener("appinstalled", () => {
+		deferredPrompt = null
+		installed = true
+		notify()
+	})
+}
 
-	async function install(): Promise<boolean> {
-		if (!installPrompt) {
-			return false
-		}
+function subscribe(callback: () => void): () => void {
+	listeners.add(callback)
+	return () => listeners.delete(callback)
+}
 
-		await installPrompt.prompt()
-		const choice = await installPrompt.userChoice
-		setInstallPrompt(null)
+function getPromptSnapshot(): BeforeInstallPromptEvent | null {
+	return deferredPrompt
+}
 
-		if (choice.outcome === "accepted") {
-			setIsInstalled(true)
-			return true
-		}
+function getInstalledSnapshot(): boolean {
+	return installed
+}
 
+function getServerSnapshot(): null {
+	return null
+}
+
+function getServerInstalledSnapshot(): boolean {
+	return false
+}
+
+async function install(): Promise<boolean> {
+	if (!deferredPrompt) {
 		return false
 	}
+
+	const prompt = deferredPrompt
+	await prompt.prompt()
+	const choice = await prompt.userChoice
+	deferredPrompt = null
+
+	if (choice.outcome === "accepted") {
+		installed = true
+	}
+
+	notify()
+
+	return choice.outcome === "accepted"
+}
+
+export function usePwaInstall() {
+	const installPrompt = useSyncExternalStore(
+		subscribe,
+		getPromptSnapshot,
+		getServerSnapshot
+	)
+	const isInstalled = useSyncExternalStore(
+		subscribe,
+		getInstalledSnapshot,
+		getServerInstalledSnapshot
+	)
 
 	return {
 		canInstall: Boolean(installPrompt) && !isInstalled,

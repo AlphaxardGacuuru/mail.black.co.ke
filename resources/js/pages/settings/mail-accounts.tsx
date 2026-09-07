@@ -10,6 +10,7 @@ import Heading from "@/components/heading"
 import RichTextEditor from "@/components/rich-text-editor"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import PasswordInput from "@/components/password-input"
 import { SelectField, SelectItem } from "@/components/ui/select"
 import type { MailgunAccount } from "@/types"
 import Axios from "@/lib/axios"
@@ -148,7 +149,7 @@ export default function MailAccounts() {
 										src={account.avatar ?? undefined}
 										alt={account.mailboxAddress}
 									/>
-									<AvatarFallback>
+									<AvatarFallback className="">
 										{account.mailboxAddress.slice(0, 2).toUpperCase()}
 									</AvatarFallback>
 								</Avatar>
@@ -279,9 +280,8 @@ export default function MailAccounts() {
 									setForm({ ...form, mailgun_domain: event.target.value })
 								}
 							/>
-							<Input
+							<PasswordInput
 								label="Mailgun API key"
-								type="password"
 								required={!editingId}
 								value={form.mailgun_api_key}
 								onChange={(event) =>
