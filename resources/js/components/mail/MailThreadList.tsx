@@ -1,4 +1,4 @@
-import { Pencil } from "lucide-react"
+import { MailPlus } from "lucide-react"
 import MailEmptyState from "@/components/mail/MailEmptyState"
 import MailRealtimeBanner from "@/components/mail/MailRealtimeBanner"
 import MailSearchBar from "@/components/mail/MailSearchBar"
@@ -102,9 +102,9 @@ export default function MailThreadList({
 				size="icon"
 				aria-label="Compose"
 				title="Compose"
-				className="fixed right-6 bottom-6 z-50 size-14 rounded-full shadow-lg"
+				className="fixed right-6 bottom-26 z-50 size-14 rounded-full shadow-lg md:bottom-6"
 				onClick={onCompose}>
-				<Pencil className="size-6" strokeWidth={1.5} />
+				<MailPlus className="size-6" strokeWidth={1.5} />
 			</Button>
 		</div>
 	)

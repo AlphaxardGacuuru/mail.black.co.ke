@@ -183,6 +183,7 @@ self.addEventListener("push", (event) => {
 		self.registration.showNotification(payload.title ?? "New notification", {
 			body: payload.body,
 			icon: payload.icon ?? "/android-chrome-192x192.png",
+			badge: "/badge-monochrome-black.png",
 			data: payload.data,
 		})
 	)

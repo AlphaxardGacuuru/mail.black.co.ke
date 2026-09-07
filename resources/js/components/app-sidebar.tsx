@@ -1,5 +1,5 @@
 import { Link } from "@/components/ui/link"
-import { Download, Mail } from "lucide-react"
+import { Archive, Download, Inbox, Send, Star, Trash2 } from "lucide-react"
 import { AdminNav } from "@/components/admin/AdminNav"
 import AppLogo from "@/components/app-logo"
 import { MailNav } from "@/components/mail-nav"
@@ -23,13 +23,37 @@ import {
 } from "@/components/ui/sidebar"
 const HOME_URL = "/mail"
 import type { NavItem } from "@/types"
+import { toUrl } from "@/lib/utils"
+
+// Sibling routes like /chats and /chats/archived both start with "/chats",
+// so a plain prefix match would leave both nav items active on the archived
+// page. Picking the longest matching href resolves the ambiguity in favor
+// of the more specific route, and generalizes to any future nav items with
+// overlapping prefixes.
+export function findActiveNavHref(
+	pathname: string,
+	items: NavItem[]
+): string | null {
+	let best: string | null = null
+
+	for (const item of items) {
+		const href = toUrl(item.href)
+		const matches = pathname === href || pathname.startsWith(`${href}/`)
+
+		if (matches && (best === null || href.length > best.length)) {
+			best = href
+		}
+	}
+
+	return best
+}
 
 export const mainNavItems: NavItem[] = [
-	{
-		title: "Mail",
-		href: "/mail",
-		icon: Mail,
-	},
+	{ title: "Inbox", href: "/mail", icon: Inbox },
+	{ title: "Starred", href: "/mail/starred", icon: Star },
+	{ title: "Sent", href: "/mail/sent", icon: Send },
+	{ title: "Archive", href: "/mail/archive", icon: Archive },
+	{ title: "Trash", href: "/mail/trash", icon: Trash2 },
 ]
 
 const footerNavItems: NavItem[] = [

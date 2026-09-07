@@ -1,5 +1,6 @@
-import { Archive, Inbox, Send, Star, Tag, Trash2 } from "lucide-react"
+import { Tag } from "lucide-react"
 import { Link } from "@/components/ui/link"
+import { mainNavItems } from "@/components/app-sidebar"
 import {
 	SidebarGroup,
 	SidebarGroupLabel,
@@ -9,15 +10,8 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar"
 import { useCurrentUrl } from "@/hooks/use-current-url"
+import { toUrl } from "@/lib/utils"
 import { useLabels } from "@/queries/mail"
-
-const FOLDERS = [
-	{ href: "/mail", label: "Inbox", icon: Inbox },
-	{ href: "/mail/starred", label: "Starred", icon: Star },
-	{ href: "/mail/sent", label: "Sent", icon: Send },
-	{ href: "/mail/archive", label: "Archive", icon: Archive },
-	{ href: "/mail/trash", label: "Trash", icon: Trash2 },
-]
 
 export function MailNav() {
 	const { isCurrentUrl } = useCurrentUrl()
@@ -37,21 +31,26 @@ export function MailNav() {
 		<SidebarGroup className="px-2 py-0">
 			<SidebarGroupLabel>Platform</SidebarGroupLabel>
 			<SidebarMenu>
-				{FOLDERS.map((folder) => (
-					<SidebarMenuItem key={folder.href}>
-						<SidebarMenuButton
-							asChild
-							isActive={isCurrentUrl(folder.href)}
-							tooltip={folder.label}>
-							<Link
-								href={folder.href}
-								onClick={closeSidebar}>
-								<folder.icon />
-								<span>{folder.label}</span>
-							</Link>
-						</SidebarMenuButton>
-					</SidebarMenuItem>
-				))}
+				{mainNavItems.map((item) => {
+					const href = toUrl(item.href)
+					const Icon = item.icon
+
+					return (
+						<SidebarMenuItem key={href}>
+							<SidebarMenuButton
+								asChild
+								isActive={isCurrentUrl(href)}
+								tooltip={item.title}>
+								<Link
+									href={href}
+									onClick={closeSidebar}>
+									{Icon ? <Icon /> : null}
+									<span>{item.title}</span>
+								</Link>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+					)
+				})}
 
 				{labels?.map((label) => (
 					<SidebarMenuItem key={label.id}>
