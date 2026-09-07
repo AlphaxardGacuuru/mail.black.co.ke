@@ -1,6 +1,7 @@
 import { configureEcho } from "@laravel/echo-react"
 import { Workbox } from "workbox-window"
 import Axios from "@/lib/axios"
+import toast from "@/lib/toast"
 import { StrictMode, createElement, useMemo } from "react"
 import type { ComponentType, ReactNode } from "react"
 import { createRoot } from "react-dom/client"
@@ -244,15 +245,49 @@ rootedContainer._reactRoot.render(
 if ("serviceWorker" in navigator) {
 	const wb = new Workbox("/sw.js")
 
-	// When a new service worker is waiting, reload once it activates so
-	// users always get the latest build assets without a manual refresh.
+	// A new service worker installed and is waiting to take over — let the
+	// user decide when to switch, instead of yanking the page out from under
+	// them mid-session.
 	wb.addEventListener("waiting", () => {
-		wb.messageSkipWaiting()
+		toast("A new version is available", {
+			description: "Update now to get the latest features and fixes.",
+			duration: Infinity,
+			action: {
+				label: "Update",
+				onClick: () => wb.messageSkipWaiting(),
+			},
+		})
 	})
 
-	wb.register().catch(() => {
-		// Ignore registration failures and keep the web app functional.
+	// Once the new service worker actually takes control, its assets are
+	// already cached — reload picks them up immediately.
+	wb.addEventListener("controlling", () => {
+		window.location.reload()
 	})
+
+	wb.register()
+		.then(() => {
+			// Browsers already re-check the service worker on navigation and
+			// roughly every 24h, but this is a long-lived SPA that rarely does a
+			// full page navigation — poll for updates and check again whenever
+			// the tab regains focus, so a new deploy isn't missed for hours.
+			const checkForUpdate = () => {
+				wb.update().catch(() => {
+					// Ignore transient network errors; the next check will retry.
+				})
+			}
+
+			setInterval(checkForUpdate, 30 * 60 * 1000)
+
+			document.addEventListener("visibilitychange", () => {
+				if (document.visibilityState === "visible") {
+					checkForUpdate()
+				}
+			})
+		})
+		.catch(() => {
+			// Ignore registration failures and keep the web app functional.
+		})
 }
 
 initializeTheme()

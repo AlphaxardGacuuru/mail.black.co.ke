@@ -17,7 +17,14 @@ declare const self: ServiceWorkerGlobalScope
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 
-self.skipWaiting()
+// Wait for the window to explicitly ask us to take over (see the "Update"
+// toast in app.tsx) instead of activating immediately, so an in-progress
+// session isn't disrupted by a deploy.
+self.addEventListener("message", (event) => {
+	if (event.data?.type === "SKIP_WAITING") {
+		self.skipWaiting()
+	}
+})
 self.addEventListener("activate", () => self.clients.claim())
 
 // ─── Caching strategies ───────────────────────────────────────────────────────
@@ -71,13 +78,14 @@ registerRoute(
 	})
 )
 
-// Dashboard & property read API routes: stale-while-revalidate for snappy loads.
-// Auth-sensitive routes (payments, billing) are intentionally excluded.
+// Mail read routes: stale-while-revalidate, so the last-fetched threads,
+// messages, and labels are what's shown immediately (including while
+// offline), with a background refresh whenever the network is up.
+// Auth-sensitive routes are intentionally excluded — see NETWORK_ONLY_APIS.
 const STALE_WHILE_REVALIDATE_APIS = [
-	"/api/dashboard",
-	"/api/properties",
+	"/api/threads",
+	"/api/labels",
 	"/api/notifications",
-	"/api/staff",
 ]
 
 registerRoute(
@@ -90,8 +98,8 @@ registerRoute(
 		cacheName: "api-stale",
 		plugins: [
 			new ExpirationPlugin({
-				maxEntries: 60,
-				maxAgeSeconds: 5 * 60, // 5 minutes max staleness
+				maxEntries: 200,
+				maxAgeSeconds: 7 * 24 * 60 * 60, // keep for offline use across a week of inactivity
 			}),
 		],
 	})
@@ -207,11 +215,14 @@ self.addEventListener("notificationclick", (event) => {
 
 // ─── SPA navigation fallback ──────────────────────────────────────────────────
 // All navigate requests that don't match a precached URL fall back to /index.php
-// so TanStack Router handles routing on the client side.
+// so TanStack Router handles routing on the client side. Kept for a month so
+// the app shell still opens while offline, not just within the first minute.
 registerRoute(
 	({ request }) => request.mode === "navigate",
 	new NetworkFirst({
 		cacheName: "navigation",
-		plugins: [new ExpirationPlugin({ maxEntries: 1, maxAgeSeconds: 60 })],
+		plugins: [
+			new ExpirationPlugin({ maxEntries: 1, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+		],
 	})
 )
