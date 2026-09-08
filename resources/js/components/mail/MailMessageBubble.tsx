@@ -61,7 +61,7 @@ export default function MailMessageBubble({
 
 				<div className="flex-1 min-w-0">
 					<span className="font-medium truncate block">{fromName}</span>
-					<span className="font-medium truncate block">
+					<span className="font-medium text-muted-foreground text-sm truncate block">
 						{message.from?.address}
 					</span>
 

@@ -127,8 +127,8 @@ export default function MailThreadView({
 	}
 
 	return (
-		<div className="flex flex-1 flex-col overflow-hidden">
-			<div className="flex items-center gap-2 border-b p-3">
+		<div className="relative flex flex-1 flex-col overflow-hidden">
+			<div className="flex items-center gap-2 border lg:p-3 p-2">
 				{variant === "page" && (
 					<Button
 						variant="ghost"
@@ -198,7 +198,7 @@ export default function MailThreadView({
 				)}
 			</div>
 
-			<div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
+			<div className="min-h-0 flex-1 overflow-y-auto lg:p-3 py-2 pb-20 space-y-2">
 				{thread.messages.map((message) => (
 					<MailMessageBubble
 						key={message.id}
@@ -223,13 +223,12 @@ export default function MailThreadView({
 			</div>
 
 			{lastMessage && (
-				<div className="bg-card p-3">
-					<MailComposeInline
-						parentMessage={lastMessage}
-						currentUserEmail={activeAccount?.mailboxAddress}
-						onSent={() => {}}
-					/>
-				</div>
+				<MailComposeInline
+					parentMessage={lastMessage}
+					currentUserEmail={activeAccount?.mailboxAddress}
+					onSent={() => {}}
+					variant={variant}
+				/>
 			)}
 		</div>
 	)
