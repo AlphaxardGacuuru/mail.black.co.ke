@@ -1,4 +1,4 @@
-import { Bell } from "lucide-react"
+import { Bell, Download } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useApp } from "@/contexts/AppContext"
 import { Button } from "@/components/ui/button"
@@ -10,10 +10,10 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { usePwaInstall } from "@/hooks/use-pwa-install"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
 import toast from "@/lib/toast"
-
-const ONBOARDING_SHOWN_KEY = "permissionsOnboardingShown"
 
 type PermissionStep = {
 	key: string
@@ -33,32 +33,54 @@ type PermissionStep = {
  */
 export default function PermissionsOnboarding() {
 	const { auth } = useApp()
+	const isMobile = useIsMobile()
+	const { canInstall, install, isInstalled } = usePwaInstall()
 	const { isSupported, permission, isSubscribed, subscribe } =
 		usePushNotifications()
 	const [active, setActive] = useState(false)
 	const [stepIndex, setStepIndex] = useState(0)
 
 	const steps: PermissionStep[] = useMemo(
-		() => [
-			{
+		() => {
+			const installStep: PermissionStep | null =
+				isMobile && !isInstalled && canInstall
+					? {
+						key: "install-pwa",
+						icon: Download,
+						title: "Install Black Mail",
+						description:
+							"Add the app to your home screen for quick access and a fuller mobile experience.",
+						isEligible: true,
+						request: install,
+						onGranted: () =>
+							toast.success("Black Mail installed", {
+								description: "You can keep using it from your home screen.",
+							}),
+					  }
+					: null
+
+			const notificationsStep: PermissionStep = {
 				key: "notifications",
 				icon: Bell,
 				title: "Turn on notifications",
 				description:
 					"Enable notifications to get messages the moment they arrive.",
-				isEligible: isSupported && permission === "default" && !isSubscribed,
+				isEligible:
+					isSupported && permission !== "granted" && !isSubscribed,
 				request: subscribe,
 				onGranted: () =>
 					toast.success("Notifications enabled", {
 						description: "You'll get a native alert when new mail arrives.",
 					}),
-			},
-		],
-		[isSupported, permission, isSubscribed, subscribe]
+			}
+
+			return [...(installStep ? [installStep] : []), notificationsStep]
+		},
+		[canInstall, install, isInstalled, isMobile, isSubscribed, isSupported, permission, subscribe]
 	)
 
 	useEffect(() => {
-		if (!auth || active || localStorage.getItem(ONBOARDING_SHOWN_KEY)) {
+		if (!auth || active) {
 			return
 		}
 
@@ -71,7 +93,7 @@ export default function PermissionsOnboarding() {
 		}
 
 		if (stepIndex >= steps.length) {
-			localStorage.setItem(ONBOARDING_SHOWN_KEY, "1")
+			setActive(false)
 			return
 		}
 
