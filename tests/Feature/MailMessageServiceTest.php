@@ -5,11 +5,15 @@ namespace Tests\Feature;
 use App\Enums\MailStatus;
 use App\Http\Services\MailMessageService;
 use App\Http\Services\MailSanitizerService;
+use App\Models\MailAttachment;
 use App\Models\MailgunAccount;
 use App\Models\MailMessage;
 use App\Models\MailThread;
+use App\Models\TemporaryUpload;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class MailMessageServiceTest extends TestCase
@@ -51,6 +55,55 @@ class MailMessageServiceTest extends TestCase
             'user_id' => $user->id,
             'subject' => 'Project update',
         ]);
+    }
+
+    public function test_create_outbound_message_moves_temporary_attachments_to_the_message(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $account = MailgunAccount::create([
+            'user_id' => $user->id,
+            'mailbox_address' => 'sender@example.com',
+            'mailgun_domain' => 'example.com',
+            'mailgun_api_key' => 'key',
+            'mailgun_endpoint' => 'api.mailgun.net',
+        ]);
+        $user->update(['active_mailgun_account_id' => $account->id]);
+
+        $temporaryUpload = TemporaryUpload::create([
+            'disk' => 'public',
+            'path' => 'temporary-uploads/mail/attachment.txt',
+            'original_name' => 'attachment.txt',
+            'mime_type' => 'text/plain',
+            'size' => 128,
+        ]);
+        Storage::disk('public')->put($temporaryUpload->path, 'hello attachment world');
+
+        $service = new TestMailMessageService(new MailSanitizerService);
+
+        [$saved, $mailMessage] = $service->createOutboundMessageForTest($user, [
+            'to' => [
+                ['address' => 'recipient@example.com', 'name' => null],
+            ],
+            'cc' => [],
+            'bcc' => [],
+            'subject' => 'Project update with attachment',
+            'bodyHtml' => '<p>Hello world</p>',
+            'inReplyTo' => null,
+            'references' => null,
+            'participantEmail' => 'recipient@example.com',
+        ], [$temporaryUpload->id]);
+
+        $this->assertTrue($saved);
+        $this->assertTrue($mailMessage->fresh()->has_attachments);
+        $this->assertDatabaseHas('mail_attachments', [
+            'mail_message_id' => $mailMessage->id,
+            'original_name' => 'attachment.txt',
+            'mime_type' => 'text/plain',
+        ]);
+        $this->assertFalse(Storage::disk('public')->exists($temporaryUpload->path));
+        $this->assertTrue(Storage::disk('public')->exists("mail-attachments/{$mailMessage->id}/attachment.txt"));
     }
 
     public function test_retry_resets_a_failed_outbound_message_to_queued(): void

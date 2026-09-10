@@ -2,15 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Events\MailMessageReceivedEvent;
+use App\Events\MailMessageStatusUpdatedEvent;
+use App\Models\MailAttachment;
+use App\Models\MailgunAccount;
+use App\Models\MailgunEvent;
 use App\Models\MailMessage;
 use App\Models\MailThread;
 use App\Models\User;
-use App\Models\MailgunEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
-use App\Events\MailMessageStatusUpdatedEvent;
-use App\Events\MailMessageReceivedEvent;
-use App\Models\MailgunAccount;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class MailgunWebhookTest extends TestCase
@@ -128,6 +131,50 @@ class MailgunWebhookTest extends TestCase
 
         $response->assertOk()->assertJson(['updated' => 0, 'message' => 'Event already processed']);
         $this->assertSame(1, MailgunEvent::where('provider_event_id', 'duplicate-event-id')->count());
+    }
+
+    public function test_mailgun_inbound_webhook_stores_attachments(): void
+    {
+        Storage::fake('public');
+        config(['services.mailgun.webhook_signing_secret' => 'webhook-secret']);
+        $user = User::factory()->create();
+        MailgunAccount::create([
+            'user_id' => $user->id,
+            'mailbox_address' => 'inbox@example.com',
+            'mailgun_domain' => 'example.com',
+            'mailgun_api_key' => 'key',
+            'mailgun_endpoint' => 'api.mailgun.net',
+        ]);
+
+        $file = UploadedFile::fake()->create('report.pdf', 120, 'application/pdf');
+
+        $timestamp = (string) now()->timestamp;
+        $token = 'inbound-attachment-token';
+        $response = $this->postJson('/api/webhooks/mailgun', [
+            'timestamp' => $timestamp,
+            'token' => $token,
+            'signature' => hash_hmac('sha256', $timestamp . $token, 'webhook-secret'),
+            'recipient' => 'inbox@example.com',
+            'sender' => 'sender@example.net',
+            'from' => 'Sender <sender@example.net>',
+            'To' => 'inbox@example.com',
+            'subject' => 'Incoming attachment',
+            'body-plain' => 'Hello',
+            'Message-Id' => '<inbound-attachment@example.net>',
+            'attachment-count' => 1,
+            'attachment-1' => $file,
+        ]);
+
+        $response->assertOk()->assertJson(['status' => true]);
+        $message = MailMessage::where('message_id', 'inbound-attachment@example.net')->firstOrFail();
+
+        $this->assertTrue($message->fresh()->has_attachments);
+        $this->assertDatabaseHas('mail_attachments', [
+            'mail_message_id' => $message->id,
+            'original_name' => 'report.pdf',
+            'mime_type' => 'application/pdf',
+        ]);
+        $this->assertNotNull(MailAttachment::where('mail_message_id', $message->id)->first());
     }
 
     public function test_mailgun_inbound_webhook_broadcasts_the_new_message(): void
