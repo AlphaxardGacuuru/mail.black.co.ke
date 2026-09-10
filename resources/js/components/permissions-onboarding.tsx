@@ -40,11 +40,10 @@ export default function PermissionsOnboarding() {
 	const [active, setActive] = useState(false)
 	const [stepIndex, setStepIndex] = useState(0)
 
-	const steps: PermissionStep[] = useMemo(
-		() => {
-			const installStep: PermissionStep | null =
-				isMobile && !isInstalled && canInstall
-					? {
+	const steps: PermissionStep[] = useMemo(() => {
+		const installStep: PermissionStep | null =
+			isMobile && !isInstalled && canInstall
+				? {
 						key: "install-pwa",
 						icon: Download,
 						title: "Install Black Mail",
@@ -56,28 +55,34 @@ export default function PermissionsOnboarding() {
 							toast.success("Black Mail installed", {
 								description: "You can keep using it from your home screen.",
 							}),
-					  }
-					: null
+					}
+				: null
 
-			const notificationsStep: PermissionStep = {
-				key: "notifications",
-				icon: Bell,
-				title: "Turn on notifications",
-				description:
-					"Enable notifications to get messages the moment they arrive.",
-				isEligible:
-					isSupported && permission !== "granted" && !isSubscribed,
-				request: subscribe,
-				onGranted: () =>
-					toast.success("Notifications enabled", {
-						description: "You'll get a native alert when new mail arrives.",
-					}),
-			}
+		const notificationsStep: PermissionStep = {
+			key: "notifications",
+			icon: Bell,
+			title: "Turn on notifications",
+			description:
+				"Enable notifications to get messages the moment they arrive.",
+			isEligible: isSupported && permission !== "granted" && !isSubscribed,
+			request: subscribe,
+			onGranted: () =>
+				toast.success("Notifications enabled", {
+					description: "You'll get a native alert when new mail arrives.",
+				}),
+		}
 
-			return [...(installStep ? [installStep] : []), notificationsStep]
-		},
-		[canInstall, install, isInstalled, isMobile, isSubscribed, isSupported, permission, subscribe]
-	)
+		return [...(installStep ? [installStep] : []), notificationsStep]
+	}, [
+		canInstall,
+		install,
+		isInstalled,
+		isMobile,
+		isSubscribed,
+		isSupported,
+		permission,
+		subscribe,
+	])
 
 	useEffect(() => {
 		if (!auth || active) {
@@ -86,6 +91,17 @@ export default function PermissionsOnboarding() {
 
 		setActive(true)
 	}, [auth, active])
+
+	useEffect(() => {
+		if (!auth || !steps.length) {
+			return
+		}
+
+		if (steps[0]?.key === "notifications" && steps[0].isEligible) {
+			setActive(true)
+			setStepIndex(0)
+		}
+	}, [auth, steps])
 
 	useEffect(() => {
 		if (!active) {
