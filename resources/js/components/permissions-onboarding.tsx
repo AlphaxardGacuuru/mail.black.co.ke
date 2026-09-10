@@ -15,6 +15,8 @@ import { usePwaInstall } from "@/hooks/use-pwa-install"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
 import toast from "@/lib/toast"
 
+const ONBOARDING_SHOWN_KEY = "permissionsOnboardingShown"
+
 type PermissionStep = {
 	key: string
 	icon: typeof Bell
@@ -26,10 +28,9 @@ type PermissionStep = {
 }
 
 /**
- * Mounted app-wide (in AppSidebar). On a user's first login in this browser,
- * walks them through a short queue of native permission requests — currently
- * just push notifications — each behind its own explanatory modal so the
- * browser's own permission prompt never appears out of nowhere.
+ * Mounted app-wide (in AppSidebar). Once per site visit, walks an authenticated
+ * user through native permission requests behind explanatory modals so browser
+ * prompts never appear out of nowhere.
  */
 export default function PermissionsOnboarding() {
 	const { auth } = useApp()
@@ -85,23 +86,18 @@ export default function PermissionsOnboarding() {
 	])
 
 	useEffect(() => {
-		if (!auth || active) {
+		if (
+			!auth ||
+			active ||
+			sessionStorage.getItem(ONBOARDING_SHOWN_KEY)
+		) {
 			return
 		}
 
+		sessionStorage.setItem(ONBOARDING_SHOWN_KEY, "1")
+		setStepIndex(0)
 		setActive(true)
 	}, [auth, active])
-
-	useEffect(() => {
-		if (!auth || !steps.length) {
-			return
-		}
-
-		if (steps[0]?.key === "notifications" && steps[0].isEligible) {
-			setActive(true)
-			setStepIndex(0)
-		}
-	}, [auth, steps])
 
 	useEffect(() => {
 		if (!active) {
