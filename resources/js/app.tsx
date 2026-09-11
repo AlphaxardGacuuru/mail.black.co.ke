@@ -43,6 +43,7 @@ type SpaPage = {
 // ─── Router ──────────────────────────────────────────────────────────────────
 
 const GUEST_ONLY = new Set([
+	"welcome",
 	"auth/login",
 	"auth/register",
 	"auth/forgot-password",
@@ -50,7 +51,7 @@ const GUEST_ONLY = new Set([
 	"auth/two-factor-challenge",
 ])
 
-const PUBLIC = new Set(["welcome", "auth/socialite-callback"])
+const PUBLIC = new Set(["auth/socialite-callback"])
 
 const pages = import.meta.glob<{
 	default: ComponentType<Record<string, unknown>>

@@ -22,6 +22,7 @@ type PermissionStep = {
 	icon: typeof Bell
 	title: string
 	description: string
+	actionLabel: string
 	isEligible: boolean
 	request: () => Promise<boolean>
 	onGranted: () => void
@@ -50,6 +51,7 @@ export default function PermissionsOnboarding() {
 						title: "Install Black Mail",
 						description:
 							"Add the app to your home screen for quick access and a fuller mobile experience.",
+						actionLabel: "Download app",
 						isEligible: true,
 						request: install,
 						onGranted: () =>
@@ -65,6 +67,7 @@ export default function PermissionsOnboarding() {
 			title: "Turn on notifications",
 			description:
 				"Enable notifications to get messages the moment they arrive.",
+			actionLabel: "Enable",
 			isEligible: isSupported && permission !== "granted" && !isSubscribed,
 			request: subscribe,
 			onGranted: () =>
@@ -167,7 +170,7 @@ export default function PermissionsOnboarding() {
 					<Button
 						type="button"
 						onClick={() => void allow()}>
-						Enable
+						{currentStep.actionLabel}
 					</Button>
 				</DialogFooter>
 			</DialogContent>
