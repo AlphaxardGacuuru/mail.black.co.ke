@@ -13,6 +13,12 @@ type BeforeInstallPromptEvent = Event & {
 // shared store instead of missing the event entirely.
 let deferredPrompt: BeforeInstallPromptEvent | null = null
 let installed = false
+// `beforeinstallprompt`, when Chrome is going to fire it at all, reliably
+// fires by the time the page finishes loading. Callers that need to order
+// steps around installability (e.g. the onboarding modal) can wait on this
+// instead of racing an eligibility check against an event that hasn't
+// arrived yet.
+let promptSettled = false
 const listeners = new Set<() => void>()
 
 function notify(): void {
@@ -30,9 +36,23 @@ function computeIsInstalled(): boolean {
 if (typeof window !== "undefined") {
 	installed = computeIsInstalled()
 
+	if (document.readyState === "complete") {
+		promptSettled = true
+	} else {
+		window.addEventListener(
+			"load",
+			() => {
+				promptSettled = true
+				notify()
+			},
+			{ once: true }
+		)
+	}
+
 	window.addEventListener("beforeinstallprompt", (event) => {
 		event.preventDefault()
 		deferredPrompt = event as BeforeInstallPromptEvent
+		promptSettled = true
 		notify()
 	})
 
@@ -56,11 +76,19 @@ function getInstalledSnapshot(): boolean {
 	return installed
 }
 
+function getPromptSettledSnapshot(): boolean {
+	return promptSettled
+}
+
 function getServerSnapshot(): null {
 	return null
 }
 
 function getServerInstalledSnapshot(): boolean {
+	return false
+}
+
+function getServerPromptSettledSnapshot(): boolean {
 	return false
 }
 
@@ -94,10 +122,16 @@ export function usePwaInstall() {
 		getInstalledSnapshot,
 		getServerInstalledSnapshot
 	)
+	const isPromptSettled = useSyncExternalStore(
+		subscribe,
+		getPromptSettledSnapshot,
+		getServerPromptSettledSnapshot
+	)
 
 	return {
 		canInstall: Boolean(installPrompt) && !isInstalled,
 		install,
 		isInstalled,
+		isPromptSettled,
 	}
 }

@@ -36,7 +36,7 @@ type PermissionStep = {
 export default function PermissionsOnboarding() {
 	const { auth } = useApp()
 	const isMobile = useIsMobile()
-	const { canInstall, install, isInstalled } = usePwaInstall()
+	const { canInstall, install, isInstalled, isPromptSettled } = usePwaInstall()
 	const { isSupported, permission, isSubscribed, subscribe } =
 		usePushNotifications()
 	const [active, setActive] = useState(false)
@@ -92,7 +92,11 @@ export default function PermissionsOnboarding() {
 		if (
 			!auth ||
 			active ||
-			sessionStorage.getItem(ONBOARDING_SHOWN_KEY)
+			sessionStorage.getItem(ONBOARDING_SHOWN_KEY) ||
+			// On mobile, wait to know whether the install step applies before
+			// activating — otherwise notifications can win the race and show
+			// first, or the install step can get skipped for the session.
+			(isMobile && !isPromptSettled)
 		) {
 			return
 		}
@@ -100,7 +104,7 @@ export default function PermissionsOnboarding() {
 		sessionStorage.setItem(ONBOARDING_SHOWN_KEY, "1")
 		setStepIndex(0)
 		setActive(true)
-	}, [auth, active])
+	}, [auth, active, isMobile, isPromptSettled])
 
 	useEffect(() => {
 		if (!active) {
