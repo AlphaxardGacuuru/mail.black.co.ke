@@ -1,4 +1,5 @@
 import { isCancel } from "axios"
+import { useQueryClient } from "@tanstack/react-query"
 import type { FilePondFile } from "filepond"
 import FilePondPluginFileValidateSize from "filepond-plugin-file-validate-size"
 import { Paperclip, Send } from "lucide-react"
@@ -49,6 +50,7 @@ export default function MailComposeForm({
 	const [pendingUploads, setPendingUploads] = useState(0)
 	const [showAttachments, setShowAttachments] = useState(false)
 	const pondRef = useRef<FilePond>(null)
+	const queryClient = useQueryClient()
 
 	const sendMail = useSendMail()
 	const replyMail = useReplyMail(
@@ -117,12 +119,22 @@ export default function MailComposeForm({
 					response.data?.data as { threadId?: string } | undefined
 				)?.threadId
 
-				toast.success(mode === "new" ? "Message sent" : "Reply sent")
+				queryClient.refetchQueries({
+					queryKey: ["mail", "threads"],
+					predicate: (query) => {
+						const filters = query.queryKey[2] as
+							| { folder?: string }
+							| undefined
+						return filters?.folder === "sent"
+					},
+				})
+
+				toast.success(mode === "new" ? "Message Sent" : "Reply Sent")
 				resetForm()
 				onSent?.({ threadId })
 			})
 			.catch(() => {
-				toast.error("Failed to send message")
+				toast.error("Failed to Send Message")
 			})
 	}
 
