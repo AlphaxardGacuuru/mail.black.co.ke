@@ -18,8 +18,6 @@ class MailInboundService
 {
     use ResolvesMailThread;
 
-    protected const ALLOWED_ATTACHMENT_MIME_PREFIXES = ['image/', 'text/', 'application/pdf', 'application/msword', 'application/vnd.'];
-
     protected const MAX_ATTACHMENT_SIZE = 26_214_400; // 25MB, matches Mailgun's own inbound cap
 
     public function __construct(protected MailSanitizerService $sanitizer) {}
@@ -177,17 +175,6 @@ class MailInboundService
                     return false;
                 }
 
-                $mime = $file->getMimeType() ?? 'application/octet-stream';
-
-                if (! $this->isAllowedMime($mime)) {
-                    Log::warning('Mailgun inbound: attachment mime type not allowed, skipped', [
-                        'mail_message_id' => $mailMessage->id,
-                        'mime' => $mime,
-                    ]);
-
-                    return false;
-                }
-
                 return true;
             })
             ->each(function ($file) use ($mailMessage) {
@@ -205,11 +192,5 @@ class MailInboundService
             });
 
         return $stored->count();
-    }
-
-    protected function isAllowedMime(string $mime): bool
-    {
-        return collect(self::ALLOWED_ATTACHMENT_MIME_PREFIXES)
-            ->contains(fn(string $prefix): bool => Str::startsWith($mime, $prefix));
     }
 }
