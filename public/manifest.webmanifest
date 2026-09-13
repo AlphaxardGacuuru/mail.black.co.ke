@@ -2,7 +2,7 @@
 	"name": "Black Mail",
 	"short_name": "Black Mail",
 	"description": "An email client with read receipts built in, see when every message is queued, sent, delivered, and opened.",
-	"start_url": "/",
+	"start_url": "/mail",
 	"scope": "/",
 	"display": "standalone",
 	"background_color": "#00313A",
