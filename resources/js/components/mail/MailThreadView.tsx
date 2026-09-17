@@ -14,6 +14,7 @@ import MailMessageBubble from "@/components/mail/MailMessageBubble"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useApp } from "@/contexts/AppContext"
+import { useMailRealtimeSync } from "@/hooks/use-mail-realtime-sync"
 import toast from "@/lib/toast"
 import {
 	useArchiveMailThread,
@@ -43,6 +44,8 @@ export default function MailThreadView({
 		(account) => account.isActive
 	)
 	const { data: thread, isLoading } = useMailThread(threadId)
+
+	useMailRealtimeSync()
 
 	const starMutation = useStarMailThread(true)
 	const unstarMutation = useStarMailThread(false)

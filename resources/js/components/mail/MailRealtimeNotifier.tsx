@@ -1,7 +1,7 @@
 import { useEcho } from "@laravel/echo-react"
-import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate, useRouterState } from "@tanstack/react-router"
 import { useApp } from "@/contexts/AppContext"
+import { useMailRealtimeSync } from "@/hooks/use-mail-realtime-sync"
 import { playIncomingMailChime } from "@/lib/notification-sound"
 import toast from "@/lib/toast"
 
@@ -11,36 +11,25 @@ type MailRealtimeEvent = {
 
 /**
  * Mounted app-wide (in AppSidebar) so new mail sound/toasts fire from any page, not just the mail views.
+ * Cache sync itself is handled by useMailRealtimeSync, which also runs directly inside mail views so
+ * status updates still land even when this (sidebar-scoped) component isn't mounted, e.g. the mobile
+ * sidebar Sheet being closed.
  */
 export default function MailRealtimeNotifier() {
 	const { auth } = useApp()
-	const queryClient = useQueryClient()
 	const navigate = useNavigate()
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	})
 	const onMailPages = pathname.startsWith("/mail")
 
-	useEcho(
-		`mail.${auth?.id ?? ""}`,
-		"MailMessageStatusUpdatedEvent",
-		(event: MailRealtimeEvent) => {
-			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
-			queryClient.invalidateQueries({
-				queryKey: ["mail", "thread", event.threadId],
-			})
-		}
-	)
+	useMailRealtimeSync()
 
 	useEcho(
 		`mail.${auth?.id ?? ""}`,
 		"MailMessageReceivedEvent",
 		(event: MailRealtimeEvent) => {
 			playIncomingMailChime()
-			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
-			queryClient.invalidateQueries({
-				queryKey: ["mail", "thread", event.threadId],
-			})
 
 			// The mail pages already show an in-context banner, avoid a redundant toast there.
 			if (!onMailPages) {
