@@ -116,7 +116,7 @@ export default function MailComposeForm({
 			.mutateAsync(payload)
 			.then((response) => {
 				const threadId = (
-					response.data?.data as { threadId?: string } | undefined
+					response.data?.data as { threadId?: string } | undefined 
 				)?.threadId
 
 				queryClient.refetchQueries({
