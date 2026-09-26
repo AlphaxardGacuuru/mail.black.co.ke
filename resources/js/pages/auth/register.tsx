@@ -36,7 +36,6 @@ export default function Register({
 	const [processing, setProcessing] = useState(false)
 	const [errors, setErrors] = useState<Record<string, string>>({})
 
-
 	function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault()
 		setProcessing(true)
@@ -240,6 +239,7 @@ export default function Register({
 						type="submit"
 						className="mt-2 w-full"
 						tabIndex={5}
+						disabled={processing}
 						data-test="register-user-button">
 						{processing && <Spinner />}
 						Create account

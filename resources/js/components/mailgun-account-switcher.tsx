@@ -1,5 +1,6 @@
 import { Check } from "lucide-react"
 import { useState } from "react"
+import { Spinner } from "@/components/ui/spinner"
 import MailgunAccountController from "@/actions/App/Http/Controllers/Settings/MailgunAccountController"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -40,7 +41,13 @@ function AccountAvatar({ account }: { account: MailgunAccount }) {
 	)
 }
 
-function AccountDetails({ account }: { account: MailgunAccount }) {
+function AccountDetails({
+	account,
+	isActivating,
+}: {
+	account: MailgunAccount
+	isActivating?: boolean
+}) {
 	return (
 		<>
 			<AccountAvatar account={account} />
@@ -51,7 +58,11 @@ function AccountDetails({ account }: { account: MailgunAccount }) {
 				</div>
 			</div>
 			<div>
-				{account.isActive && <Check className="size-4 shrink-0 text-primary" />}
+				{isActivating ? (
+					<Spinner className="size-4 shrink-0" />
+				) : (
+					account.isActive && <Check className="size-4 shrink-0 text-primary" />
+				)}
 			</div>
 		</>
 	)
@@ -62,14 +73,17 @@ export function MailgunAccountSwitcher() {
 	const queryClient = useQueryClient()
 	const isMobile = useIsMobile()
 	const [sheetOpen, setSheetOpen] = useState(false)
+	const [activatingId, setActivatingId] = useState<string | null>(null)
 	const accounts = auth?.mailgunAccounts ?? []
 	const activeAccount =
 		accounts.find((account) => account.isActive) ?? accounts[0]
 
 	function activateAccount(account: MailgunAccount): void {
-		if (account.isActive) {
+		if (account.isActive || activatingId) {
 			return
 		}
+
+		setActivatingId(account.id)
 
 		Axios.post(MailgunAccountController.activate.url(account.id))
 			.then(() => {
@@ -79,6 +93,7 @@ export function MailgunAccountSwitcher() {
 				setSheetOpen(false)
 			})
 			.catch(() => toast.error("Unable to switch mail account."))
+			.finally(() => setActivatingId(null))
 	}
 
 	if (!activeAccount) {
@@ -113,9 +128,13 @@ export function MailgunAccountSwitcher() {
 								key={account.id}
 								type="button"
 								variant="ghost"
+								disabled={activatingId === account.id}
 								className="h-auto w-full justify-start gap-3 py-2 px-0 normal-case"
 								onClick={() => activateAccount(account)}>
-								<AccountDetails account={account} />
+								<AccountDetails
+									account={account}
+									isActivating={activatingId === account.id}
+								/>
 							</Button>
 						))}
 					</div>
@@ -135,9 +154,13 @@ export function MailgunAccountSwitcher() {
 				{accounts.map((account) => (
 					<DropdownMenuItem
 						key={account.id}
+						disabled={activatingId === account.id}
 						onClick={() => activateAccount(account)}
 						className="cursor-pointer gap-2">
-						<AccountDetails account={account} />
+						<AccountDetails
+							account={account}
+							isActivating={activatingId === account.id}
+						/>
 					</DropdownMenuItem>
 				))}
 			</DropdownMenuContent>

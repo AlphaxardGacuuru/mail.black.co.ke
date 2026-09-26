@@ -30,6 +30,16 @@ export default function Profile({
 
 	const [processing, setProcessing] = useState(false)
 	const [errors, setErrors] = useState<Record<string, string>>({})
+	const [resendingVerification, setResendingVerification] = useState(false)
+
+	async function handleResendVerification() {
+		setResendingVerification(true)
+		try {
+			await Axios.request({ url: send().url, method: send().method })
+		} finally {
+			setResendingVerification(false)
+		}
+	}
 
 	function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault()
@@ -129,10 +139,12 @@ export default function Profile({
 								Your email address is unverified.{" "}
 								<button
 									type="button"
-									onClick={() =>
-										Axios.request({ url: send().url, method: send().method })
-									}
-									className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500">
+									disabled={resendingVerification}
+									onClick={handleResendVerification}
+									className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500 disabled:pointer-events-none disabled:opacity-70">
+									{resendingVerification && (
+										<LoaderCircle className="mr-1 inline-block size-3 animate-spin" />
+									)}
 									Click here to resend the verification email.
 								</button>
 							</p>

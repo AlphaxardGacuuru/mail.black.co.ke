@@ -10,6 +10,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog"
+import { Spinner } from "@/components/ui/spinner"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { usePwaInstall } from "@/hooks/use-pwa-install"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
@@ -41,6 +42,7 @@ export default function PermissionsOnboarding() {
 		usePushNotifications()
 	const [active, setActive] = useState(false)
 	const [stepIndex, setStepIndex] = useState(0)
+	const [processing, setProcessing] = useState(false)
 
 	const steps: PermissionStep[] = useMemo(() => {
 		const installStep: PermissionStep | null =
@@ -133,13 +135,19 @@ export default function PermissionsOnboarding() {
 			return
 		}
 
-		const granted = await currentStep.request()
+		setProcessing(true)
 
-		if (granted) {
-			currentStep.onGranted()
+		try {
+			const granted = await currentStep.request()
+
+			if (granted) {
+				currentStep.onGranted()
+			}
+
+			setStepIndex((index) => index + 1)
+		} finally {
+			setProcessing(false)
 		}
-
-		setStepIndex((index) => index + 1)
 	}
 
 	if (!currentStep) {
@@ -168,12 +176,15 @@ export default function PermissionsOnboarding() {
 					<Button
 						type="button"
 						variant="outline"
+						disabled={processing}
 						onClick={skip}>
 						Not now
 					</Button>
 					<Button
 						type="button"
+						disabled={processing}
 						onClick={() => void allow()}>
+						{processing && <Spinner className="size-4" />}
 						{currentStep.actionLabel}
 					</Button>
 				</DialogFooter>

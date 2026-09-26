@@ -10,7 +10,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card"
 import axios from "@/lib/axios"
-import { regenerate as regenerateRecoveryCodes } from '@/routes/two-factor/recovery-codes'
+import { regenerate as regenerateRecoveryCodes } from "@/routes/two-factor/recovery-codes"
 
 type Props = {
 	recoveryCodesList: string[]
@@ -101,7 +101,10 @@ export default function TwoFactorRecoveryCodes({
 							disabled={regenerating}
 							onClick={handleRegenerate}
 							aria-describedby="regenerate-warning">
-							<RefreshCw /> Regenerate codes
+							<RefreshCw
+								className={regenerating ? "animate-spin" : undefined}
+							/>{" "}
+							Regenerate codes
 						</Button>
 					)}
 				</div>

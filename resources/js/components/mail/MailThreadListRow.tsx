@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { useEffect, useRef, useState } from "react"
 import MailStatusIcon from "@/components/mail/MailStatusIcon"
 import { cn } from "@/lib/utils"
@@ -67,6 +68,14 @@ export default function MailThreadListRow({
 	const trashMutation = useTrashMailThread()
 	const markReadMutation = useMarkMailThreadRead(true)
 	const markUnreadMutation = useMarkMailThreadRead(false)
+	const isReadTogglePending = (
+		thread.hasUnread ? markReadMutation : markUnreadMutation
+	).isPending
+	const isStarPending = (thread.isStarred ? unstarMutation : starMutation)
+		.isPending
+	const isArchiveTogglePending = (
+		folder === "archive" ? restoreMutation : archiveMutation
+	).isPending
 	const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 	const swipeOffsetRef = useRef(0)
 	const swipedRef = useRef(false)
@@ -78,7 +87,10 @@ export default function MailThreadListRow({
 		}
 
 		setIsHighlighted(true)
-		const timeout = setTimeout(() => setIsHighlighted(false), HIGHLIGHT_DURATION_MS)
+		const timeout = setTimeout(
+			() => setIsHighlighted(false),
+			HIGHLIGHT_DURATION_MS
+		)
 
 		return () => clearTimeout(timeout)
 	}, [isIncoming])
@@ -117,9 +129,7 @@ export default function MailThreadListRow({
 		}
 
 		if (swipeOffsetRef.current <= -72) {
-			;(folder === "trash" ? restoreMutation : trashMutation).mutate(
-				thread.id
-			)
+			;(folder === "trash" ? restoreMutation : trashMutation).mutate(thread.id)
 			swipedRef.current = true
 		} else if (swipeOffsetRef.current >= 72) {
 			;(folder === "archive" ? restoreMutation : archiveMutation).mutate(
@@ -249,6 +259,7 @@ export default function MailThreadListRow({
 						aria-label={thread.hasUnread ? "Mark as read" : "Mark as unread"}
 						title={thread.hasUnread ? "Mark as read" : "Mark as unread"}
 						className="size-7"
+						disabled={isReadTogglePending}
 						onClick={(event) => {
 							event.stopPropagation()
 							;(thread.hasUnread
@@ -256,7 +267,9 @@ export default function MailThreadListRow({
 								: markUnreadMutation
 							).mutate(thread.id)
 						}}>
-						{thread.hasUnread ? (
+						{isReadTogglePending ? (
+							<Spinner className="size-3.5" />
+						) : thread.hasUnread ? (
 							<MailOpen className="size-3.5" />
 						) : (
 							<MailCheck className="size-3.5" />
@@ -266,31 +279,39 @@ export default function MailThreadListRow({
 						variant="ghost"
 						size="icon"
 						className="size-7"
+						disabled={isStarPending}
 						onClick={(event) => {
 							event.stopPropagation()
 							;(thread.isStarred ? unstarMutation : starMutation).mutate(
 								thread.id
 							)
 						}}>
-						<Star
-							className={
-								thread.isStarred
-									? "size-3.5 fill-yellow-400 text-yellow-400"
-									: "size-3.5"
-							}
-						/>
+						{isStarPending ? (
+							<Spinner className="size-3.5" />
+						) : (
+							<Star
+								className={
+									thread.isStarred
+										? "size-3.5 fill-yellow-400 text-yellow-400"
+										: "size-3.5"
+								}
+							/>
+						)}
 					</Button>
 					<Button
 						variant="ghost"
 						size="icon"
 						className="size-7"
+						disabled={isArchiveTogglePending}
 						onClick={(event) => {
 							event.stopPropagation()
 							const mutation =
 								folder === "archive" ? restoreMutation : archiveMutation
 							mutation.mutate(thread.id)
 						}}>
-						{folder === "archive" ? (
+						{isArchiveTogglePending ? (
+							<Spinner className="size-3.5" />
+						) : folder === "archive" ? (
 							<ArchiveRestore className="size-3.5" />
 						) : (
 							<Archive className="size-3.5" />
@@ -300,11 +321,16 @@ export default function MailThreadListRow({
 						variant="ghost"
 						size="icon"
 						className="size-7"
+						disabled={trashMutation.isPending}
 						onClick={(event) => {
 							event.stopPropagation()
 							trashMutation.mutate(thread.id)
 						}}>
-						<Trash2 className="size-3.5" />
+						{trashMutation.isPending ? (
+							<Spinner className="size-3.5" />
+						) : (
+							<Trash2 className="size-3.5" />
+						)}
 					</Button>
 				</div>
 			</div>

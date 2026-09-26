@@ -13,6 +13,7 @@ import MailComposeInline from "@/components/mail/MailComposeInline"
 import MailMessageBubble from "@/components/mail/MailMessageBubble"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
 import { useApp } from "@/contexts/AppContext"
 import { useMailRealtimeSync } from "@/hooks/use-mail-realtime-sync"
 import toast from "@/lib/toast"
@@ -92,6 +93,15 @@ export default function MailThreadView({
 		thread.messages.every((message) => message.folder === "archive")
 	const hasUnread = thread.messages.some((message) => !message.isRead)
 
+	const isStarPending = (thread.isStarred ? unstarMutation : starMutation)
+		.isPending
+	const isReadTogglePending = (
+		hasUnread ? markReadMutation : markUnreadMutation
+	).isPending
+	const isArchiveTogglePending = (
+		isArchived ? restoreMutation : archiveMutation
+	).isPending
+
 	const closeThread = () => {
 		if (variant === "pane") {
 			onClose?.()
@@ -148,14 +158,19 @@ export default function MailThreadView({
 				<Button
 					variant="ghost"
 					size="icon"
+					disabled={isStarPending}
 					onClick={toggleStar}>
-					<Star
-						className={
-							thread.isStarred
-								? "size-4 fill-yellow-400 text-yellow-400"
-								: "size-4"
-						}
-					/>
+					{isStarPending ? (
+						<Spinner className="size-4" />
+					) : (
+						<Star
+							className={
+								thread.isStarred
+									? "size-4 fill-yellow-400 text-yellow-400"
+									: "size-4"
+							}
+						/>
+					)}
 				</Button>
 
 				<Button
@@ -163,8 +178,11 @@ export default function MailThreadView({
 					size="icon"
 					aria-label={hasUnread ? "Mark as read" : "Mark as unread"}
 					title={hasUnread ? "Mark as read" : "Mark as unread"}
+					disabled={isReadTogglePending}
 					onClick={toggleRead}>
-					{hasUnread ? (
+					{isReadTogglePending ? (
+						<Spinner className="size-4" />
+					) : hasUnread ? (
 						<MailOpen className="size-4" />
 					) : (
 						<MailCheck className="size-4" />
@@ -176,8 +194,11 @@ export default function MailThreadView({
 					size="icon"
 					aria-label={isArchived ? "Unarchive" : "Archive"}
 					title={isArchived ? "Unarchive" : "Archive"}
+					disabled={isArchiveTogglePending}
 					onClick={handleArchive}>
-					{isArchived ? (
+					{isArchiveTogglePending ? (
+						<Spinner className="size-4" />
+					) : isArchived ? (
 						<ArchiveRestore className="size-4" />
 					) : (
 						<Archive className="size-4" />
@@ -187,8 +208,13 @@ export default function MailThreadView({
 				<Button
 					variant="ghost"
 					size="icon"
+					disabled={trashMutation.isPending}
 					onClick={handleTrash}>
-					<Trash2 className="size-4" />
+					{trashMutation.isPending ? (
+						<Spinner className="size-4" />
+					) : (
+						<Trash2 className="size-4" />
+					)}
 				</Button>
 
 				{variant === "pane" && (

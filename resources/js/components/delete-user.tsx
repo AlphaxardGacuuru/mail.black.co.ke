@@ -14,6 +14,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { Spinner } from "@/components/ui/spinner"
 import axios from "@/lib/axios"
 
 export default function DeleteUser() {
@@ -138,6 +139,7 @@ export default function DeleteUser() {
 									<button
 										type="submit"
 										data-test="confirm-delete-user-button">
+										{processing && <Spinner className="size-4" />}
 										Delete account
 									</button>
 								</Button>

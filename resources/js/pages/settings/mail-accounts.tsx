@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react"
+import { LoaderCircle, Plus } from "lucide-react"
 import { useState } from "react"
 import { FilePond, registerPlugin } from "react-filepond"
 import { Head } from "@/lib/spa"
@@ -318,6 +318,9 @@ export default function MailAccounts() {
 									</Button>
 								)}
 								<Button disabled={processing}>
+									{processing && (
+										<LoaderCircle className="h-4 w-4 animate-spin" />
+									)}
 									{editingId ? "Update account" : "Add account"}
 								</Button>
 							</div>
