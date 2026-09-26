@@ -26,7 +26,7 @@ class UserService extends Service
 
 		return $query
 			->orderBy('id', 'DESC')
-			->paginate();
+			->paginate($request->integer('per_page', 15));
 	}
 
 	public function show(int|string $id): User

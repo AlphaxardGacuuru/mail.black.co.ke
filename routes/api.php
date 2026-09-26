@@ -66,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('webhooks', [AdminWebhookController::class, 'index'])->name('webhooks');
+    Route::get('users', [UserController::class, 'index'])->name('users.index');
 });
 
 /*
