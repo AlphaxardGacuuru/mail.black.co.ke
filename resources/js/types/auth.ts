@@ -1,7 +1,14 @@
+export type MailgunDomain = {
+	id: string
+	domain: string
+	endpoint: string
+}
+
 export type MailgunAccount = {
 	id: string
 	mailFromName: string | null
 	mailboxAddress: string
+	mailgunDomainId: string
 	mailgunDomain: string
 	mailgunEndpoint: string
 	signature: string | null
@@ -18,6 +25,7 @@ export type User = {
 	twoFactorEnabled?: boolean
 	created_at: string
 	updated_at: string
+	mailgunDomains?: MailgunDomain[]
 	mailgunAccounts?: MailgunAccount[]
 	[key: string]: unknown
 }

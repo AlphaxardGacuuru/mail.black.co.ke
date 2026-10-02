@@ -104,11 +104,12 @@ class SendMailMessageJob implements ShouldQueue
     protected function mailer(?User $user): Mailer
     {
         $account = $user?->activeMailgunAccount;
+        $mailgunDomain = $account?->mailgunDomain;
 
-        if ($account && filled($account->mailgun_domain) && filled($account->mailgun_api_key)) {
-            $domain = $account->mailgun_domain;
-            $secret = $account->mailgun_api_key;
-            $endpoint = $account->mailgun_endpoint;
+        if ($mailgunDomain && filled($mailgunDomain->domain) && filled($mailgunDomain->api_key)) {
+            $domain = $mailgunDomain->domain;
+            $secret = $mailgunDomain->api_key;
+            $endpoint = $mailgunDomain->endpoint;
         } else {
             return Mail::mailer(config('mail.default'));
         }

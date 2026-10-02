@@ -31,6 +31,9 @@ class UserResource extends JsonResource
             "name" => $this->name,
             "email" => $this->email,
             "mailgunConfigured" => $this->hasMailgunCredentials(),
+            "mailgunDomains" => MailgunDomainResource::collection(
+                $this->mailgunDomains()->get()
+            )->resolve(),
             "mailgunAccounts" => MailgunAccountResource::collection(
                 $this->mailgunAccounts()->get()
             )->resolve(),

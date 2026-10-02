@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Events\UserCreatedEvent;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -42,6 +43,7 @@ class RegisteredUserController extends Controller
             ->plainTextToken;
 
         UserCreatedEvent::dispatch($user);
+        event(new Registered($user));
 
         return response([
             "status" => "success",

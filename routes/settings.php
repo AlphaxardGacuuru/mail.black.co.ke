@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Settings\MailgunAccountController;
+use App\Http\Controllers\Settings\MailgunDomainController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,11 @@ Route::get('settings/appearance', fn() => view('app'))->name('appearance.edit');
 // as intended here.
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::get('settings/mailgun-domains', [MailgunDomainController::class, 'index'])->name('mailgun-domains.index');
+    Route::post('settings/mailgun-domains', [MailgunDomainController::class, 'store'])->name('mailgun-domains.store');
+    Route::patch('settings/mailgun-domains/{domain}', [MailgunDomainController::class, 'update'])->name('mailgun-domains.update');
+    Route::delete('settings/mailgun-domains/{domain}', [MailgunDomainController::class, 'destroy'])->name('mailgun-domains.destroy');
 
     Route::get('settings/mailgun-accounts', [MailgunAccountController::class, 'index'])->name('mailgun-accounts.index');
     Route::post('settings/mailgun-accounts', [MailgunAccountController::class, 'store'])->name('mailgun-accounts.store');

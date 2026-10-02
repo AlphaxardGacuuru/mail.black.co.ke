@@ -27,6 +27,7 @@
         "laravel/telescope": "^5.20",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.14",
+        "mailgun/mailgun-php": "^4.5",
         "spatie/laravel-permission": "^7.4",
         "symfony/http-client": "^8.0",
         "symfony/mailgun-mailer": "^8.0"

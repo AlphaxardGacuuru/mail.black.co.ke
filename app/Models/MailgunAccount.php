@@ -13,11 +13,16 @@ class MailgunAccount extends Model
 
     protected $guarded = [];
 
-    protected $hidden = ['mailgun_api_key'];
+    protected $hidden = ['mailgun_smtp_password'];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function mailgunDomain(): BelongsTo
+    {
+        return $this->belongsTo(MailgunDomain::class);
     }
 
     protected function avatar(): Attribute

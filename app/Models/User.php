@@ -139,11 +139,16 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
      */
     public function hasMailgunCredentials(): bool
     {
-        $account = $this->activeMailgunAccount;
+        $domain = $this->activeMailgunAccount?->mailgunDomain;
 
-        return $account !== null
-            && filled($account->mailgun_domain)
-            && filled($account->mailgun_api_key);
+        return $domain !== null
+            && filled($domain->domain)
+            && filled($domain->api_key);
+    }
+
+    public function mailgunDomains()
+    {
+        return $this->hasMany(MailgunDomain::class);
     }
 
     public function mailgunAccounts()

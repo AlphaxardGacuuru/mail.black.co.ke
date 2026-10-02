@@ -5,12 +5,19 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\MailgunAccountRequest;
 use App\Http\Resources\MailgunAccountResource;
+use App\Http\Services\MailgunMailboxService;
 use App\Models\MailgunAccount;
+use App\Models\MailgunDomain;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class MailgunAccountController extends Controller
 {
+    public function __construct(protected MailgunMailboxService $mailboxService)
+    {
+        //
+    }
+
     public function index(Request $request): JsonResponse
     {
         return response()->json($this->accounts($request->user()));
@@ -18,10 +25,15 @@ class MailgunAccountController extends Controller
 
     public function store(MailgunAccountRequest $request): JsonResponse
     {
-        $account = $request
-            ->user()
-            ->mailgunAccounts()
-            ->create($request->validated());
+        $data = $request->validated();
+
+        $domain = MailgunDomain::query()->findOrFail($data['mailgun_domain_id']);
+        $data['mailgun_smtp_password'] = $this->mailboxService->createMailbox(
+            $domain,
+            $data['mailbox_address']
+        );
+
+        $account = $request->user()->mailgunAccounts()->create($data);
 
         if (! $request->user()->active_mailgun_account_id) {
             $request
@@ -42,13 +54,7 @@ class MailgunAccountController extends Controller
     {
         abort_unless($account->user_id === $request->user()->id, 404);
 
-        $data = $request->validated();
-
-        if (blank($data['mailgun_api_key'] ?? null)) {
-            unset($data['mailgun_api_key']);
-        }
-
-        $account->update($data);
+        $account->update($request->validated());
 
         $request->user()->refresh();
 
