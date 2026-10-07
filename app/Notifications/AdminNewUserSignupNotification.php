@@ -5,7 +5,6 @@ namespace App\Notifications;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
@@ -25,31 +24,12 @@ class AdminNewUserSignupNotification extends Notification implements ShouldQueue
      */
     public function via($notifiable): array
     {
-        return ['mail', 'database', WebPushChannel::class];
+        return [WebPushChannel::class];
     }
 
     protected function bodyLine(): string
     {
         return "New user signed up: {$this->newUser->name} ({$this->newUser->email}).";
-    }
-
-    public function toMail($notifiable): MailMessage
-    {
-        return (new MailMessage)
-            ->from('al@mail.black.co.ke', 'Alphaxard from Black Mail')
-            ->subject('New user signup')
-            ->greeting('Hello ' . $notifiable->name . ',')
-            ->line($this->bodyLine())
-            ->action('View users', url('/admin/users'));
-    }
-
-    public function toArray($notifiable): array
-    {
-        return [
-            'url' => '/admin/users',
-            'from' => 'System',
-            'message' => $this->bodyLine(),
-        ];
     }
 
     public function toWebPush($notifiable, $notification): WebPushMessage

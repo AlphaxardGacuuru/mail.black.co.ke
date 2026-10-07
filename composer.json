@@ -65,7 +65,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan horizon:listen\" \"php artisan schedule:work\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=horizon,schedule,logs,vite --kill-others"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74,#86efac\" \"php artisan horizon:listen\" \"php artisan schedule:work\" \"php artisan pail --timeout=0\" \"npm run dev\" \"php artisan reverb:start\" --names=horizon,schedule,logs,vite,reverb --kill-others"
         ],
         "lint": [
             "pint --parallel"
