@@ -19,3 +19,7 @@ If `./vendor/bin/sail` or `docker-compose.yml` is missing from a checkout, it ha
 Short confirmation-style status messages (e.g. toast titles like "Message Sent", "Reply Sent") should always be Title Case — capitalize each significant word. This applies to brief status/result messages, not longer sentences or descriptions (e.g. "Add at least one recipient" stays sentence case).
 
 This also applies to backend response messages (e.g. a controller's JSON `message` field returned after an action succeeds) — a short result message like "Label Created" or "Password Updated" should be Title Case for the same reason, matching what the frontend displays.
+
+# Naming conventions
+
+Events and listeners must carry the matching suffix: an event class ends in `Event` (e.g. `UserCreatedEvent`) and the listener that handles it ends in `Listener` (e.g. `UserCreatedListener`).
