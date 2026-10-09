@@ -11,7 +11,6 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog"
 import { Spinner } from "@/components/ui/spinner"
-import { useIsMobile } from "@/hooks/use-mobile"
 import { usePwaInstall } from "@/hooks/use-pwa-install"
 import { usePushNotifications } from "@/hooks/use-push-notifications"
 import toast from "@/lib/toast"
@@ -36,7 +35,6 @@ type PermissionStep = {
  */
 export default function PermissionsOnboarding() {
 	const { auth } = useApp()
-	const isMobile = useIsMobile()
 	const { canInstall, install, isInstalled, isPromptSettled } = usePwaInstall()
 	const { isSupported, permission, isSubscribed, subscribe } =
 		usePushNotifications()
@@ -46,7 +44,7 @@ export default function PermissionsOnboarding() {
 
 	const steps: PermissionStep[] = useMemo(() => {
 		const installStep: PermissionStep | null =
-			isMobile && !isInstalled && canInstall
+			!isInstalled && canInstall
 				? {
 						key: "install-pwa",
 						icon: Download,
@@ -83,7 +81,6 @@ export default function PermissionsOnboarding() {
 		canInstall,
 		install,
 		isInstalled,
-		isMobile,
 		isSubscribed,
 		isSupported,
 		permission,
@@ -95,10 +92,10 @@ export default function PermissionsOnboarding() {
 			!auth ||
 			active ||
 			sessionStorage.getItem(ONBOARDING_SHOWN_KEY) ||
-			// On mobile, wait to know whether the install step applies before
-			// activating — otherwise notifications can win the race and show
-			// first, or the install step can get skipped for the session.
-			(isMobile && !isPromptSettled)
+			// Wait to know whether the install step applies before activating
+			// — otherwise notifications can win the race and show first, or
+			// the install step can get skipped for the session.
+			!isPromptSettled
 		) {
 			return
 		}
@@ -106,7 +103,7 @@ export default function PermissionsOnboarding() {
 		sessionStorage.setItem(ONBOARDING_SHOWN_KEY, "1")
 		setStepIndex(0)
 		setActive(true)
-	}, [auth, active, isMobile, isPromptSettled])
+	}, [auth, active, isPromptSettled])
 
 	useEffect(() => {
 		if (!active) {
