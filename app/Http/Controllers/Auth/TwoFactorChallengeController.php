@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
@@ -42,6 +43,10 @@ class TwoFactorChallengeController extends Controller
         }
 
         Cache::forget("2fa_pending:{$request->pending_token}");
+
+        // Also start a web session so session-guarded pages (Telescope, Horizon) recognise the user
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
 
         $token = $user->createToken('web')->plainTextToken;
 

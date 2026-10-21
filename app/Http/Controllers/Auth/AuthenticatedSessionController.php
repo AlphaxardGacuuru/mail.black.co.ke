@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Socialite\Facades\Socialite;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 
@@ -82,6 +83,10 @@ class AuthenticatedSessionController extends Controller
             event(new Registered($dbUser));
         }
 
+        // Also start a web session so session-guarded pages (Telescope, Horizon) recognise the user
+        Auth::guard('web')->login($dbUser);
+        session()->regenerate();
+
         $token = $dbUser->createToken('web')->plainTextToken;
 
         return redirect('/socialite-callback?token=' . urlencode($token) . '&message=' . urlencode('Logged in') . '&provider=' . urlencode($website));
@@ -124,6 +129,10 @@ class AuthenticatedSessionController extends Controller
             ], 200);
         }
 
+        // Also start a web session so session-guarded pages (Telescope, Horizon) recognise the user
+        Auth::guard('web')->login($user);
+        $request->session()->regenerate();
+
         $token = $user
             ->createToken("$request->device_name")
             ->plainTextToken;
@@ -145,12 +154,17 @@ class AuthenticatedSessionController extends Controller
             return response(["message" => "No active authenticated user found"], 401);
         }
 
+        // Login issues both a bearer token and a web session, so clear both
+        $token = $user->currentAccessToken();
+
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();
+        }
+
         if (Auth::guard('web')->check()) {
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
-        } else {
-            $user->currentAccessToken()->delete();
         }
 
         return response(["message" => "Logged Out"], 200);
