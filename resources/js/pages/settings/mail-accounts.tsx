@@ -451,7 +451,7 @@ function AccountsSection({
 									<SelectItem
 										key={domain.id}
 										value={domain.id}>
-										{domain.domain}
+										{domain.domain.toLowerCase()}
 									</SelectItem>
 								))}
 							</SelectField>
