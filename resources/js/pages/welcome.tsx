@@ -17,6 +17,7 @@ import {
 	ShieldCheck,
 	Sparkles,
 } from "lucide-react"
+import { ScrollToTopButton } from "@/components/scroll-to-top-button"
 
 type WelcomeProps = {
 	canRegister?: boolean
@@ -204,6 +205,7 @@ const Welcome: FC<WelcomeProps> = () => {
 
 	return (
 		<div className="relative isolate min-h-screen overflow-hidden bg-background text-foreground">
+			<ScrollToTopButton />
 			{!isCoarsePointer && (
 				<div
 					aria-hidden="true"
