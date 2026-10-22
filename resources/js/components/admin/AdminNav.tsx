@@ -1,4 +1,13 @@
-import { Activity, ChevronRight, LayoutDashboard, ShieldCheck, Telescope, Users, Webhook } from "lucide-react"
+import {
+	Activity,
+	ChevronRight,
+	Gauge,
+	LayoutDashboard,
+	ShieldCheck,
+	Telescope,
+	Users,
+	Webhook,
+} from "lucide-react"
 import { Link } from "@/components/ui/link"
 import {
 	Collapsible,
@@ -22,6 +31,7 @@ const ADMIN_ITEMS = [
 	{ title: "Users", href: "/admin/users", icon: Users },
 	{ title: "Telescope", href: "/telescope", icon: Telescope },
 	{ title: "Horizon", href: "/horizon", icon: Activity },
+	{ title: "Pulse", href: "/pulse", icon: Gauge },
 ]
 
 export function AdminNav() {
