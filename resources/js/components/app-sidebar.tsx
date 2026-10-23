@@ -5,7 +5,6 @@ import AppLogo from "@/components/app-logo"
 import { MailNav } from "@/components/mail-nav"
 import MailRealtimeNotifier from "@/components/mail/MailRealtimeNotifier"
 import { NavFooter } from "@/components/nav-footer"
-import { NavNotifications } from "@/components/nav-notifications"
 import { NavUser } from "@/components/nav-user"
 import PermissionsOnboarding from "@/components/permissions-onboarding"
 import { useApp } from "@/contexts/AppContext"
@@ -110,7 +109,6 @@ export function AppSidebar() {
 						className="mt-auto"
 					/>
 				)}
-				<NavNotifications />
 				<NavUser />
 			</SidebarFooter>
 		</Sidebar>

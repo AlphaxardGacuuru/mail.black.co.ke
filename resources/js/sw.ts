@@ -78,6 +78,16 @@ registerRoute(
 	})
 )
 
+// Notifications change the moment they're read or deleted, so a refetch
+// must reach the network (falling back to the cache only when offline);
+// stale-while-revalidate would hand back the list from before the change.
+registerRoute(
+	({ url }) =>
+		url.origin === self.location.origin &&
+		url.pathname.startsWith("/api/notifications"),
+	new NetworkFirst({ cacheName: "api-notifications" })
+)
+
 // Mail read routes: stale-while-revalidate, so the last-fetched threads,
 // messages, and labels are what's shown immediately (including while
 // offline), with a background refresh whenever the network is up.
@@ -85,7 +95,6 @@ registerRoute(
 const STALE_WHILE_REVALIDATE_APIS = [
 	"/api/threads",
 	"/api/labels",
-	"/api/notifications",
 ]
 
 registerRoute(

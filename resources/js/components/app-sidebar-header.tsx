@@ -6,6 +6,7 @@ import { useRouterState } from "@tanstack/react-router"
 import { useLabels, useMailThread } from "@/queries/mail"
 import { cn } from "@/lib/utils"
 import type { BreadcrumbItem as BreadcrumbItemType } from "@/types"
+import { NotificationsBell } from "@/components/notifications-bell"
 
 export function AppSidebarHeader({
 	breadcrumbs = [],
@@ -60,6 +61,7 @@ export function AppSidebarHeader({
 					<Breadcrumbs breadcrumbs={displayedBreadcrumbs} />
 				</div>
 				<MailConnectionStatus />
+				<NotificationsBell />
 				<MailgunAccountSwitcher />
 			</div>
 		</header>

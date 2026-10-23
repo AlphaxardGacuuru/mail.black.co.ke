@@ -29,9 +29,23 @@ class NotificationService extends Service
      * @param  Notifications  $notifications
      * @return Response
      */
+    /**
+     * Mark one notification as read, or every one with the id "0" (the
+     * same convention as destroy()). Another user's id is a 404.
+     */
     public function update($request, $id)
     {
-        return auth('sanctum')->user()->notifications->markAsRead();
+        $user = auth('sanctum')->user();
+
+        if ((string) $id === '0') {
+            $user->unreadNotifications->markAsRead();
+
+            return null;
+        }
+
+        $user->notifications()->findOrFail($id)->markAsRead();
+
+        return null;
     }
 
     /**
