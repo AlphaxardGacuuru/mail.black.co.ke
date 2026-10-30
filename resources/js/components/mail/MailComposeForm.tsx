@@ -1,8 +1,8 @@
-import { isCancel } from "axios"
+import { isAxiosError, isCancel } from "axios"
 import { useQueryClient } from "@tanstack/react-query"
 import type { FilePondFile } from "filepond"
 import FilePondPluginFileValidateSize from "filepond-plugin-file-validate-size"
-import { Paperclip, Send } from "lucide-react"
+import { Paperclip, Send, Sparkles } from "lucide-react"
 import { useRef, useState } from "react"
 import type { FormEvent } from "react"
 import { FilePond, registerPlugin } from "react-filepond"
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
-import { useReplyMail, useSendMail } from "@/queries/mail"
+import { useReplyMail, useSendMail, useSuggestReply } from "@/queries/mail"
 import type { MailComposeMode } from "@/types/mail"
 
 import "filepond/dist/filepond.min.css"
@@ -58,7 +58,11 @@ export default function MailComposeForm({
 		parentMessageId ?? ""
 	)
 
+	const suggestReply = useSuggestReply(parentMessageId ?? "")
+
 	const mutation = mode === "new" ? sendMail : replyMail
+	const canSuggest =
+		(mode === "reply" || mode === "reply-all") && !!parentMessageId
 	const showToField = mode === "new" || mode === "forward"
 	const isUploading = pendingUploads > 0
 
@@ -70,6 +74,34 @@ export default function MailComposeForm({
 	function removeBcc() {
 		setShowBcc(false)
 		setBcc([])
+	}
+
+	function handleSuggest() {
+		if (mode !== "reply" && mode !== "reply-all") {
+			return
+		}
+
+		const hasText =
+			new DOMParser()
+				.parseFromString(body, "text/html")
+				.body.textContent?.trim() ?? ""
+
+		if (
+			hasText &&
+			!window.confirm("Replace your message with a suggested reply?")
+		) {
+			return
+		}
+
+		suggestReply
+			.mutateAsync(mode)
+			.then((suggestion) => setBody(suggestion.data.html))
+			.catch((error) => {
+				const message = isAxiosError(error)
+					? (error.response?.data as { message?: string } | undefined)?.message
+					: undefined
+				toast.error(message ?? "Couldn't Suggest a Reply")
+			})
 	}
 
 	function resetForm() {
@@ -116,15 +148,13 @@ export default function MailComposeForm({
 			.mutateAsync(payload)
 			.then((response) => {
 				const threadId = (
-					response.data?.data as { threadId?: string } | undefined 
+					response.data?.data as { threadId?: string } | undefined
 				)?.threadId
 
 				queryClient.refetchQueries({
 					queryKey: ["mail", "threads"],
 					predicate: (query) => {
-						const filters = query.queryKey[2] as
-							| { folder?: string }
-							| undefined
+						const filters = query.queryKey[2] as { folder?: string } | undefined
 						return filters?.folder === "sent"
 					},
 				})
@@ -309,6 +339,24 @@ export default function MailComposeForm({
 				{/* Cancel Button End */}
 
 				<div className="flex items-center gap-2">
+					{/* Suggest Reply Start */}
+					{canSuggest && (
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={handleSuggest}
+							disabled={suggestReply.isPending || mutation.isPending}
+							className="gap-2">
+							{suggestReply.isPending ? (
+								<Spinner className="size-4" />
+							) : (
+								<Sparkles className="size-4" />
+							)}
+							<span className="hidden sm:inline">Suggest Reply</span>
+						</Button>
+					)}
+					{/* Suggest Reply End */}
+
 					{/* Attachment Start */}
 					<Button
 						type="button"

@@ -7,6 +7,7 @@ import toast from "@/lib/toast"
 
 type MailRealtimeEvent = {
 	threadId: string
+	accountId: string | null
 }
 
 /**
@@ -30,6 +31,30 @@ export default function MailRealtimeNotifier() {
 		"MailMessageReceivedEvent",
 		(event: MailRealtimeEvent) => {
 			playIncomingMailChime()
+
+			const otherAccount = auth?.mailgunAccounts?.find(
+				(account) => account.id === event.accountId && !account.isActive
+			)
+
+			// Mail for another of the user's mailboxes: always toast, since the
+			// mail pages' banner only covers the active one. Opening it switches
+			// to that mailbox (see pages/mail/[id]/show.tsx).
+			if (otherAccount) {
+				toast.info("New message received", {
+					description: `New email for ${otherAccount.mailboxAddress}.`,
+					action: {
+						label: "View Message",
+						onClick: () =>
+							navigate({
+								to: "/mail/$id/show" as never,
+								params: { id: event.threadId } as never,
+								search: { account: otherAccount.id } as never,
+							}),
+					},
+				})
+
+				return
+			}
 
 			// The mail pages already show an in-context banner, avoid a redundant toast there.
 			if (!onMailPages) {

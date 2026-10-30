@@ -25,6 +25,7 @@ type Props = {
 
 type MailRealtimeEvent = {
 	threadId: string
+	accountId: string | null
 }
 
 const INCOMING_BANNER_DURATION_MS = 10000
@@ -56,6 +57,16 @@ export default function MailShell({
 		`mail.${auth?.id ?? ""}`,
 		"MailMessageReceivedEvent",
 		(event: MailRealtimeEvent) => {
+			const activeAccountId = auth?.mailgunAccounts?.find(
+				(account) => account.isActive
+			)?.id
+
+			// Mail for another of the user's mailboxes isn't in this list; the
+			// app-wide toast offers to switch to it instead.
+			if (event.accountId && event.accountId !== activeAccountId) {
+				return
+			}
+
 			setShowIncomingBanner(true)
 			setIncomingThreadId(event.threadId)
 		}

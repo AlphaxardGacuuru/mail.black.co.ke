@@ -7,6 +7,7 @@ export type Notification = {
 	url: string | null
 	from: string | null
 	message: string | null
+	mailbox: string | null
 	readAt: string | null
 	updatedAt: string
 	createdAt: string

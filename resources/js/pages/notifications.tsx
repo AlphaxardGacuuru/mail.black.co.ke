@@ -151,6 +151,11 @@ function NotificationRow({
 					)}>
 					{notification.message ?? "New notification"}
 				</span>
+				{notification.mailbox && (
+					<span className="truncate text-xs text-muted-foreground">
+						To {notification.mailbox}
+					</span>
+				)}
 				<span className="text-xs text-muted-foreground">
 					{formatDistanceToNow(new Date(notification.createdAt), {
 						addSuffix: true,

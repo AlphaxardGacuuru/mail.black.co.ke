@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\MailgunAccount;
 use App\Models\MailMessage;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
@@ -13,6 +14,11 @@ class NewMailReceivedNotification extends Notification
 	 * Create a new notification instance.
 	 */
 	public function __construct(protected MailMessage $mailMessage) {}
+
+	/**
+	 * The user's mailbox that received the message, resolved once.
+	 */
+	protected MailgunAccount|false|null $account = false;
 
 	/**
 	 * Get the notification's delivery channels.
@@ -37,6 +43,7 @@ class NewMailReceivedNotification extends Notification
 			'url' => $this->url(),
 			'from' => $this->from(),
 			'message' => $this->mailMessage->subject ?: '(no subject)',
+			'mailbox' => $this->account()?->mailbox_address,
 		];
 	}
 
@@ -50,7 +57,7 @@ class NewMailReceivedNotification extends Notification
 		return (new WebPushMessage)
 			->title($this->from())
 			->icon('/android-chrome-192x192.png')
-			->body($this->mailMessage->subject ?: '(no subject)')
+			->body($this->body())
 			->data(['url' => $this->url()])
 			->options(['TTL' => 300]);
 	}
@@ -62,8 +69,32 @@ class NewMailReceivedNotification extends Notification
 			?? 'Unknown sender';
 	}
 
+	protected function body(): string
+	{
+		$subject = $this->mailMessage->subject ?: '(no subject)';
+		$mailbox = $this->account()?->mailbox_address;
+
+		return $mailbox ? "{$subject}\nTo {$mailbox}" : $subject;
+	}
+
+	/**
+	 * The thread link carries the receiving account, so opening it switches
+	 * to that account when another one is active.
+	 */
 	protected function url(): string
 	{
-		return '/mail/' . $this->mailMessage->mail_thread_id . '/show';
+		$url = '/mail/' . $this->mailMessage->mail_thread_id . '/show';
+		$account = $this->account();
+
+		return $account ? "{$url}?account={$account->id}" : $url;
+	}
+
+	protected function account(): ?MailgunAccount
+	{
+		if ($this->account === false) {
+			$this->account = $this->mailMessage->receivingAccount();
+		}
+
+		return $this->account;
 	}
 }

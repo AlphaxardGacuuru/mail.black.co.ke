@@ -36,6 +36,7 @@ class MailMessageReceivedEvent implements ShouldBroadcastNow
         return [
             'messageId' => $this->mailMessage->id,
             'threadId' => $this->mailMessage->mail_thread_id,
+            'accountId' => $this->mailMessage->receivingAccount()?->id,
         ];
     }
 }

@@ -18,6 +18,11 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    // AI-suggested replies on the compose form (laravel/ai, Gemini).
+    'mail_ai' => [
+        'reply_model' => env('MAIL_AI_REPLY_MODEL', 'gemini-2.5-flash-lite'),
+    ],
+
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
         'secret' => env('MAILGUN_SECRET'),

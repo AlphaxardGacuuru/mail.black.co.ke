@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Mail;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\MailMessageResource;
 use App\Http\Services\MailMessageService;
+use App\Http\Services\MailReplySuggestionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Jobs\SendMailMessageJob;
 
@@ -100,5 +102,26 @@ class MailMessageController extends Controller
                 'saved' => true,
                 'message' => 'Message Queued for Sending',
             ]);
+    }
+
+    /**
+     * Draft a reply to one of the user's messages with AI, for them to edit
+     * on the compose form (nothing is sent).
+     */
+    public function suggestReply(
+        Request $request,
+        string $id,
+        MailReplySuggestionService $suggestions
+    ): JsonResponse {
+        $validated = $request->validate([
+            'mode' => 'nullable|in:reply,reply-all',
+        ]);
+
+        $result = $suggestions->suggest($request->user(), $id, $validated['mode'] ?? 'reply');
+
+        return response()->json(
+            collect($result)->except('status')->all(),
+            $result['status'],
+        );
     }
 }

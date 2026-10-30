@@ -90,4 +90,27 @@ class MailMessage extends Model
     {
         return $query->where('is_starred', true);
     }
+
+    /**
+     * The owner's mailbox this message was sent to: the first To (then Cc)
+     * address that matches one of their accounts, the same way the inbox
+     * decides which account a message belongs to.
+     */
+    public function receivingAccount(): ?MailgunAccount
+    {
+        $addresses = collect([...($this->to ?? []), ...($this->cc ?? [])])
+            ->pluck('address')
+            ->filter()
+            ->map(fn (string $address) => mb_strtolower($address))
+            ->values();
+
+        $accounts = MailgunAccount::query()
+            ->where('user_id', $this->user_id)
+            ->whereIn('mailbox_address', $addresses)
+            ->get();
+
+        return $addresses
+            ->map(fn (string $address) => $accounts->firstWhere('mailbox_address', $address))
+            ->first(fn (?MailgunAccount $account) => $account !== null);
+    }
 }
