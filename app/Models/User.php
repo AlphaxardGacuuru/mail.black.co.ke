@@ -160,4 +160,19 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     {
         return $this->belongsTo(MailgunAccount::class, 'active_mailgun_account_id');
     }
+
+    public function jobSeekerProfile()
+    {
+        return $this->hasOne(JobSeekerProfile::class);
+    }
+
+    public function jobApplications()
+    {
+        return $this->hasMany(JobApplication::class);
+    }
+
+    public function companyCareerPages()
+    {
+        return $this->hasMany(CompanyCareerPage::class);
+    }
 }

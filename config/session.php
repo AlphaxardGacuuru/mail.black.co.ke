@@ -32,7 +32,9 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    // Sessions last as long as Sanctum API tokens (SANCTUM_EXPIRATION). Tokens
+    // that never expire get 400 days, the longest a browser keeps a cookie.
+    'lifetime' => (int) (env('SANCTUM_EXPIRATION') ?: 60 * 24 * 400),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

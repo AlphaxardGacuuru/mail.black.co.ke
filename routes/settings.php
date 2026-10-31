@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 Route::redirect('settings', '/settings/profile');
 Route::get('settings/profile', fn() => view('app'))->name('profile.edit');
 Route::get('settings/mail-accounts', fn() => view('app'))->name('mail-accounts.edit');
+Route::get('settings/job-search', fn() => view('app'))->name('job-search.edit');
 Route::get('settings/security', fn() => view('app'))->name('security.edit');
 Route::get('settings/appearance', fn() => view('app'))->name('appearance.edit');
 

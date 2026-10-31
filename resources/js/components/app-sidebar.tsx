@@ -1,5 +1,13 @@
 import { Link } from "@/components/ui/link"
-import { Archive, Download, Inbox, Send, Star, Trash2 } from "lucide-react"
+import {
+	Archive,
+	Briefcase,
+	Download,
+	Inbox,
+	Send,
+	Star,
+	Trash2,
+} from "lucide-react"
 import { AdminNav } from "@/components/admin/AdminNav"
 import AppLogo from "@/components/app-logo"
 import { MailNav } from "@/components/mail-nav"
@@ -53,6 +61,7 @@ export const mainNavItems: NavItem[] = [
 	{ title: "Sent", href: "/mail/sent", icon: Send },
 	{ title: "Archive", href: "/mail/archive", icon: Archive },
 	{ title: "Trash", href: "/mail/trash", icon: Trash2 },
+	{ title: "Job applications", href: "/job-applications", icon: Briefcase },
 ]
 
 const footerNavItems: NavItem[] = [
@@ -86,7 +95,10 @@ export function AppSidebar() {
 								asChild>
 								<Link href={HOME_URL}>
 									{state === "collapsed" ? (
-										<AppLogo variant="icon" className="h-8" />
+										<AppLogo
+											variant="icon"
+											className="h-8"
+										/>
 									) : (
 										<AppLogo />
 									)}

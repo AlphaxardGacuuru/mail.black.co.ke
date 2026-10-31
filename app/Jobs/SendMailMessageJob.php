@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\MailStatus;
 use App\Mail\ComposedMail;
+use App\Models\MailgunAccount;
 use App\Models\MailMessage;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -66,8 +67,8 @@ class SendMailMessageJob implements ShouldQueue
         $cc = collect($mailMessage->cc ?? [])->pluck('address')->filter()->all();
         $bcc = collect($mailMessage->bcc ?? [])->pluck('address')->filter()->all();
 
-        $account = $mailMessage->user?->activeMailgunAccount;
-        $sentMessage = $this->mailer($mailMessage->user)
+        $account = $this->sendingAccount($mailMessage);
+        $sentMessage = $this->mailer($mailMessage->user, $account)
             ->to($to)
             ->cc($cc)
             ->bcc($bcc)
@@ -98,12 +99,26 @@ class SendMailMessageJob implements ShouldQueue
     }
 
     /**
-     * Resolve the mailer that should send this message: the owning user's own
-     * Mailgun account if they've configured one, otherwise the system default.
+     * The user's account whose address the message is from, so it still goes
+     * out from that mailbox if they switched accounts after queueing it (or
+     * it was sent on their behalf, like a job application). Falls back to
+     * the active account.
      */
-    protected function mailer(?User $user): Mailer
+    protected function sendingAccount(MailMessage $mailMessage): ?MailgunAccount
     {
-        $account = $user?->activeMailgunAccount;
+        $address = $mailMessage->from_address['address'] ?? null;
+
+        return ($address
+            ? MailgunAccount::where('user_id', $mailMessage->user_id)->where('mailbox_address', $address)->first()
+            : null) ?? $mailMessage->user?->activeMailgunAccount;
+    }
+
+    /**
+     * Resolve the mailer that should send this message: the sending account's
+     * own Mailgun domain if it's configured, otherwise the system default.
+     */
+    protected function mailer(?User $user, ?MailgunAccount $account): Mailer
+    {
         $mailgunDomain = $account?->mailgunDomain;
 
         if ($mailgunDomain && filled($mailgunDomain->domain) && filled($mailgunDomain->api_key)) {

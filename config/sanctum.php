@@ -50,7 +50,9 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Minutes; empty means tokens never expire. Sessions follow this too
+    // (see session.php's lifetime).
+    'expiration' => env('SANCTUM_EXPIRATION') ? (int) env('SANCTUM_EXPIRATION') : null,
 
     /*
     |--------------------------------------------------------------------------

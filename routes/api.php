@@ -4,6 +4,8 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminWebhookController;
 use App\Http\Controllers\FilePondController;
 use App\Http\Controllers\IntegrationController;
+use App\Http\Controllers\Jobs\JobApplicationController;
+use App\Http\Controllers\Jobs\JobSearchController;
 use App\Http\Controllers\Mail\MailAttachmentController;
 use App\Http\Controllers\Mail\MailLabelController;
 use App\Http\Controllers\Mail\MailMessageController;
@@ -62,6 +64,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('attachments/{id}/download', [MailAttachmentController::class, 'download'])
         ->name('attachments.download');
+
+    // Job search
+    Route::get('job-search', [JobSearchController::class, 'show']);
+    Route::put('job-search', [JobSearchController::class, 'update']);
+    Route::delete('job-search', [JobSearchController::class, 'destroy']);
+    Route::post('job-search/cv', [JobSearchController::class, 'uploadCv'])->middleware('throttle:10,1');
+    Route::post('job-search/career-pages', [JobSearchController::class, 'storeCareerPage'])->middleware('throttle:10,1');
+    Route::delete('job-search/career-pages/{id}', [JobSearchController::class, 'destroyCareerPage']);
+
+    Route::get('job-applications', [JobApplicationController::class, 'index']);
+    Route::patch('job-applications/{id}', [JobApplicationController::class, 'update']);
+    Route::post('job-applications/{id}/approve', [JobApplicationController::class, 'approve']);
+    Route::post('job-applications/{id}/skip', [JobApplicationController::class, 'skip']);
 
 });
 

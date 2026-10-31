@@ -1,4 +1,5 @@
 export type * from "./auth"
+export type * from "./job-search"
 export type * from "./navigation"
 export type * from "./notification"
 export type * from "./payment"

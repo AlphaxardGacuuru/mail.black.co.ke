@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Events\MailMessageReceivedEvent;
 use App\Models\MailgunAccount;
+use App\Models\MailgunDomain;
 use App\Models\MailMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,12 +16,15 @@ class NewMailNotificationTest extends TestCase
 
     private function account(User $user, string $mailbox): MailgunAccount
     {
+        $domain = MailgunDomain::firstOrCreate(
+            ['user_id' => $user->id, 'domain' => 'example.com'],
+            ['api_key' => 'key'],
+        );
+
         return MailgunAccount::create([
             'user_id' => $user->id,
+            'mailgun_domain_id' => $domain->id,
             'mailbox_address' => $mailbox,
-            'mailgun_domain' => 'example.com',
-            'mailgun_api_key' => 'key',
-            'mailgun_endpoint' => 'api.mailgun.net',
         ]);
     }
 
