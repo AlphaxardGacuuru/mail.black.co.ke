@@ -4,6 +4,9 @@ import { useCurrentUrl } from "@/hooks/use-current-url"
 import { shouldHideBottomNav } from "@/lib/bottom-nav"
 import { cn } from "@/lib/utils"
 
+// The bottom nav only fits the mail folders; other sections stay sidebar-only
+const bottomNavItems = mainNavItems.filter((item) => item.href !== "/job-applications")
+
 export function AppBottomNav() {
 	const { currentUrl } = useCurrentUrl()
 
@@ -11,12 +14,12 @@ export function AppBottomNav() {
 		return null
 	}
 
-	const activeHref = findActiveNavHref(currentUrl, mainNavItems)
+	const activeHref = findActiveNavHref(currentUrl, bottomNavItems)
 
 	return (
 		<div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-3 md:hidden">
 			<nav className="bg-sidebar text-sidebar-foreground border-sidebar-border pointer-events-auto mx-auto flex max-w-md items-center justify-around rounded-2xl border shadow-sm backdrop-blur supports-backdrop-filter:bg-sidebar/95">
-				{mainNavItems.map((item) => {
+				{bottomNavItems.map((item) => {
 					const href = typeof item.href === "string" ? item.href : item.href.url
 					const isActive = href === activeHref
 					const Icon = item.icon
