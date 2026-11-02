@@ -242,7 +242,9 @@ function CoverLetterSection({ state }: { state: JobSearchState }) {
 					value={coverLetter}
 					rows={12}
 					maxLength={COVER_LETTER_MAX}
-					placeholder={"Dear Hiring Manager,\n\nI'm applying for the {role} position at {company}…"}
+					placeholder={
+						"Dear Hiring Manager,\n\nI'm applying for the {role} position at {company}…"
+					}
 					onChange={(event) => setCoverLetter(event.target.value)}
 					className="w-full rounded-lg border border-neutral-300 bg-transparent p-4 font-nunito text-sm font-light focus:border-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-400/20 dark:border-white/20"
 				/>
@@ -275,6 +277,212 @@ function CoverLetterSection({ state }: { state: JobSearchState }) {
 				<Button disabled={save.isPending}>
 					{save.isPending && <LoaderCircle className="size-4 animate-spin" />}
 					Save cover letter
+				</Button>
+			</div>
+		</form>
+	)
+}
+
+// ─── Settings ────────────────────────────────────────────────────────────────
+
+function SettingsForm({ state }: { state: JobSearchState }) {
+	const { auth } = useApp()
+	const save = useSaveJobSearch()
+	const [form, setForm] = useState<Form>(() => formFrom(state))
+	const accounts = auth?.mailgunAccounts ?? []
+	const profile = state.profile
+
+	// Pick up server-side changes (a pause, a reset) without losing edits
+	// in progress to every background refetch.
+	useEffect(() => {
+		setForm((current) => ({
+			...current,
+			autoApply: profile?.autoApply ?? false,
+			consent: !!profile?.consentedAt,
+		}))
+	}, [profile?.autoApply, profile?.consentedAt])
+
+	function submit(event: FormEvent): void {
+		event.preventDefault()
+
+		save
+			.mutateAsync({
+				autoApply: form.autoApply,
+				consent: form.consent,
+				mode: form.mode,
+				mailgunAccountId: form.mailgunAccountId,
+				preferences: {
+					keywords: textToList(form.keywords),
+					locations: form.locations,
+					remoteOk: form.remoteOk,
+					excludedCompanies: textToList(form.excludedCompanies),
+				},
+				dailyLimit: Number(form.dailyLimit),
+				minMatchScore: Number(form.minMatchScore),
+			})
+			.then((data) => {
+				toast.success(data.message)
+				setForm(formFrom(data))
+			})
+			.catch((error) =>
+				toast.error(errorMessage(error, "Unable to save your settings."))
+			)
+	}
+
+	return (
+		<form
+			onSubmit={submit}
+			className="space-y-10">
+			<div className="space-y-4">
+				{profile?.pausedReason && !form.autoApply && (
+					<Alert variant="destructive">
+						<AlertTitle>Job search was paused</AlertTitle>
+						<AlertDescription>{profile.pausedReason}</AlertDescription>
+					</Alert>
+				)}
+
+				<label className="flex items-center justify-between gap-4 rounded-lg border p-4">
+					<span>
+						<span className="block text-sm font-medium">
+							Turn on job search
+						</span>
+						<span className="block text-xs text-muted-foreground">
+							{form.mode === "autopilot"
+								? "Finds matching jobs and sends strong matches for you."
+								: "Finds matching jobs and drafts applications for you to approve."}{" "}
+							Turning this off stops anything not yet sent.
+						</span>
+					</span>
+					<Switch
+						checked={form.autoApply}
+						onCheckedChange={(autoApply) => setForm({ ...form, autoApply })}
+					/>
+				</label>
+
+				<SelectField
+					label="Before sending"
+					value={form.mode}
+					onValueChange={(mode) =>
+						setForm({ ...form, mode: mode as Form["mode"] })
+					}>
+					<SelectItem value="review">Let me review each application</SelectItem>
+					<SelectItem value="autopilot">
+						Send strong matches automatically
+					</SelectItem>
+				</SelectField>
+
+				<SelectField
+					label="Send from"
+					value={form.mailgunAccountId ?? ACTIVE_ACCOUNT}
+					onValueChange={(value) =>
+						setForm({
+							...form,
+							mailgunAccountId: value === ACTIVE_ACCOUNT ? null : value,
+						})
+					}>
+					<SelectItem value={ACTIVE_ACCOUNT}>My active mail account</SelectItem>
+					{accounts.map((account) => (
+						<SelectItem
+							key={account.id}
+							value={account.id}>
+							{account.mailboxAddress}
+						</SelectItem>
+					))}
+				</SelectField>
+			</div>
+
+			<div className="space-y-4">
+				<Heading
+					variant="small"
+					title="What to look for"
+					description="Separate entries with commas. Roles from your CV are always included."
+				/>
+				<Input
+					label="Extra job titles or keywords - (Accountant, Finance Officer)"
+					value={form.keywords}
+					onChange={(event) =>
+						setForm({ ...form, keywords: event.target.value })
+					}
+				/>
+				<MultiSelectField
+					label="Locations"
+					options={KENYA_LOCATIONS}
+					value={form.locations}
+					max={state.limits.maxLocations}
+					searchPlaceholder="Search counties and towns"
+					helperText="Leave empty to include jobs anywhere in Kenya."
+					onChange={(locations) => setForm({ ...form, locations })}
+				/>
+				<label className="flex items-center justify-between gap-4 text-sm">
+					Include remote jobs anywhere
+					<Switch
+						checked={form.remoteOk}
+						onCheckedChange={(remoteOk) => setForm({ ...form, remoteOk })}
+					/>
+				</label>
+				<Input
+					label="Never apply to these companies"
+					value={form.excludedCompanies}
+					onChange={(event) =>
+						setForm({ ...form, excludedCompanies: event.target.value })
+					}
+				/>
+			</div>
+
+			<hr />
+
+			<div className="space-y-4">
+				<Heading
+					variant="small"
+					title="Limits"
+					description="Applications go out on weekdays during working hours, spread through the day, and never twice to the same company within a month."
+				/>
+				<div className="grid gap-4 sm:grid-cols-2">
+					<Input
+						label="Applications per day"
+						type="number"
+						min={1}
+						max={state.limits.maxDailyLimit}
+						value={form.dailyLimit}
+						helperText={`Up to ${state.limits.maxDailyLimit}`}
+						onChange={(event) =>
+							setForm({ ...form, dailyLimit: Number(event.target.value) })
+						}
+					/>
+					<Input
+						label="Minimum match score"
+						type="number"
+						min={state.limits.minMatchScoreFloor}
+						max={100}
+						value={form.minMatchScore}
+						helperText={`${state.limits.minMatchScoreFloor} to 100`}
+						onChange={(event) =>
+							setForm({ ...form, minMatchScore: Number(event.target.value) })
+						}
+					/>
+				</div>
+			</div>
+
+			{!profile?.consentedAt && (
+				<label className="flex items-start gap-3 text-sm">
+					<Checkbox
+						className="mt-0.5"
+						checked={form.consent}
+						onCheckedChange={(checked) =>
+							setForm({ ...form, consent: checked === true })
+						}
+					/>
+					<span>
+						I agree to let this app read my CV with AI and send job applications
+						with it, from my mailbox, on my behalf.
+					</span>
+				</label>
+			)}
+
+			<div className="flex justify-end">
+				<Button disabled={save.isPending}>
+					{save.isPending && <LoaderCircle className="size-4 animate-spin" />}
+					Save settings
 				</Button>
 			</div>
 		</form>
@@ -500,52 +708,16 @@ function CareerPagesSection({ state }: { state: JobSearchState }) {
 	)
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+// ─── Delete ──────────────────────────────────────────────────────────────────
 
-function SettingsForm({ state }: { state: JobSearchState }) {
-	const { auth } = useApp()
-	const save = useSaveJobSearch()
+function DeleteSection({
+	state,
+	onDeleted,
+}: {
+	state: JobSearchState
+	onDeleted: () => void
+}) {
 	const destroy = useDeleteJobSearch()
-	const [form, setForm] = useState<Form>(() => formFrom(state))
-	const accounts = auth?.mailgunAccounts ?? []
-	const profile = state.profile
-
-	// Pick up server-side changes (a pause, a reset) without losing edits
-	// in progress to every background refetch.
-	useEffect(() => {
-		setForm((current) => ({
-			...current,
-			autoApply: profile?.autoApply ?? false,
-			consent: !!profile?.consentedAt,
-		}))
-	}, [profile?.autoApply, profile?.consentedAt])
-
-	function submit(event: FormEvent): void {
-		event.preventDefault()
-
-		save
-			.mutateAsync({
-				autoApply: form.autoApply,
-				consent: form.consent,
-				mode: form.mode,
-				mailgunAccountId: form.mailgunAccountId,
-				preferences: {
-					keywords: textToList(form.keywords),
-					locations: form.locations,
-					remoteOk: form.remoteOk,
-					excludedCompanies: textToList(form.excludedCompanies),
-				},
-				dailyLimit: Number(form.dailyLimit),
-				minMatchScore: Number(form.minMatchScore),
-			})
-			.then((data) => {
-				toast.success(data.message)
-				setForm(formFrom(data))
-			})
-			.catch((error) =>
-				toast.error(errorMessage(error, "Unable to save your settings."))
-			)
-	}
 
 	function deleteEverything(): void {
 		if (
@@ -560,189 +732,56 @@ function SettingsForm({ state }: { state: JobSearchState }) {
 			.mutateAsync(undefined)
 			.then((data) => {
 				toast.success(data.message)
-				setForm(formFrom(data))
+				onDeleted()
 			})
 			.catch(() => toast.error("Unable to delete your job search data."))
 	}
 
 	return (
+		<div className="space-y-4">
+			<Heading
+				variant="small"
+				title="Delete job search data"
+				description="Removes your CV, what was read from it, your preferences, careers pages and applications."
+			/>
+			<Button
+				type="button"
+				variant="destructive"
+				disabled={destroy.isPending || !state.profile}
+				onClick={deleteEverything}>
+				{destroy.isPending && <LoaderCircle className="size-4 animate-spin" />}
+				Delete my data
+			</Button>
+		</div>
+	)
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
+function JobSearchSections({ state }: { state: JobSearchState }) {
+	// Remounts the settings form after a delete so it starts blank again.
+	const [formKey, setFormKey] = useState(0)
+
+	return (
 		<div className="space-y-10">
-			<form
-				onSubmit={submit}
-				className="space-y-10">
-				<div className="space-y-4">
-					<Heading
-						variant="small"
-						title="Job search"
-						description="Find jobs that match your CV on Kenyan job boards and employers' careers pages, then apply by email from your mailbox. Replies arrive in your inbox."
-					/>
-
-					{profile?.pausedReason && !form.autoApply && (
-						<Alert variant="destructive">
-							<AlertTitle>Job search was paused</AlertTitle>
-							<AlertDescription>{profile.pausedReason}</AlertDescription>
-						</Alert>
-					)}
-
-					<label className="flex items-center justify-between gap-4 rounded-lg border p-4">
-						<span>
-							<span className="block text-sm font-medium">
-								Turn on job search
-							</span>
-							<span className="block text-xs text-muted-foreground">
-								{form.mode === "autopilot"
-									? "Finds matching jobs and sends strong matches for you."
-									: "Finds matching jobs and drafts applications for you to approve."}{" "}
-								Turning this off stops anything not yet sent.
-							</span>
-						</span>
-						<Switch
-							checked={form.autoApply}
-							onCheckedChange={(autoApply) => setForm({ ...form, autoApply })}
-						/>
-					</label>
-
-					{!profile?.consentedAt && (
-						<label className="flex items-start gap-3 text-sm">
-							<Checkbox
-								className="mt-0.5"
-								checked={form.consent}
-								onCheckedChange={(checked) =>
-									setForm({ ...form, consent: checked === true })
-								}
-							/>
-							<span>
-								I agree to let this app read my CV with AI and send job
-								applications with it, from my mailbox, on my behalf.
-							</span>
-						</label>
-					)}
-
-					<SelectField
-						label="Before sending"
-						value={form.mode}
-						onValueChange={(mode) =>
-							setForm({ ...form, mode: mode as Form["mode"] })
-						}>
-						<SelectItem value="review">
-							Let me review each application
-						</SelectItem>
-						<SelectItem value="autopilot">
-							Send strong matches automatically
-						</SelectItem>
-					</SelectField>
-
-					<SelectField
-						label="Send from"
-						value={form.mailgunAccountId ?? ACTIVE_ACCOUNT}
-						onValueChange={(value) =>
-							setForm({
-								...form,
-								mailgunAccountId: value === ACTIVE_ACCOUNT ? null : value,
-							})
-						}>
-						<SelectItem value={ACTIVE_ACCOUNT}>
-							My active mail account
-						</SelectItem>
-						{accounts.map((account) => (
-							<SelectItem
-								key={account.id}
-								value={account.id}>
-								{account.mailboxAddress}
-							</SelectItem>
-						))}
-					</SelectField>
-				</div>
-
-				<hr />
-
-				<div className="space-y-4">
-					<Heading
-						variant="small"
-						title="What to look for"
-						description="Separate entries with commas. Roles from your CV are always included."
-					/>
-					<Input
-						label="Extra job titles or keywords - (Accountant, Finance Officer)"
-						value={form.keywords}
-						onChange={(event) =>
-							setForm({ ...form, keywords: event.target.value })
-						}
-					/>
-					<MultiSelectField
-						label="Locations"
-						options={KENYA_LOCATIONS}
-						value={form.locations}
-						max={state.limits.maxLocations}
-						searchPlaceholder="Search counties and towns"
-						helperText="Leave empty to include jobs anywhere in Kenya."
-						onChange={(locations) => setForm({ ...form, locations })}
-					/>
-					<label className="flex items-center justify-between gap-4 text-sm">
-						Include remote jobs anywhere
-						<Switch
-							checked={form.remoteOk}
-							onCheckedChange={(remoteOk) => setForm({ ...form, remoteOk })}
-						/>
-					</label>
-					<Input
-						label="Never apply to these companies"
-						value={form.excludedCompanies}
-						onChange={(event) =>
-							setForm({ ...form, excludedCompanies: event.target.value })
-						}
-					/>
-				</div>
-
-				<hr />
-
-				<div className="space-y-4">
-					<Heading
-						variant="small"
-						title="Limits"
-						description="Applications go out on weekdays during working hours, spread through the day, and never twice to the same company within a month."
-					/>
-					<div className="grid gap-4 sm:grid-cols-2">
-						<Input
-							label="Applications per day"
-							type="number"
-							min={1}
-							max={state.limits.maxDailyLimit}
-							value={form.dailyLimit}
-							helperText={`Up to ${state.limits.maxDailyLimit}`}
-							onChange={(event) =>
-								setForm({ ...form, dailyLimit: Number(event.target.value) })
-							}
-						/>
-						<Input
-							label="Minimum match score"
-							type="number"
-							min={state.limits.minMatchScoreFloor}
-							max={100}
-							value={form.minMatchScore}
-							helperText={`${state.limits.minMatchScoreFloor} to 100`}
-							onChange={(event) =>
-								setForm({ ...form, minMatchScore: Number(event.target.value) })
-							}
-						/>
-					</div>
-				</div>
-
-				<div className="flex justify-end">
-					<Button disabled={save.isPending}>
-						{save.isPending && <LoaderCircle className="size-4 animate-spin" />}
-						Save settings
-					</Button>
-				</div>
-			</form>
-
-			<hr />
+			<Heading
+				variant="small"
+				title="Job search"
+				description="Find jobs that match your CV on Kenyan job boards and employers' careers pages, then apply by email from your mailbox. Replies arrive in your inbox."
+			/>
 
 			<CvSection state={state} />
 
 			<hr />
 
 			<CoverLetterSection state={state} />
+
+			<hr />
+
+			<SettingsForm
+				key={formKey}
+				state={state}
+			/>
 
 			<hr />
 
@@ -754,23 +793,10 @@ function SettingsForm({ state }: { state: JobSearchState }) {
 
 			<hr />
 
-			<div className="space-y-4">
-				<Heading
-					variant="small"
-					title="Delete job search data"
-					description="Removes your CV, what was read from it, your preferences, careers pages and applications."
-				/>
-				<Button
-					type="button"
-					variant="destructive"
-					disabled={destroy.isPending || !profile}
-					onClick={deleteEverything}>
-					{destroy.isPending && (
-						<LoaderCircle className="size-4 animate-spin" />
-					)}
-					Delete my data
-				</Button>
-			</div>
+			<DeleteSection
+				state={state}
+				onDeleted={() => setFormKey((key) => key + 1)}
+			/>
 		</div>
 	)
 }
@@ -791,7 +817,7 @@ export default function JobSearch() {
 					<Skeleton className="h-14 w-full" />
 				</div>
 			) : (
-				<SettingsForm state={data} />
+				<JobSearchSections state={data} />
 			)}
 		</>
 	)
