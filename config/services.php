@@ -20,7 +20,7 @@ return [
 
     // AI-suggested replies on the compose form (laravel/ai, Gemini).
     'mail_ai' => [
-        'reply_model' => env('MAIL_AI_REPLY_MODEL', 'gemini-2.5-flash-lite'),
+        'reply_model' => env('MAIL_AI_REPLY_MODEL', 'gemini-3.1-flash-lite'),
     ],
 
     'mailgun' => [

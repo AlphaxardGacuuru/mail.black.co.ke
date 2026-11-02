@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Services\Jobs;
+namespace App\Services\Jobs;
 
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;

@@ -26,6 +26,8 @@ class JobSeekerProfileResource extends JsonResource
                 default => 'ready',
             },
             'profile' => $this->profile,
+            'coverLetter' => $this->cover_letter,
+            'coverLetterMode' => $this->cover_letter_mode ?? 'tailor',
             'preferences' => [
                 'keywords' => $this->preference('keywords'),
                 'locations' => $this->preference('locations'),
@@ -36,6 +38,8 @@ class JobSeekerProfileResource extends JsonResource
             'minMatchScore' => $this->min_match_score,
             'pausedReason' => $this->paused_reason,
             'lastDiscoveryAt' => $this->last_discovery_at,
+            'lastAlertAt' => $this->last_alert_at,
+            'lastAlertSource' => $this->last_alert_source,
         ];
     }
 }

@@ -1,6 +1,7 @@
 import {
 	Activity,
 	ChevronRight,
+	Coins,
 	Gauge,
 	LayoutDashboard,
 	ShieldCheck,
@@ -23,22 +24,41 @@ import {
 	SidebarMenuSubButton,
 	SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
+import { useApp } from "@/contexts/AppContext"
 import { useCurrentUrl } from "@/hooks/use-current-url"
+import type { User } from "@/types"
+
+type AdminItem = {
+	title: string
+	href: string
+	icon: typeof Coins
+	newTab?: boolean
+	/** Shown only when the signed-in user may see it. */
+	visible?: (auth: User | undefined) => boolean
+}
 
 // Telescope, Horizon and Pulse are Laravel-rendered dashboards, opened in a
 // new tab so the app stays open behind them.
-const ADMIN_ITEMS = [
+const ADMIN_ITEMS: AdminItem[] = [
 	{ title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
 	{ title: "Webhooks", href: "/admin/webhooks", icon: Webhook },
 	{ title: "Users", href: "/admin/users", icon: Users },
+	{
+		title: "AI usage",
+		href: "/admin/ai-usage",
+		icon: Coins,
+		visible: (auth) => Boolean(auth?.can_view_ai_usage),
+	},
 	{ title: "Telescope", href: "/telescope", icon: Telescope, newTab: true },
 	{ title: "Horizon", href: "/horizon", icon: Activity, newTab: true },
 	{ title: "Pulse", href: "/pulse", icon: Gauge, newTab: true },
 ]
 
 export function AdminNav() {
+	const { auth } = useApp()
 	const { isCurrentOrParentUrl } = useCurrentUrl()
-	const isActive = ADMIN_ITEMS.some((item) => isCurrentOrParentUrl(item.href))
+	const items = ADMIN_ITEMS.filter((item) => item.visible?.(auth) ?? true)
+	const isActive = items.some((item) => isCurrentOrParentUrl(item.href))
 
 	return (
 		<SidebarGroup className="px-3 py-0">
@@ -56,7 +76,7 @@ export function AdminNav() {
 						</CollapsibleTrigger>
 						<CollapsibleContent>
 							<SidebarMenuSub>
-								{ADMIN_ITEMS.map((item) => (
+								{items.map((item) => (
 									<SidebarMenuSubItem key={item.href}>
 										<SidebarMenuSubButton
 											asChild

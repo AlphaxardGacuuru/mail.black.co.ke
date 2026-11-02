@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminAiUsageController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminWebhookController;
 use App\Http\Controllers\FilePondController;
@@ -70,6 +71,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('job-search', [JobSearchController::class, 'update']);
     Route::delete('job-search', [JobSearchController::class, 'destroy']);
     Route::post('job-search/cv', [JobSearchController::class, 'uploadCv'])->middleware('throttle:10,1');
+    Route::put('job-search/cover-letter', [JobSearchController::class, 'updateCoverLetter']);
+    Route::post('job-search/cover-letter', [JobSearchController::class, 'uploadCoverLetter'])->middleware('throttle:10,1');
     Route::post('job-search/career-pages', [JobSearchController::class, 'storeCareerPage'])->middleware('throttle:10,1');
     Route::delete('job-search/career-pages/{id}', [JobSearchController::class, 'destroyCareerPage']);
 
@@ -84,6 +87,11 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('webhooks', [AdminWebhookController::class, 'index'])->name('webhooks');
     Route::get('users', [UserController::class, 'index'])->name('users.index');
+});
+
+// AI spend is for the same people as Telescope (see the viewAiUsage gate).
+Route::middleware(['auth:sanctum', 'can:viewAiUsage'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('ai-usage', [AdminAiUsageController::class, 'index'])->name('ai-usage.index');
 });
 
 /*

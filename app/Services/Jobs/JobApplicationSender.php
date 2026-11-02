@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Services\Jobs;
+namespace App\Services\Jobs;
 
 use App\Enums\JobApplicationStatus;
 use App\Enums\MailFolder;

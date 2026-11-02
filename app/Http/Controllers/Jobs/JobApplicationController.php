@@ -32,7 +32,7 @@ class JobApplicationController extends Controller
 
         $applications = $user->jobApplications()
             ->whereIn('status', self::TABS[$tab])
-            ->with('posting')
+            ->with('posting.board')
             ->orderByDesc($tab === 'sent' ? 'applied_at' : 'created_at')
             ->paginate(20);
 
@@ -59,7 +59,7 @@ class JobApplicationController extends Controller
 
         return response()->json([
             'message' => 'Draft Saved',
-            'data' => JobApplicationResource::make($application->load('posting')),
+            'data' => JobApplicationResource::make($application->load('posting.board')),
         ]);
     }
 
@@ -92,7 +92,7 @@ class JobApplicationController extends Controller
 
         return response()->json([
             'message' => 'Application Approved',
-            'data' => JobApplicationResource::make($application->load('posting')),
+            'data' => JobApplicationResource::make($application->load('posting.board')),
         ]);
     }
 
@@ -108,7 +108,7 @@ class JobApplicationController extends Controller
 
         return response()->json([
             'message' => 'Application Skipped',
-            'data' => JobApplicationResource::make($application->load('posting')),
+            'data' => JobApplicationResource::make($application->load('posting.board')),
         ]);
     }
 

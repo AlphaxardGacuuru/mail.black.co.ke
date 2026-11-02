@@ -2,12 +2,14 @@
 
 namespace App\Agents;
 
+use App\Agents\Concerns\ThinksMinimally;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Attributes\MaxTokens;
 use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
@@ -20,9 +22,9 @@ use Laravel\Ai\Promptable;
 #[MaxTokens(1500)]
 #[Temperature(0.1)]
 #[Timeout(60)]
-class CvProfileAgent implements Agent, HasStructuredOutput
+class CvProfileAgent implements Agent, HasStructuredOutput, HasProviderOptions
 {
-    use Promptable;
+    use Promptable, ThinksMinimally;
 
     public function instructions(): string
     {

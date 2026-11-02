@@ -32,6 +32,7 @@ class JobApplicationResource extends JsonResource
                 'url' => $this->posting?->url,
                 'applyEmail' => $this->posting?->apply_email,
                 'source' => $this->posting?->source,
+                'sourceName' => $this->posting?->sourceName(),
                 'postedAt' => $this->posting?->posted_at,
             ],
         ];

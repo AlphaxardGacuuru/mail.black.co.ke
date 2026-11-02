@@ -5,30 +5,42 @@ namespace Tests\Feature;
 use App\Agents\CareerPageAgent;
 use App\Agents\CareerPageSearchAgent;
 use App\Agents\CvProfileAgent;
+use App\Agents\JobAlertAgent;
 use App\Agents\JobApplicationAgent;
 use App\Agents\JobMatchAgent;
+use App\Agents\JobPageAgent;
 use App\Enums\JobApplicationStatus;
 use App\Events\MailMessageStatusUpdatedEvent;
-use App\Http\Services\Jobs\CareerPageDiscovery;
-use App\Http\Services\Jobs\CompanyCareerPageSource;
-use App\Http\Services\Jobs\JobApplicationSender;
-use App\Http\Services\Jobs\JobMatcher;
-use App\Http\Services\Jobs\MyJobMagSource;
-use App\Http\Services\Jobs\SafePageFetcher;
+use App\Jobs\FetchJobBoardListingJob;
+use App\Jobs\FetchJobPostingDetailsJob;
+use App\Jobs\FetchJobPostingsJob;
 use App\Jobs\ParseCvJob;
+use App\Jobs\ReadJobAlertJob;
 use App\Jobs\SendMailMessageJob;
 use App\Jobs\SyncCareerPageJob;
+use App\Models\AiUsage;
 use App\Models\CompanyCareerPage;
 use App\Models\JobApplication;
+use App\Models\JobBoard;
 use App\Models\JobPosting;
 use App\Models\JobSeekerProfile;
 use App\Models\MailgunAccount;
 use App\Models\MailgunDomain;
 use App\Models\MailMessage;
 use App\Models\User;
-use App\Notifications\JobApplicationsReadyNotification;
+use App\Notifications\JobApplicationFailedNotification;
+use App\Notifications\JobApplicationRepliedNotification;
 use App\Notifications\JobApplicationSentNotification;
+use App\Notifications\JobApplicationsReadyNotification;
 use App\Notifications\JobSearchPausedNotification;
+use App\Notifications\JobsToApplyManuallyNotification;
+use App\Services\Jobs\CareerPageDiscovery;
+use App\Services\Jobs\CompanyCareerPageSource;
+use App\Services\Jobs\JobAlertReader;
+use App\Services\Jobs\JobApplicationSender;
+use App\Services\Jobs\JobBoardSource;
+use App\Services\Jobs\JobMatcher;
+use App\Services\Jobs\SafePageFetcher;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -36,9 +48,12 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Ai\Prompts\AgentPrompt;
+use NotificationChannels\WebPush\WebPushChannel;
 use RuntimeException;
 use Tests\TestCase;
+use ZipArchive;
 
 class JobSearchTest extends TestCase
 {
@@ -107,7 +122,7 @@ class JobSearchTest extends TestCase
     private function posting(string $title, ?string $company = 'Acme Ltd', ?string $email = 'jobs@acme.co.ke', array $overrides = []): JobPosting
     {
         return JobPosting::create([
-            'source' => JobPosting::SOURCE_MYJOBMAG,
+            'source' => JobPosting::SOURCE_BOARD,
             'fingerprint' => JobPosting::fingerprint('test', $title, (string) $company),
             'title' => $title,
             'company' => $company,
@@ -168,15 +183,17 @@ class JobSearchTest extends TestCase
                 HTML),
         ]);
 
-        $source = app(MyJobMagSource::class);
+        $source = app(JobBoardSource::class);
+        $board = JobBoard::where('host', 'www.myjobmag.co.ke')->sole();
 
-        $this->assertSame(1, $source->syncFeed());
+        $this->assertSame(1, $source->list($board, $board->listing_url)['created']);
 
         $posting = JobPosting::sole();
         $this->assertSame('Accountant', $posting->title);
         $this->assertSame('Acme Ltd', $posting->company);
+        $this->assertSame($board->id, $posting->job_board_id);
 
-        $source->fetchDetails($posting);
+        $this->assertTrue($source->fetchDetails($posting));
         $posting->refresh();
 
         $this->assertSame('careers@acme.co.ke', $posting->apply_email);
@@ -235,6 +252,302 @@ class JobSearchTest extends TestCase
         $this->assertSame(0, $source->sync($page->fresh()));
         CareerPageAgent::assertPrompted(fn () => true);
         $this->assertSame(2, JobPosting::count());
+    }
+
+    // ─── Job boards ──────────────────────────────────────────────────────────
+
+    private function aiBoard(): JobBoard
+    {
+        return JobBoard::create([
+            'name' => 'Jobs Blog',
+            'host' => 'jobs.example.org',
+            'listing_url' => 'https://jobs.example.org/feed/',
+            'link_pattern' => '#^https://jobs\.example\.org/[^?]+$#',
+            'reader' => JobBoard::READER_AI,
+            'enabled' => true,
+        ]);
+    }
+
+    private function boardPosting(JobBoard $board, string $path, string $title = ''): JobPosting
+    {
+        return JobPosting::create([
+            'source' => JobPosting::SOURCE_BOARD,
+            'job_board_id' => $board->id,
+            'fingerprint' => JobPosting::fingerprint(JobPosting::SOURCE_BOARD, "https://{$board->host}/{$path}"),
+            'title' => $title,
+            'url' => "https://{$board->host}/{$path}",
+            'posted_at' => now()->subDay(),
+        ]);
+    }
+
+    public function test_boards_with_structured_job_data_are_read_through_their_sitemaps(): void
+    {
+        $job = json_encode(['@context' => 'https://schema.org', '@graph' => [
+            // The board's own office, which it also puts on every listing.
+            ['@type' => 'Organization', 'name' => 'BrighterMonday Kenya', 'url' => 'https://www.brightermonday.co.ke', 'address' => ['streetAddress' => 'Riverside Drive', 'addressRegion' => 'Westlands', 'addressCountry' => 'Kenya']],
+            [
+                '@type' => 'JobPosting',
+                'title' => 'Accountant',
+                'description' => '<p>Prepare IFRS accounts.</p><p><b>How to Apply</b></p><p>Send your CV to:<br><b>HR@Acme.co.ke</b>. Questions: csteam@brightermonday.co.ke</p>',
+                'datePosted' => now()->subDays(2)->toIso8601String(),
+                'validThrough' => now()->addMonth()->toIso8601String(),
+                'hiringOrganization' => ['@id' => '#acme'],
+                'jobLocation' => ['@id' => '#place'],
+            ],
+            ['@type' => 'Organization', '@id' => '#acme', 'name' => 'Acme Ltd'],
+            ['@type' => 'Place', '@id' => '#place', 'address' => ['@id' => '#address']],
+            ['@type' => 'PostalAddress', '@id' => '#address', 'streetAddress' => 'Nairobi', 'addressRegion' => 'Westlands', 'addressCountry' => 'Kenya'],
+        ]]);
+        $recent = now()->subDay()->toAtomString();
+        $old = now()->subDays(60)->toAtomString();
+
+        Http::fake([
+            'www.brightermonday.co.ke/robots.txt' => Http::response("User-agent: *\nDisallow: /job/\n"),
+            'www.brightermonday.co.ke/sitemap-listings-index-en.xml' => Http::response(<<<XML
+                <?xml version="1.0" encoding="UTF-8"?>
+                <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+                <sitemap><loc>https://www.brightermonday.co.ke/sitemap-listings-finance-en.xml</loc><lastmod>{$recent}</lastmod></sitemap>
+                <sitemap><loc>https://elsewhere.example.com/sitemap.xml</loc><lastmod>{$recent}</lastmod></sitemap>
+                </sitemapindex>
+                XML),
+            'www.brightermonday.co.ke/sitemap-listings-finance-en.xml' => Http::response(<<<XML
+                <?xml version="1.0" encoding="UTF-8"?>
+                <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+                <url><loc>https://www.brightermonday.co.ke/listings/accountant-abc123</loc><lastmod>{$recent}</lastmod></url>
+                <url><loc>https://www.brightermonday.co.ke/listings/driver-old999</loc><lastmod>{$old}</lastmod></url>
+                <url><loc>https://www.brightermonday.co.ke/about</loc><lastmod>{$recent}</lastmod></url>
+                </urlset>
+                XML),
+            'www.brightermonday.co.ke/listings/accountant-abc123' => Http::response("<html><head><script type=\"application/ld+json\">{$job}</script></head><body></body></html>"),
+        ]);
+
+        $source = app(JobBoardSource::class);
+        $board = JobBoard::where('host', 'www.brightermonday.co.ke')->sole();
+        $sitemap = 'https://www.brightermonday.co.ke/sitemap-listings-finance-en.xml';
+
+        // The index only names its sitemaps on this board; each is read on its own.
+        $this->assertSame([$sitemap => $recent], $source->list($board, $board->listing_url)['sitemaps']);
+        $this->assertSame(1, $source->list($board, $sitemap)['created']);
+
+        // Read once, an unchanged sitemap is skipped next time.
+        $source->markSitemapRead($sitemap, $recent);
+        $this->assertSame([], $source->list($board, $board->listing_url)['sitemaps']);
+
+        // Known only by its link, the job isn't matched until its page is read.
+        $posting = JobPosting::sole();
+        $this->assertSame(0, JobPosting::availableTo($this->user->id)->count());
+
+        $this->assertTrue($source->fetchDetails($posting));
+        $posting->refresh();
+
+        $this->assertSame('Accountant', $posting->title);
+        $this->assertSame('Acme Ltd', $posting->company);
+        $this->assertSame('Nairobi', $posting->location);
+        $this->assertSame('hr@acme.co.ke', $posting->apply_email);
+        $this->assertStringStartsWith('Send your CV to:', $posting->apply_instructions);
+        $this->assertTrue($posting->valid_through->isFuture());
+        $this->assertSame(1, JobPosting::availableTo($this->user->id)->count());
+    }
+
+    public function test_boards_without_structured_data_are_read_by_the_ai(): void
+    {
+        // The address as Cloudflare's email protection hides it on the page.
+        $hidden = collect(str_split('jobs@acme.co.ke'))
+            ->map(fn (string $character) => sprintf('%02x', ord($character) ^ 0x42))
+            ->prepend('42')
+            ->implode('');
+
+        Http::fake([
+            'jobs.example.org/robots.txt' => Http::response('', 404),
+            'jobs.example.org/accountant-at-acme' => Http::response(
+                '<html><body><nav>Latest jobs menu</nav>'
+                .'<article><h2>Related: Driver at Beta</h2></article>'
+                ."<article><h1>Accountant at Acme</h1><p>Send CVs to <a href=\"/cdn-cgi/l/email-protection#{$hidden}\"><span class=\"__cf_email__\" data-cfemail=\"{$hidden}\">[email&#160;protected]</span></a></p></article>"
+                .'</body></html>'
+            ),
+            'jobs.example.org/how-to-write-a-cv' => Http::response('<html><body><article><h1>How to write a CV</h1></article></body></html>'),
+        ]);
+        JobPageAgent::fake([
+            ['is_job' => true, 'title' => 'Accountant', 'company' => 'Acme Ltd', 'location' => 'Nairobi', 'description' => 'IFRS accounts.', 'apply_email' => 'jobs@acme.co.ke', 'apply_instructions' => 'Send CVs to jobs@acme.co.ke', 'closing_date' => now()->addWeek()->toDateString()],
+            ['is_job' => false, 'title' => '', 'company' => '', 'location' => '', 'description' => '', 'apply_email' => '', 'apply_instructions' => '', 'closing_date' => ''],
+        ]);
+
+        $source = app(JobBoardSource::class);
+        $board = $this->aiBoard();
+        $job = $this->boardPosting($board, 'accountant-at-acme', 'Accountant at Acme');
+        $article = $this->boardPosting($board, 'how-to-write-a-cv', 'How to write a CV');
+
+        $this->assertTrue($source->fetchDetails($job));
+        $job->refresh();
+        $this->assertSame('Acme Ltd', $job->company);
+        $this->assertSame('jobs@acme.co.ke', $job->apply_email);
+        $this->assertTrue($job->valid_through->isFuture());
+
+        // Only the advert itself is sent, not the menus and related posts
+        // around it, and with its hidden address written out.
+        JobPageAgent::assertPrompted(fn (AgentPrompt $prompt) => str_contains($prompt->prompt, 'Send CVs to jobs@acme.co.ke')
+            && ! str_contains($prompt->prompt, 'Latest jobs menu')
+            && ! str_contains($prompt->prompt, 'Driver at Beta'));
+
+        // A page that isn't an advert is kept out of matching.
+        $this->assertFalse($source->fetchDetails($article));
+        $this->assertSame([$job->id], JobPosting::availableTo($this->user->id)->pluck('id')->all());
+
+        // Shared by everyone, so billed to the system.
+        $this->assertSame(2, AiUsage::where('feature', AiUsage::FEATURE_JOB_PAGE_READ)->whereNull('user_id')->count());
+    }
+
+    public function test_pages_the_ai_reads_stay_within_the_daily_allowance(): void
+    {
+        Queue::fake();
+        config(['job_search.boards.max_ai_pages_per_day' => 2]);
+        $this->readyProfile();
+        $board = $this->aiBoard();
+
+        foreach (range(1, 5) as $number) {
+            $this->boardPosting($board, "job-{$number}");
+        }
+
+        (new FetchJobPostingsJob)->handle(app(JobBoardSource::class));
+
+        Queue::assertPushed(FetchJobBoardListingJob::class, 3);
+        Queue::assertPushed(FetchJobPostingDetailsJob::class, 2);
+    }
+
+    public function test_a_board_is_added_switched_off_once_its_job_pages_are_checked(): void
+    {
+        $job = json_encode(['@context' => 'https://schema.org', '@type' => 'JobPosting', 'title' => 'Accountant', 'hiringOrganization' => ['@type' => 'Organization', 'name' => 'Acme Ltd']]);
+
+        Http::fake([
+            'jobs.example.org/robots.txt' => Http::response("User-agent: *\nDisallow: /admin/\nSitemap: https://jobs.example.org/sitemap-blog.xml\nSitemap: https://jobs.example.org/sitemap-vacancies.xml\n"),
+            'jobs.example.org/sitemap-vacancies.xml' => Http::response(<<<'XML'
+                <?xml version="1.0" encoding="UTF-8"?>
+                <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+                <url><loc>https://jobs.example.org/vacancies/accountant-1</loc></url>
+                <url><loc>https://jobs.example.org/vacancies/driver-2</loc></url>
+                <url><loc>https://jobs.example.org/about</loc></url>
+                </urlset>
+                XML),
+            'jobs.example.org/vacancies/*' => Http::response("<html><head><script type=\"application/ld+json\">{$job}</script></head></html>"),
+        ]);
+
+        $this->artisan('job-boards:add', ['url' => 'https://jobs.example.org'])
+            ->assertSuccessful();
+
+        $board = JobBoard::where('host', 'jobs.example.org')->sole();
+
+        $this->assertFalse($board->enabled);
+        $this->assertSame('https://jobs.example.org/sitemap-vacancies.xml', $board->listing_url);
+        $this->assertTrue($board->isJobLink('https://jobs.example.org/vacancies/finance-officer-3'));
+        $this->assertFalse($board->isJobLink('https://jobs.example.org/about'));
+    }
+
+    // ─── Job alerts ──────────────────────────────────────────────────────────
+
+    private function alertEmail(string $from, string $subject, string $html = ''): MailMessage
+    {
+        return $this->sentMessage([
+            'direction' => 'inbound',
+            'folder' => 'inbox',
+            'status' => 'received',
+            'from_address' => ['address' => $from],
+            'to' => [['address' => 'wanjiku@example.com']],
+            'subject' => $subject,
+            'body_html' => $html,
+            'received_at' => now(),
+        ]);
+    }
+
+    public function test_job_alert_emails_from_job_sites_are_read_when_job_search_is_on(): void
+    {
+        Queue::fake();
+        config(['services.mailgun.webhook_signing_secret' => 'secret']);
+        $profile = $this->readyProfile();
+
+        $receive = function (string $from, string $subject) {
+            $timestamp = (string) now()->timestamp;
+            $token = Str::random(10);
+
+            $this->postJson('/api/webhooks/mailgun', [
+                'timestamp' => $timestamp,
+                'token' => $token,
+                'signature' => hash_hmac('sha256', $timestamp.$token, 'secret'),
+                'recipient' => 'wanjiku@example.com',
+                'sender' => $from,
+                'from' => $from,
+                'To' => 'wanjiku@example.com',
+                'subject' => $subject,
+                'body-html' => '<p>Hello</p>',
+                'Message-Id' => '<'.Str::random(10).'@example.com>',
+            ])->assertOk();
+        };
+
+        $receive('jobalerts-noreply@linkedin.com', 'Accountant: Acme Ltd and 4 more jobs in Nairobi');
+        // Not alerts: LinkedIn's other mail, and mail from anyone else.
+        $receive('notifications-noreply@linkedin.com', 'You appeared in 5 searches this week');
+        $receive('friend@gmail.com', 'Any jobs going?');
+
+        Queue::assertPushed(ReadJobAlertJob::class, 1);
+
+        $profile->update(['auto_apply' => false]);
+        $receive('alert@indeed.com', 'New jobs for accountant');
+
+        Queue::assertPushed(ReadJobAlertJob::class, 1);
+    }
+
+    public function test_jobs_in_an_alert_join_a_board_we_read_or_become_the_users_own(): void
+    {
+        $profile = $this->readyProfile();
+        $message = $this->alertEmail('jobalerts-noreply@linkedin.com', 'Accountant: Acme Ltd and 2 more', <<<'HTML'
+            <table>
+            <tr><td><a href="https://www.linkedin.com/comm/jobs/view/4123456789/?trackingId=abc123xyz">Accountant</a><br>Acme Ltd · Nairobi</td></tr>
+            <tr><td><a href="https://www.brightermonday.co.ke/listings/finance-officer-xyz789?utm_source=alert">Finance Officer</a><br>Beta Bank · Nairobi</td></tr>
+            <tr><td><a href="https://www.linkedin.com/comm/jobs/unsubscribe?id=1">Unsubscribe</a></td></tr>
+            </table>
+            HTML);
+
+        JobAlertAgent::fake([['jobs' => [
+            ['title' => 'Accountant', 'company' => 'Acme Ltd', 'location' => 'Nairobi', 'link' => 1],
+            ['title' => 'Finance Officer', 'company' => 'Beta Bank', 'location' => 'Nairobi', 'link' => 2],
+            // A link that isn't in the email.
+            ['title' => 'Auditor', 'company' => 'Gamma', 'location' => 'Nairobi', 'link' => 99],
+        ]]]);
+
+        $this->assertSame(2, app(JobAlertReader::class)->read($profile, $message));
+
+        // The AI sees numbered links, not the tracking addresses.
+        JobAlertAgent::assertPrompted(fn (AgentPrompt $prompt) => str_contains($prompt->prompt, 'Accountant [1]')
+            && ! str_contains($prompt->prompt, 'trackingId'));
+
+        $linkedIn = JobPosting::where('source', JobPosting::SOURCE_ALERT)->sole();
+        $this->assertSame($this->user->id, $linkedIn->user_id);
+        $this->assertSame('Acme Ltd', $linkedIn->company);
+        $this->assertSame('LinkedIn', $linkedIn->sourceName());
+        $this->assertNotNull($linkedIn->details_fetched_at);
+
+        // BrighterMonday is read like its other jobs, for everyone.
+        $board = JobPosting::where('source', JobPosting::SOURCE_BOARD)->sole();
+        $this->assertSame('https://www.brightermonday.co.ke/listings/finance-officer-xyz789', $board->url);
+        $this->assertNull($board->user_id);
+        $this->assertNull($board->details_fetched_at);
+
+        $this->assertSame('LinkedIn', $profile->fresh()->last_alert_source);
+        $this->assertSame(1, AiUsage::where('feature', AiUsage::FEATURE_JOB_ALERT_READ)->where('user_id', $this->user->id)->count());
+
+        // The same job in the next day's alert isn't added twice.
+        JobAlertAgent::fake([['jobs' => [['title' => 'Accountant', 'company' => 'Acme Ltd', 'location' => 'Nairobi', 'link' => 1]]]]);
+        $this->assertSame(0, app(JobAlertReader::class)->read($profile, $message));
+    }
+
+    public function test_alerts_are_read_within_a_daily_allowance(): void
+    {
+        config(['job_search.alerts.max_per_user_per_day' => 1]);
+        $profile = $this->readyProfile();
+        JobAlertAgent::fake([['jobs' => []]]);
+        $message = $this->alertEmail('noreply@fuzu.com', 'New jobs matching your profile');
+
+        $this->assertSame(0, app(JobAlertReader::class)->read($profile, $message));
+        $this->assertNull(app(JobAlertReader::class)->read($profile, $message));
     }
 
     // ─── Finding careers pages ───────────────────────────────────────────────
@@ -448,10 +761,49 @@ class JobSearchTest extends TestCase
         $this->assertSame(JobApplicationStatus::NOT_MATCHED, $status($weak));
         $this->assertSame('Application for Accountant', JobApplication::where('job_posting_id', $strong->id)->value('subject'));
         Notification::assertSentTo($this->user, JobApplicationsReadyNotification::class);
+        Notification::assertSentTo($this->user, JobsToApplyManuallyNotification::class, fn ($notification) => $notification
+            ->toArray($this->user)['message'] === '1 Job To Apply For Yourself');
 
         // Already scored postings are never sent to the AI again.
         JobMatchAgent::fake()->preventStrayPrompts();
         $this->assertSame(0, app(JobMatcher::class)->matchFor($profile));
+    }
+
+    public function test_locations_match_whole_place_names_whatever_the_spelling(): void
+    {
+        $profile = $this->readyProfile([
+            'preferences' => ['keywords' => [], 'locations' => ["Murang'a", 'Iten'], 'remote_ok' => false, 'excluded_companies' => []],
+        ]);
+        $this->posting('Accountant', 'Muranga Ltd', 'x@mu.co.ke', ['location' => 'Muranga, Kenya']);
+        $this->posting('Accountant', 'Iten Ltd', 'x@it.co.ke', ['location' => 'Iten, Elgeyo-Marakwet']);
+        $this->posting('Accountant', 'Kitengela Ltd', 'x@ki.co.ke', ['location' => 'Kitengela']);
+
+        JobMatchAgent::fake([['results' => [
+            ['id' => '1', 'score' => 40, 'reason' => 'Weak fit.'],
+            ['id' => '2', 'score' => 40, 'reason' => 'Weak fit.'],
+        ]]]);
+
+        $this->assertSame(2, app(JobMatcher::class)->matchFor($profile));
+
+        JobMatchAgent::assertPrompted(fn (AgentPrompt $prompt) => str_contains($prompt->prompt, 'Company: Muranga Ltd')
+            && str_contains($prompt->prompt, 'Company: Iten Ltd')
+            && ! str_contains($prompt->prompt, 'Company: Kitengela Ltd'));
+    }
+
+    public function test_a_job_on_several_boards_is_matched_once_and_closed_jobs_not_at_all(): void
+    {
+        $profile = $this->readyProfile();
+        $this->posting('Accountant', 'Acme Ltd', null, ['posted_at' => now()->subHours(1)]);
+        $withEmail = $this->posting('ACCOUNTANT', 'ACME Limited', 'jobs@acme.co.ke', ['posted_at' => now()->subHours(2)]);
+        $this->posting('Finance Officer', 'Beta Ltd', 'hr@beta.co.ke', ['valid_through' => now()->subDay()]);
+
+        // Of the two copies, the one that can be applied to by email.
+        $this->assertSame([$withEmail->id], app(JobMatcher::class)->candidates($profile)->pluck('id')->all());
+
+        // Once seen through one board, the copy on another isn't considered.
+        JobApplication::create(['user_id' => $this->user->id, 'job_posting_id' => $withEmail->id, 'status' => JobApplicationStatus::NOT_MATCHED, 'match_score' => 20]);
+
+        $this->assertCount(0, app(JobMatcher::class)->candidates($profile));
     }
 
     public function test_scoring_stops_at_the_daily_allowance(): void
@@ -505,7 +857,30 @@ class JobSearchTest extends TestCase
         $this->assertSame('Wanjiku CV.pdf', $message->attachments->sole()->original_name);
         Storage::disk('local')->assertExists($message->attachments->sole()->path);
         Queue::assertPushed(SendMailMessageJob::class, fn ($job) => $job->mailMessageId === $message->id);
-        Notification::assertSentTo($this->user, JobApplicationSentNotification::class);
+        Notification::assertSentTo($this->user, JobApplicationSentNotification::class, fn ($notification, array $channels) => $channels === ['database', 'broadcast', WebPushChannel::class, 'mail']);
+    }
+
+    public function test_the_user_is_emailed_about_every_application_sent_for_them(): void
+    {
+        Queue::fake([SendMailMessageJob::class]);
+        $this->duringWorkingHours();
+        $profile = $this->readyProfile(['mode' => 'autopilot']);
+        $application = $this->queuedApplication($this->posting('Accountant'));
+
+        app(JobApplicationSender::class)->sendNext($profile);
+
+        $notification = new JobApplicationSentNotification($application->fresh('posting'));
+        $mail = $notification->toMail($this->user);
+        $push = $notification->toWebPush($this->user, $notification)->toArray();
+
+        $this->assertSame('Applied To Accountant At Acme Ltd', $mail->subject);
+        $this->assertStringContainsString('jobs@acme.co.ke', (string) $mail->render());
+        $this->assertSame('Applied To Accountant At Acme Ltd', $push['title']);
+        $this->assertSame('/mail/'.$application->fresh()->mail_thread_id.'/show', $push['data']['url']);
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_id' => $this->user->id,
+            'type' => JobApplicationSentNotification::class,
+        ]);
     }
 
     public function test_sending_respects_the_daily_limit_and_working_hours(): void
@@ -574,12 +949,14 @@ class JobSearchTest extends TestCase
 
         $this->assertFalse($profile->fresh()->auto_apply);
         $this->assertSame(3, JobApplication::where('status', JobApplicationStatus::FAILED)->count());
-        Notification::assertSentTo($this->user, JobSearchPausedNotification::class);
+        Notification::assertSentTo($this->user, JobSearchPausedNotification::class, fn ($notification, array $channels) => in_array('mail', $channels, true));
+        Notification::assertSentToTimes($this->user, JobApplicationFailedNotification::class, 3);
     }
 
     public function test_an_employer_reply_marks_the_application_replied(): void
     {
         Http::fake();
+        Notification::fake();
         config(['services.mailgun.webhook_signing_secret' => 'secret']);
         $application = $this->queuedApplication($this->posting('Accountant'), ['status' => JobApplicationStatus::APPLIED, 'applied_at' => now()]);
         $sent = $this->sentMessage(['message_id' => 'application-1@example.com']);
@@ -601,6 +978,24 @@ class JobSearchTest extends TestCase
         ])->assertOk();
 
         $this->assertSame(JobApplicationStatus::REPLIED, $application->fresh()->status);
+        Notification::assertSentToTimes($this->user, JobApplicationRepliedNotification::class, 1);
+
+        // A second reply in the same thread doesn't notify again.
+        $this->postJson('/api/webhooks/mailgun', [
+            'timestamp' => $timestamp,
+            'token' => 'reply-token-2',
+            'signature' => hash_hmac('sha256', $timestamp.'reply-token-2', 'secret'),
+            'recipient' => 'wanjiku@example.com',
+            'sender' => 'jobs@acme.co.ke',
+            'from' => 'Acme HR <jobs@acme.co.ke>',
+            'To' => 'wanjiku@example.com',
+            'subject' => 'Re: Application for Accountant',
+            'body-plain' => 'Any day this week works.',
+            'Message-Id' => '<reply-2@acme.co.ke>',
+            'In-Reply-To' => '<reply-1@acme.co.ke>',
+        ])->assertOk();
+
+        Notification::assertSentToTimes($this->user, JobApplicationRepliedNotification::class, 1);
     }
 
     private function sentMessage(array $overrides = []): MailMessage
@@ -618,6 +1013,77 @@ class JobSearchTest extends TestCase
             'status' => 'sent',
             ...$overrides,
         ]);
+    }
+
+    // ─── Cover letters ───────────────────────────────────────────────────────
+
+    private function draftFor(JobSeekerProfile $profile): JobApplication
+    {
+        $application = $this->queuedApplication($this->posting('Accountant'), [
+            'status' => JobApplicationStatus::PENDING_APPROVAL,
+            'subject' => null,
+            'cover_letter' => null,
+        ]);
+
+        app(JobMatcher::class)->draft($profile, $application);
+
+        return $application->refresh();
+    }
+
+    public function test_a_cover_letter_sent_as_written_uses_no_ai(): void
+    {
+        JobApplicationAgent::fake()->preventStrayPrompts();
+        $profile = $this->readyProfile([
+            'cover_letter' => "Dear Hiring Manager,\n\nI'd like to join { Company } as your {role}.\n\nKind regards,\nWanjiku",
+            'cover_letter_mode' => 'as_is',
+        ]);
+
+        $application = $this->draftFor($profile);
+
+        $this->assertSame('Application for Accountant', $application->subject);
+        $this->assertStringContainsString("I'd like to join Acme Ltd as your Accountant.", $application->cover_letter);
+        JobApplicationAgent::assertNeverPrompted();
+    }
+
+    public function test_the_ai_tailors_the_users_own_cover_letter(): void
+    {
+        JobApplicationAgent::fake([['subject' => 'Application for Accountant', 'body' => 'Tailored letter.']]);
+        $profile = $this->readyProfile(['cover_letter' => 'My own letter about audit work.']);
+
+        $this->assertSame('Tailored letter.', $this->draftFor($profile)->cover_letter);
+
+        JobApplicationAgent::assertPrompted(fn (AgentPrompt $prompt) => str_contains($prompt->prompt, "The candidate's own cover letter:\nMy own letter about audit work."));
+    }
+
+    public function test_a_cover_letter_can_be_uploaded_or_typed(): void
+    {
+        $this->readyProfile();
+
+        // A Word document: only its text is kept.
+        $path = tempnam(sys_get_temp_dir(), 'letter');
+        $zip = new ZipArchive;
+        $zip->open($path, ZipArchive::OVERWRITE);
+        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+        $zip->addFromString('word/document.xml', '<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Dear Hiring Manager,</w:t></w:r></w:p><w:p><w:r><w:t>I&apos;m an accountant at {company}.</w:t></w:r></w:p></w:body></w:document>');
+        $zip->close();
+
+        $this->actingAs($this->user, 'sanctum')
+            ->post('/api/job-search/cover-letter', ['coverLetter' => new UploadedFile($path, 'Cover letter.docx', null, null, true)], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('message', 'Cover Letter Uploaded')
+            ->assertJsonPath('profile.coverLetter', "Dear Hiring Manager,\nI'm an accountant at {company}.");
+
+        $this->actingAs($this->user, 'sanctum')
+            ->putJson('/api/job-search/cover-letter', ['coverLetter' => '', 'coverLetterMode' => 'as_is'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('coverLetter');
+
+        $this->actingAs($this->user, 'sanctum')
+            ->putJson('/api/job-search/cover-letter', ['coverLetter' => ' Dear {company}, ', 'coverLetterMode' => 'as_is'])
+            ->assertOk()
+            ->assertJsonPath('message', 'Cover Letter Saved')
+            ->assertJsonPath('profile.coverLetter', 'Dear {company},')
+            ->assertJsonPath('profile.coverLetterMode', 'as_is');
     }
 
     // ─── Review page ─────────────────────────────────────────────────────────

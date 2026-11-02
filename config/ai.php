@@ -40,6 +40,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Pricing
+    |--------------------------------------------------------------------------
+    |
+    | US dollars per million tokens for each model, used to work out what every
+    | AI request cost. These are Google's paid tier list prices for text input
+    | (https://ai.google.dev/gemini-api/docs/pricing). Check that page when
+    | prices change: costs already recorded keep the price they were charged
+    | at. Google Search grounding (careers page search) is billed separately
+    | per prompt and isn't included.
+    |
+    */
+
+    'pricing' => [
+        'gemini-3.1-flash-lite' => [
+            'input' => (float) env('AI_PRICE_GEMINI_3_1_FLASH_LITE_INPUT', 0.25),
+            'cached_input' => (float) env('AI_PRICE_GEMINI_3_1_FLASH_LITE_CACHED_INPUT', 0.025),
+            'output' => (float) env('AI_PRICE_GEMINI_3_1_FLASH_LITE_OUTPUT', 1.50),
+        ],
+        'gemini-2.5-flash-lite' => [
+            'input' => (float) env('AI_PRICE_GEMINI_2_5_FLASH_LITE_INPUT', 0.10),
+            'cached_input' => (float) env('AI_PRICE_GEMINI_2_5_FLASH_LITE_CACHED_INPUT', 0.01),
+            'output' => (float) env('AI_PRICE_GEMINI_2_5_FLASH_LITE_OUTPUT', 0.40),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | AI Providers
     |--------------------------------------------------------------------------
     |

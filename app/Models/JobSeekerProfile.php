@@ -21,6 +21,7 @@ class JobSeekerProfile extends Model
         'preferences' => 'array',
         'parsed_at' => 'datetime',
         'last_discovery_at' => 'datetime',
+        'last_alert_at' => 'datetime',
         'daily_limit' => 'integer',
         'min_match_score' => 'integer',
     ];
@@ -53,6 +54,15 @@ class JobSeekerProfile extends Model
             && $this->consented_at !== null
             && $this->profile !== null
             && $this->sendingAccount()?->mailbox_address !== null;
+    }
+
+    /**
+     * Whether the user's own cover letter goes out unchanged, rather than
+     * being tailored to each job by the AI.
+     */
+    public function sendsCoverLetterAsWritten(): bool
+    {
+        return $this->cover_letter_mode === 'as_is' && trim((string) $this->cover_letter) !== '';
     }
 
     public function isAutopilot(): bool

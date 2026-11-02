@@ -1,15 +1,18 @@
 <?php
 
-namespace App\Http\Services\Jobs;
+namespace App\Services\Jobs;
 
 use App\Agents\JobApplicationAgent;
 use App\Agents\JobMatchAgent;
 use App\Enums\JobApplicationStatus;
 use App\Jobs\DraftJobApplicationJob;
+use App\Models\AiUsage;
 use App\Models\JobApplication;
 use App\Models\JobPosting;
 use App\Models\JobSeekerProfile;
 use App\Notifications\JobApplicationsReadyNotification;
+use App\Notifications\JobsToApplyManuallyNotification;
+use App\Services\AiUsageService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -24,6 +27,8 @@ use Throwable;
 class JobMatcher
 {
     private const DESCRIPTION_CHARS = 1500;
+
+    public function __construct(protected AiUsageService $aiUsageService) {}
 
     /**
      * Score up to $batches batches of new postings (one AI call each, kept
@@ -47,6 +52,7 @@ class JobMatcher
         $batchSize = (int) config('job_search.match_batch_size');
         $candidates = $this->candidates($profile)->take(min($budget, $batches * $batchSize));
         $matched = 0;
+        $manual = 0;
 
         foreach ($candidates->chunk($batchSize) as $batch) {
             $scores = $this->score($profile, $batch->values());
@@ -68,12 +74,22 @@ class JobMatcher
                     DraftJobApplicationJob::dispatch($application->id);
                     $matched++;
                 }
+
+                if ($application->status === JobApplicationStatus::APPLY_MANUALLY) {
+                    $manual++;
+                }
             }
         }
 
         // On autopilot the user hears about each application as it's sent.
         if ($matched > 0 && ! $profile->isAutopilot()) {
             $profile->user->notify(new JobApplicationsReadyNotification($matched));
+        }
+
+        // Good matches without an apply email are never sent for the user,
+        // so they need to hear about them whatever the mode.
+        if ($manual > 0) {
+            $profile->user->notify(new JobsToApplyManuallyNotification($manual));
         }
 
         return $candidates->count();
@@ -93,16 +109,37 @@ class JobMatcher
             ->unique()
             ->values();
 
-        $locations = collect($profile->preference('locations'))->map(fn ($location) => mb_strtolower(trim($location)))->filter();
+        // Each place matches as a whole word, ignoring spaces and punctuation
+        // inside it: "Murang'a" matches "Muranga", "Homa Bay" matches
+        // "Homabay", but "Iten" doesn't match "Kitengela".
+        $locations = collect($profile->preference('locations'))
+            ->map(fn ($location) => preg_split('//u', preg_replace('/[^\p{L}\p{N}]+/u', '', mb_strtolower($location)), -1, PREG_SPLIT_NO_EMPTY))
+            ->filter()
+            ->map(fn (array $letters) => '/(?<![\p{L}\p{N}])'.implode('[^\p{L}\p{N}]*', array_map(fn ($letter) => preg_quote($letter, '/'), $letters)).'(?![\p{L}\p{N}])/u');
         $remoteOk = (bool) ($profile->preferences['remote_ok'] ?? false);
         $excluded = collect($profile->preference('excluded_companies'))->map(fn ($company) => JobPosting::normalizeCompany($company))->filter();
+
+        // A job posted on several boards is only considered once: not again
+        // once it's been seen through any of them.
+        $seen = JobPosting::query()
+            ->whereNotNull('dedupe_key')
+            ->whereHas('applications', fn ($query) => $query->where('user_id', $profile->user_id))
+            ->select('dedupe_key');
 
         return JobPosting::query()
             ->availableTo($profile->user_id)
             ->whereDoesntHave('applications', fn ($query) => $query->where('user_id', $profile->user_id))
+            ->where(fn ($query) => $query
+                ->whereNull('dedupe_key')
+                ->orWhereNotIn('dedupe_key', $seen))
             ->orderByDesc('posted_at')
             ->limit(300)
             ->get()
+            // Of the copies of one job, the one with an apply email.
+            ->groupBy(fn (JobPosting $posting) => $posting->dedupe_key ?? $posting->id)
+            ->map(fn (Collection $copies) => $copies
+                ->sortByDesc(fn (JobPosting $posting) => $posting->apply_email !== null)
+                ->first())
             ->filter(function (JobPosting $posting) use ($keywords, $locations, $remoteOk, $excluded) {
                 if ($excluded->contains(JobPosting::normalizeCompany($posting->company))) {
                     return false;
@@ -120,7 +157,7 @@ class JobMatcher
 
                 $location = mb_strtolower($posting->location);
 
-                return $locations->contains(fn ($wanted) => str_contains($location, $wanted))
+                return $locations->contains(fn ($pattern) => preg_match($pattern, $location) === 1)
                     || ($remoteOk && (str_contains($location, 'remote') || str_contains($haystack, 'remote')));
             })
             ->values();
@@ -142,15 +179,18 @@ class JobMatcher
         ])))->implode("\n\n---\n\n");
 
         try {
-            $response = JobMatchAgent::make()->prompt(
-                $this->candidateSummary($profile)."\n\nPostings:\n\n".$listing,
-                model: config('job_search.model'),
-            );
+            $response = JobMatchAgent::make()
+                ->prompt(
+                    $this->candidateSummary($profile)."\n\nPostings:\n\n".$listing,
+                    model: config('job_search.model'),
+                );
         } catch (Throwable $exception) {
             Log::warning('Job matching failed', ['user_id' => $profile->user_id, 'error' => $exception->getMessage()]);
 
             return null;
         }
+
+        $this->aiUsageService->record($profile->user_id, AiUsage::FEATURE_JOB_MATCH, $response, $profile);
 
         $scores = [];
 
@@ -202,37 +242,78 @@ class JobMatcher
             return;
         }
 
-        $posting = $application->posting;
+        $letter = $profile->sendsCoverLetterAsWritten()
+            ? $this->letterAsWritten($profile, $application->posting)
+            : $this->writeLetter($profile, $application);
 
-        try {
-            $response = JobApplicationAgent::make()->prompt(
-                $this->candidateSummary($profile)."\n\nJob posting:\n".implode("\n", array_filter([
-                    "Title: {$posting->title}",
-                    $posting->company ? "Company: {$posting->company}" : null,
-                    $posting->location ? "Location: {$posting->location}" : null,
-                    'Description: '.Str::limit((string) $posting->description, 4000, ' [...]'),
-                    $posting->apply_instructions ? "How to apply: {$posting->apply_instructions}" : null,
-                ])),
-                model: config('job_search.model'),
-            );
-        } catch (Throwable $exception) {
-            Log::warning('Job application draft failed', ['application_id' => $application->id, 'error' => $exception->getMessage()]);
-
-            return;
-        }
-
-        $subject = Str::limit(trim((string) ($response['subject'] ?? '')), 250, '');
-        $body = trim((string) ($response['body'] ?? ''));
-
-        if ($subject === '' || $body === '') {
+        if ($letter === null) {
             return;
         }
 
         $application->update([
-            'subject' => $subject,
-            'cover_letter' => $body,
+            ...$letter,
             'status' => $profile->isAutopilot() ? JobApplicationStatus::QUEUED : JobApplicationStatus::PENDING_APPROVAL,
         ]);
+    }
+
+    /**
+     * The user's own letter, unchanged apart from {company} and {role}. No
+     * AI is used.
+     *
+     * @return array{subject: string, cover_letter: string}
+     */
+    public function letterAsWritten(JobSeekerProfile $profile, JobPosting $posting): array
+    {
+        return [
+            'subject' => Str::limit("Application for {$posting->title}", 250, ''),
+            'cover_letter' => Str::of((string) $profile->cover_letter)
+                ->replaceMatches('/\{\s*company\s*\}/i', $posting->company ?: 'your organisation')
+                ->replaceMatches('/\{\s*(role|title|position)\s*\}/i', $posting->title)
+                ->trim()
+                ->toString(),
+        ];
+    }
+
+    /**
+     * A letter written by the AI for this job, from the user's own letter
+     * when they have one.
+     *
+     * @return array{subject: string, cover_letter: string}|null
+     */
+    protected function writeLetter(JobSeekerProfile $profile, JobApplication $application): ?array
+    {
+        $posting = $application->posting;
+
+        try {
+            $response = JobApplicationAgent::make()
+                ->prompt(
+                    implode("\n\n", array_filter([
+                        $this->candidateSummary($profile),
+                        $profile->cover_letter
+                            ? "The candidate's own cover letter:\n".Str::limit($profile->cover_letter, 5000, '')
+                            : null,
+                        "Job posting:\n".implode("\n", array_filter([
+                            "Title: {$posting->title}",
+                            $posting->company ? "Company: {$posting->company}" : null,
+                            $posting->location ? "Location: {$posting->location}" : null,
+                            'Description: '.Str::limit((string) $posting->description, 4000, ' [...]'),
+                            $posting->apply_instructions ? "How to apply: {$posting->apply_instructions}" : null,
+                        ])),
+                    ])),
+                    model: config('job_search.model'),
+                );
+        } catch (Throwable $exception) {
+            Log::warning('Job application draft failed', ['application_id' => $application->id, 'error' => $exception->getMessage()]);
+
+            return null;
+        }
+
+        $this->aiUsageService->record($application->user_id, AiUsage::FEATURE_JOB_APPLICATION_DRAFT, $response, $application);
+
+        $subject = Str::limit(trim((string) ($response['subject'] ?? '')), 250, '');
+        $body = trim((string) ($response['body'] ?? ''));
+
+        return $subject !== '' && $body !== '' ? ['subject' => $subject, 'cover_letter' => $body] : null;
     }
 
     /**

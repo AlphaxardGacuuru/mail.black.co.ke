@@ -110,3 +110,35 @@ export function useAdminWebhooks(filters: AdminWebhookFilters) {
 		placeholderData: keepPreviousData,
 	})
 }
+
+export type AdminAiUsageTotals = {
+	requests: number
+	replySuggestions: number
+	inputTokens: number
+	outputTokens: number
+	costMicros: number
+}
+
+/** One user's AI usage for the month; userId is null for system-wide requests. */
+export type AdminAiUsageUser = AdminAiUsageTotals & {
+	userId: string | null
+	name: string
+	email: string | null
+}
+
+export type AdminAiUsageReport = {
+	month: string
+	users: AdminAiUsageUser[]
+	totals: AdminAiUsageTotals
+}
+
+export function useAdminAiUsage(month: string) {
+	return useQuery({
+		queryKey: ["admin", "ai-usage", month],
+		queryFn: () =>
+			Axios.get<AdminAiUsageReport>("api/admin/ai-usage", {
+				params: { month },
+			}).then((res) => res.data),
+		placeholderData: keepPreviousData,
+	})
+}

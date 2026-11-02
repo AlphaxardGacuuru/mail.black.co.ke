@@ -1,5 +1,11 @@
 import { format, formatDistanceToNow } from "date-fns"
-import { Briefcase, ExternalLink, LoaderCircle, MailOpen } from "lucide-react"
+import {
+	BellRing,
+	Briefcase,
+	ExternalLink,
+	LoaderCircle,
+	MailOpen,
+} from "lucide-react"
 import { useEffect, useState } from "react"
 import Heading from "@/components/heading"
 import { Badge } from "@/components/ui/badge"
@@ -193,7 +199,7 @@ function ApplicationCard({
 					rel="noopener noreferrer"
 					className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
 					<ExternalLink className="size-3.5" />
-					View posting
+					View on {posting.sourceName}
 				</a>
 				{application.mailThreadId && (
 					<Link
@@ -287,6 +293,23 @@ export default function JobApplications() {
 							variant="solid"
 							size="sm">
 							Set up
+						</Link>
+					</GlassCard>
+				)}
+
+				{settings?.profile?.autoApply && !settings.profile.lastAlertAt && (
+					<GlassCard className="flex flex-wrap items-center gap-3 p-4 text-sm">
+						<BellRing className="size-5 shrink-0 text-muted-foreground" />
+						<span className="min-w-0 flex-1">
+							Get more matches: turn on job alerts on LinkedIn, Fuzu and other
+							sites with your Black Mail address, and the jobs in them are added
+							here.
+						</span>
+						<Link
+							href="/settings/job-search"
+							variant="outline"
+							size="sm">
+							Show me how
 						</Link>
 					</GlassCard>
 				)}

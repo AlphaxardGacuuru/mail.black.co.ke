@@ -23,7 +23,8 @@ class ReplySuggestionTest extends TestCase
     {
         parent::setUp();
 
-        $this->owner = User::factory()->create(['name' => 'Wanjiku Muhandi']);
+        $this->owner = User::factory()
+            ->create(['name' => 'Wanjiku Muhandi']);
         $this->thread = MailThread::create(['user_id' => $this->owner->id, 'subject' => 'Viewing on Saturday']);
     }
 
@@ -76,7 +77,9 @@ class ReplySuggestionTest extends TestCase
         ReplySuggestionAgent::fake(['First draft', 'Second draft']);
         $message = $this->message($this->thread, 'Hello?');
 
-        $this->actingAs($this->owner, 'sanctum')->postJson("/api/messages/{$message->id}/suggest-reply")->assertOk();
+        $this->actingAs($this->owner, 'sanctum')
+            ->postJson("/api/messages/{$message->id}/suggest-reply")
+            ->assertOk();
 
         $this->actingAs($this->owner, 'sanctum')
             ->postJson("/api/messages/{$message->id}/suggest-reply")
@@ -100,7 +103,8 @@ class ReplySuggestionTest extends TestCase
             ->assertJsonPath('data.text', 'First draft')
             ->assertJsonPath('cached', true);
 
-        $this->travel(2)->days();
+        $this->travel(2)
+            ->days();
 
         $this->actingAs($this->owner, 'sanctum')
             ->postJson("/api/messages/{$message->id}/suggest-reply")
@@ -148,10 +152,12 @@ class ReplySuggestionTest extends TestCase
 
     public function test_other_users_messages_are_not_found(): void
     {
-        ReplySuggestionAgent::fake(['Nope'])->preventStrayPrompts();
+        ReplySuggestionAgent::fake(['Nope'])
+            ->preventStrayPrompts();
         $message = $this->message($this->thread, 'Private');
 
-        $this->actingAs(User::factory()->create(), 'sanctum')
+        $this->actingAs(User::factory()
+            ->create(), 'sanctum')
             ->postJson("/api/messages/{$message->id}/suggest-reply")
             ->assertNotFound();
     }
@@ -169,6 +175,7 @@ class ReplySuggestionTest extends TestCase
     {
         $message = $this->message($this->thread, 'Hello?');
 
-        $this->postJson("/api/messages/{$message->id}/suggest-reply")->assertUnauthorized();
+        $this->postJson("/api/messages/{$message->id}/suggest-reply")
+            ->assertUnauthorized();
     }
 }

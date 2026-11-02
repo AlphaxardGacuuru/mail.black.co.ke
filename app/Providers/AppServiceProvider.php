@@ -31,11 +31,15 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * The Pulse dashboard (/pulse) is for the same people as Horizon, so
-     * there's one admin list to maintain (see HorizonServiceProvider).
+     * there's one admin list to maintain (see HorizonServiceProvider). The AI
+     * usage page is for the same people as Telescope.
      */
     protected function configurePulse(): void
     {
-        Gate::define('viewPulse', fn (?User $user = null): bool => Gate::forUser($user)->allows('viewHorizon'));
+        Gate::define('viewPulse', fn (?User $user = null): bool => Gate::forUser($user)
+            ->allows('viewHorizon'));
+        Gate::define('viewAiUsage', fn (?User $user = null): bool => Gate::forUser($user)
+            ->allows('viewTelescope'));
     }
 
     /**

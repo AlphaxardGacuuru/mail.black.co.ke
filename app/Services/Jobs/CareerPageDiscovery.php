@@ -1,12 +1,15 @@
 <?php
 
-namespace App\Http\Services\Jobs;
+namespace App\Services\Jobs;
 
 use App\Agents\CareerPageSearchAgent;
 use App\Jobs\SyncCareerPageJob;
+use App\Models\AiUsage;
 use App\Models\CompanyCareerPage;
+use App\Models\JobBoard;
 use App\Models\JobPosting;
 use App\Models\JobSeekerProfile;
+use App\Services\AiUsageService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -22,7 +25,7 @@ use Throwable;
  */
 class CareerPageDiscovery
 {
-    public function __construct(protected SafePageFetcher $fetcher) {}
+    public function __construct(protected SafePageFetcher $fetcher, protected AiUsageService $aiUsageService) {}
 
     /**
      * Returns how many pages were added.
@@ -131,15 +134,20 @@ class CareerPageDiscovery
     protected function search(array $roles, array $places): array
     {
         try {
-            $response = CareerPageSearchAgent::make()->prompt(
-                'Roles: '.implode(', ', $roles)."\nPlaces: ".implode(', ', $places),
-                model: config('job_search.discovery.model'),
-            );
+            $response = CareerPageSearchAgent::make()
+                ->prompt(
+                    'Roles: '.implode(', ', $roles)."\nPlaces: ".implode(', ', $places),
+                    model: config('job_search.discovery.model'),
+                );
         } catch (Throwable $exception) {
             Log::warning('Careers page search failed', ['error' => $exception->getMessage()]);
 
             return [];
         }
+
+        // The answer is cached and shared by everyone looking for the same
+        // roles in the same places, so it's billed to the system, not a user.
+        $this->aiUsageService->record(null, AiUsage::FEATURE_CAREER_PAGE_SEARCH, $response);
 
         $candidates = collect();
 
@@ -177,7 +185,10 @@ class CareerPageDiscovery
      */
     protected function usable(Collection $candidates): array
     {
-        $blocked = config('job_search.discovery.blocked_hosts');
+        $blocked = JobBoard::query()
+            ->pluck('host')
+            ->map(fn (string $host) => Str::after($host, 'www.'))
+            ->merge(config('job_search.discovery.blocked_hosts'));
 
         return $candidates
             ->map(fn (array $candidate) => [...$candidate, 'url' => Str::before(rtrim($candidate['url'], '.,;)'), '#')])
@@ -187,7 +198,7 @@ class CareerPageDiscovery
                 return $host !== ''
                     && strlen($candidate['url']) <= 2000
                     && ! str_ends_with($host, 'vertexaisearch.cloud.google.com')
-                    && ! collect($blocked)->contains(fn (string $site) => $host === $site || str_ends_with($host, '.'.$site));
+                    && ! $blocked->contains(fn (string $site) => $host === $site || str_ends_with($host, '.'.$site));
             })
             ->sortByDesc(fn (array $candidate) => CompanyCareerPageSource::looksLikeCareersUrl($candidate['url']))
             ->unique(fn (array $candidate) => CompanyCareerPage::hostOf($candidate['url']))

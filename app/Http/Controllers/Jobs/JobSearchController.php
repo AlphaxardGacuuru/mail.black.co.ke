@@ -5,8 +5,7 @@ namespace App\Http\Controllers\Jobs;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CompanyCareerPageResource;
 use App\Http\Resources\JobSeekerProfileResource;
-use App\Http\Services\Jobs\JobApplicationSender;
-use App\Http\Services\Jobs\SafePageFetcher;
+use App\Http\Services\CoverLetterService;
 use App\Jobs\DiscoverCareerPagesJob;
 use App\Jobs\MatchJobsForUserJob;
 use App\Jobs\ParseCvJob;
@@ -14,6 +13,8 @@ use App\Jobs\SyncCareerPageJob;
 use App\Models\CompanyCareerPage;
 use App\Models\JobSeekerProfile;
 use App\Models\User;
+use App\Services\Jobs\JobApplicationSender;
+use App\Services\Jobs\SafePageFetcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -46,7 +47,7 @@ class JobSearchController extends Controller
             'mailgunAccountId' => ['nullable', 'string', Rule::exists('mailgun_accounts', 'id')->where('user_id', $user->id)],
             'preferences.keywords' => 'array|max:20',
             'preferences.keywords.*' => 'string|max:60',
-            'preferences.locations' => 'array|max:10',
+            'preferences.locations' => 'array|max:'.config('job_search.max_locations'),
             'preferences.locations.*' => 'string|max:60',
             'preferences.remoteOk' => 'boolean',
             'preferences.excludedCompanies' => 'array|max:50',
@@ -135,6 +136,62 @@ class JobSearchController extends Controller
         ParseCvJob::dispatch($profile->id, $hash);
 
         return response()->json(['message' => 'CV Uploaded', ...$this->state($user)]);
+    }
+
+    /**
+     * The user's own cover letter and how it's used. Without one, the AI
+     * writes each letter from the CV.
+     */
+    public function updateCoverLetter(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'coverLetter' => 'nullable|string|max:'.CoverLetterService::MAX_CHARACTERS,
+            'coverLetterMode' => 'required|in:tailor,as_is',
+        ]);
+
+        $coverLetter = trim((string) ($data['coverLetter'] ?? '')) ?: null;
+
+        if ($data['coverLetterMode'] === 'as_is' && ! $coverLetter) {
+            throw ValidationException::withMessages([
+                'coverLetter' => ['Add your cover letter to send it as written.'],
+            ]);
+        }
+
+        $user = $request->user();
+
+        $this->profile($user)
+            ->fill(['cover_letter' => $coverLetter, 'cover_letter_mode' => $data['coverLetterMode']])
+            ->save();
+
+        return response()->json(['message' => 'Cover Letter Saved', ...$this->state($user->fresh())]);
+    }
+
+    /**
+     * Read the text of an uploaded cover letter into the profile; the file
+     * itself isn't kept.
+     */
+    public function uploadCoverLetter(Request $request, CoverLetterService $coverLetterService): JsonResponse
+    {
+        // Only the text is read out and the file isn't kept, so the
+        // extension is enough: a file that isn't what it claims has no
+        // text to read.
+        $request->validate([
+            'coverLetter' => 'required|file|extensions:pdf,docx,txt|max:2048',
+        ]);
+
+        try {
+            $text = $coverLetterService->text($request->file('coverLetter'));
+        } catch (RuntimeException $exception) {
+            throw ValidationException::withMessages(['coverLetter' => [$exception->getMessage()]]);
+        }
+
+        $user = $request->user();
+
+        $this->profile($user)
+            ->fill(['cover_letter' => $text])
+            ->save();
+
+        return response()->json(['message' => 'Cover Letter Uploaded', ...$this->state($user->fresh())]);
     }
 
     /**
@@ -246,6 +303,9 @@ class JobSearchController extends Controller
 
         return [
             'profile' => $profile ? JobSeekerProfileResource::make($profile)->resolve() : null,
+            // The address to sign up for other sites' job alerts with.
+            'alertAddress' => $profile?->sendingAccount()?->mailbox_address
+                ?? $user->activeMailgunAccount?->mailbox_address,
             'careerPages' => CompanyCareerPageResource::collection(
                 $user->companyCareerPages()->active()->orderBy('source', 'desc')->latest()->get()
             )->resolve(),
@@ -253,6 +313,7 @@ class JobSearchController extends Controller
                 'maxDailyLimit' => config('job_search.max_daily_limit'),
                 'minMatchScoreFloor' => config('job_search.min_match_score_floor'),
                 'maxCareerPages' => config('job_search.max_career_pages'),
+                'maxLocations' => config('job_search.max_locations'),
                 'maxDiscoveredPages' => config('job_search.discovery.max_pages'),
                 'maxCvKilobytes' => config('job_search.max_cv_kilobytes'),
             ],

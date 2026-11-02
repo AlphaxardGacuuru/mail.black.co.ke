@@ -23,6 +23,7 @@ export type User = {
 	avatar?: string
 	email_verified_at: string | null
 	twoFactorEnabled?: boolean
+	can_view_ai_usage?: boolean
 	created_at: string
 	updated_at: string
 	mailgunDomains?: MailgunDomain[]

@@ -2,11 +2,13 @@
 
 namespace App\Agents;
 
+use App\Agents\Concerns\ThinksMinimally;
 use Laravel\Ai\Attributes\MaxTokens;
 use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Contracts\Agent;
+use Laravel\Ai\Contracts\HasProviderOptions;
 use Laravel\Ai\Contracts\HasTools;
 use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
@@ -21,9 +23,9 @@ use Laravel\Ai\Providers\Tools\WebSearch;
 #[MaxTokens(1200)]
 #[Temperature(0.2)]
 #[Timeout(45)]
-class CareerPageSearchAgent implements Agent, HasTools
+class CareerPageSearchAgent implements Agent, HasTools, HasProviderOptions
 {
-    use Promptable;
+    use Promptable, ThinksMinimally;
 
     public function instructions(): string
     {

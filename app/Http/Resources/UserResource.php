@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Gate;
 
 class UserResource extends JsonResource
 {
@@ -47,6 +48,8 @@ class UserResource extends JsonResource
             "roleNames" => [$userRoleNames],
             "permissions" => $this->getAllPermissions()->pluck('name')->unique()->values(),
             "twoFactorEnabled" => $this->hasTwoFactorEnabled(),
+            "can_view_ai_usage" => Gate::forUser($this->resource)
+                ->allows('viewAiUsage'),
             "createdAt" => $this->created_at,
         ];
     }

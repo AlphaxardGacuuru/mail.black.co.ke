@@ -5,8 +5,9 @@ namespace App\Listeners;
 use App\Enums\JobApplicationStatus;
 use App\Enums\MailStatus;
 use App\Events\MailMessageStatusUpdatedEvent;
-use App\Http\Services\Jobs\JobApplicationSender;
 use App\Models\JobApplication;
+use App\Notifications\JobApplicationFailedNotification;
+use App\Services\Jobs\JobApplicationSender;
 
 /**
  * A bounced application is marked failed, and too many bounces switch
@@ -35,6 +36,7 @@ class JobApplicationBounceListener
 		$application = JobApplication::query()
 			->where('mail_message_id', $event->messageId)
 			->whereIn('status', [JobApplicationStatus::APPLIED, JobApplicationStatus::REPLIED])
+			->with('posting')
 			->first();
 
 		if (! $application) {
@@ -42,6 +44,7 @@ class JobApplicationBounceListener
 		}
 
 		$application->update(['status' => JobApplicationStatus::FAILED]);
+		$application->user?->notify(new JobApplicationFailedNotification($application));
 
 		$profile = $application->user?->jobSeekerProfile;
 

@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Http\Services\Jobs\JobApplicationSender;
 use App\Models\JobSeekerProfile;
+use App\Services\Jobs\JobApplicationSender;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

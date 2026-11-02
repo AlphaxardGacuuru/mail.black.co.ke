@@ -1,5 +1,7 @@
 export type JobSearchMode = "review" | "autopilot"
 
+export type CoverLetterMode = "tailor" | "as_is"
+
 export type JobSeekerProfile = {
 	autoApply: boolean
 	mode: JobSearchMode
@@ -14,6 +16,8 @@ export type JobSeekerProfile = {
 		target_titles?: string[]
 		years_of_experience?: number
 	} | null
+	coverLetter: string | null
+	coverLetterMode: CoverLetterMode
 	preferences: {
 		keywords: string[]
 		locations: string[]
@@ -24,6 +28,8 @@ export type JobSeekerProfile = {
 	minMatchScore: number
 	pausedReason: string | null
 	lastDiscoveryAt: string | null
+	lastAlertAt: string | null
+	lastAlertSource: string | null
 }
 
 export type CompanyCareerPage = {
@@ -38,10 +44,12 @@ export type CompanyCareerPage = {
 export type JobSearchState = {
 	profile: JobSeekerProfile | null
 	careerPages: CompanyCareerPage[]
+	alertAddress: string | null
 	limits: {
 		maxDailyLimit: number
 		minMatchScoreFloor: number
 		maxCareerPages: number
+		maxLocations: number
 		maxDiscoveredPages: number
 		maxCvKilobytes: number
 	}
@@ -81,7 +89,8 @@ export type JobApplication = {
 		location: string | null
 		url: string
 		applyEmail: string | null
-		source: "myjobmag" | "company_page"
+		source: "board" | "company_page" | "alert"
+		sourceName: string
 		postedAt: string | null
 	}
 }

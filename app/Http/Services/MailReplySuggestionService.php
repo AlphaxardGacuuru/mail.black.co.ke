@@ -3,12 +3,13 @@
 namespace App\Http\Services;
 
 use App\Agents\ReplySuggestionAgent;
+use App\Models\AiUsage;
 use App\Models\MailMessage;
 use App\Models\User;
+use App\Services\AiUsageService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Throwable;
 
 class MailReplySuggestionService extends Service
@@ -23,6 +24,11 @@ class MailReplySuggestionService extends Service
      * Longest slice of a single message's text that is sent.
      */
     private const MAX_CHARS_PER_MESSAGE = 2000;
+
+    public function __construct(protected AiUsageService $aiUsageService)
+    {
+        parent::__construct();
+    }
 
     /**
      * Draft a reply to one of the user's messages. The AI is asked at most
@@ -44,10 +50,11 @@ class MailReplySuggestionService extends Service
         }
 
         try {
-            $response = ReplySuggestionAgent::make()->prompt(
-                $this->prompt($user, $parent, $mode),
-                model: config('services.mail_ai.reply_model'),
-            );
+            $response = ReplySuggestionAgent::make()
+                ->prompt(
+                    $this->prompt($user, $parent, $mode),
+                    model: config('services.mail_ai.reply_model'),
+                );
         } catch (Throwable $exception) {
             Log::warning('Reply suggestion failed', [
                 'message_id' => $parent->id,
@@ -61,7 +68,11 @@ class MailReplySuggestionService extends Service
             ];
         }
 
-        $text = trim((string) $response->text);
+        $this->aiUsageService->record($user->id, AiUsage::FEATURE_REPLY_SUGGESTION, $response, $parent);
+
+        $text = str($response->text)
+            ->trim()
+            ->toString();
 
         if ($text === '') {
             return [
@@ -148,21 +159,15 @@ class MailReplySuggestionService extends Service
     {
         $text = $message->body_text ?: html_entity_decode(strip_tags((string) $message->body_html));
 
-        $kept = [];
-
-        foreach (preg_split('/\R/', $text) as $line) {
-            if (preg_match('/^\s*On .+wrote:\s*$/i', $line)) {
-                break;
-            }
-
-            if (! str_starts_with(ltrim($line), '>')) {
-                $kept[] = rtrim($line);
-            }
-        }
-
-        $body = trim(preg_replace("/\n{3,}/", "\n\n", implode("\n", $kept)));
-
-        return Str::limit($body, self::MAX_CHARS_PER_MESSAGE, ' [...]');
+        return collect(preg_split('/\R/', $text))
+            ->takeUntil(fn (string $line) => preg_match('/^\s*On .+wrote:\s*$/i', $line))
+            ->reject(fn (string $line) => str_starts_with(ltrim($line), '>'))
+            ->map(fn (string $line) => rtrim($line))
+            ->pipe(fn ($lines) => str($lines->implode("\n")))
+            ->replaceMatches("/\n{3,}/", "\n\n")
+            ->trim()
+            ->limit(self::MAX_CHARS_PER_MESSAGE, ' [...]')
+            ->toString();
     }
 
     /**

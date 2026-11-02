@@ -1,85 +1,19 @@
 <?php
 
-namespace App\Http\Services\Jobs;
+namespace App\Services\Jobs;
 
-use App\Models\JobPosting;
-use Carbon\Carbon;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Support\Str;
-use Throwable;
 
 /**
- * myjobmag.co.ke, read through its published RSS feed and its public job
- * pages (both allowed by its robots.txt). The feed gives the listing; each
- * job page gives the full description and the "Method of Application",
- * where an apply email usually appears.
+ * myjobmag.co.ke's job pages. The board is listed through its RSS feed like
+ * any other (see JobBoardSource), but its pages carry no structured data,
+ * so the description, location and "Method of Application" (where an apply
+ * email usually appears) are read from its layout.
  */
 class MyJobMagSource
 {
-    public function __construct(protected SafePageFetcher $fetcher) {}
-
-    /**
-     * Store postings from the feed that aren't known yet; returns how many
-     * were new.
-     */
-    public function syncFeed(): int
-    {
-        $xml = simplexml_load_string(
-            $this->fetcher->fetch(config('job_search.myjobmag.feed_url')),
-            options: LIBXML_NOCDATA | LIBXML_NONET,
-        );
-
-        if ($xml === false) {
-            return 0;
-        }
-
-        $created = 0;
-
-        foreach ($xml->channel->item ?? [] as $item) {
-            $url = trim((string) $item->link);
-
-            if (! preg_match('#^https://www\.myjobmag\.co\.ke/jobs/[^?]+$#', $url)) {
-                continue;
-            }
-
-            [$title, $company] = $this->splitTitle(trim((string) $item->title));
-
-            $posting = JobPosting::firstOrCreate(
-                ['fingerprint' => JobPosting::fingerprint(JobPosting::SOURCE_MYJOBMAG, $url)],
-                [
-                    'source' => JobPosting::SOURCE_MYJOBMAG,
-                    'title' => Str::limit($title, 250, ''),
-                    'company' => $company ? Str::limit($company, 250, '') : null,
-                    'industry' => Str::limit(trim((string) $item->industry), 250, '') ?: null,
-                    'description' => trim(html_entity_decode(strip_tags((string) $item->description))) ?: null,
-                    'url' => $url,
-                    'posted_at' => $this->date((string) $item->pubDate),
-                ],
-            );
-
-            $created += $posting->wasRecentlyCreated ? 1 : 0;
-        }
-
-        return $created;
-    }
-
-    /**
-     * Fill in the description, location and apply details from the job page.
-     */
-    public function fetchDetails(JobPosting $posting): void
-    {
-        $details = $this->parseJobPage($this->fetcher->fetch($posting->url));
-
-        $posting->update([
-            'description' => $details['description'] ?: $posting->description,
-            'location' => $details['location'] ?: $posting->location,
-            'apply_email' => $details['apply_email'],
-            'apply_instructions' => $details['apply_instructions'],
-            'details_fetched_at' => now(),
-        ]);
-    }
-
     /**
      * @return array{description: ?string, location: ?string, apply_email: ?string, apply_instructions: ?string}
      */
@@ -118,7 +52,7 @@ class MyJobMagSource
      *
      * @return array{0: string, 1: ?string}
      */
-    protected function splitTitle(string $title): array
+    public static function splitTitle(string $title): array
     {
         $position = strrpos($title, ' at ');
 
@@ -133,14 +67,5 @@ class MyJobMagSource
         $value = preg_replace("/[ \t\x{00A0}]+/u", ' ', $value);
 
         return trim(preg_replace("/\s*\n\s*(\n\s*)+/", "\n\n", $value));
-    }
-
-    protected function date(string $value): ?Carbon
-    {
-        try {
-            return $value !== '' ? Carbon::parse($value) : null;
-        } catch (Throwable) {
-            return null;
-        }
     }
 }

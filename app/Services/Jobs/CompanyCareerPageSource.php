@@ -1,10 +1,12 @@
 <?php
 
-namespace App\Http\Services\Jobs;
+namespace App\Services\Jobs;
 
 use App\Agents\CareerPageAgent;
+use App\Models\AiUsage;
 use App\Models\CompanyCareerPage;
 use App\Models\JobPosting;
+use App\Services\AiUsageService;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Support\Str;
@@ -16,7 +18,7 @@ use Illuminate\Support\Str;
  */
 class CompanyCareerPageSource
 {
-    public function __construct(protected SafePageFetcher $fetcher) {}
+    public function __construct(protected SafePageFetcher $fetcher, protected AiUsageService $aiUsageService) {}
 
     /**
      * Returns how many new postings were found.
@@ -45,10 +47,13 @@ class CompanyCareerPageSource
             return 0;
         }
 
-        $response = CareerPageAgent::make()->prompt(
-            "Careers page: {$page->url}\n\n".Str::limit($text, (int) config('job_search.max_page_chars_for_ai'), ''),
-            model: config('job_search.model'),
-        );
+        $response = CareerPageAgent::make()
+            ->prompt(
+                "Careers page: {$page->url}\n\n".Str::limit($text, (int) config('job_search.max_page_chars_for_ai'), ''),
+                model: config('job_search.model'),
+            );
+
+        $this->aiUsageService->record($page->user_id, AiUsage::FEATURE_CAREER_PAGE_READ, $response, $page);
 
         $company = Str::limit(trim((string) ($response['company'] ?? '')), 250, '') ?: $page->company_name;
         $created = 0;
@@ -118,7 +123,7 @@ class CompanyCareerPageSource
     public function pageText(string $html, string $baseUrl): string
     {
         $document = new DOMDocument;
-        @$document->loadHTML('<?xml encoding="utf-8" ?>'.$html, LIBXML_NONET | LIBXML_NOERROR);
+        @$document->loadHTML('<?xml encoding="utf-8" ?>'.self::revealEmails($html), LIBXML_NONET | LIBXML_NOERROR);
         $xpath = new DOMXPath($document);
 
         foreach (iterator_to_array($xpath->query('//script|//style|//noscript|//svg|//template')) as $node) {
@@ -141,6 +146,24 @@ class CompanyCareerPageSource
         $text = preg_replace("/[ \t\x{00A0}]+/u", ' ', $text);
 
         return trim(preg_replace("/\s*\n\s*/", "\n", $text));
+    }
+
+    /**
+     * Addresses hidden by Cloudflare's email protection ("[email protected]"),
+     * written out again. Many job sites use it; readers see the address, so
+     * the email check against the page needs to as well. The address is
+     * hex, XOR'd with the first byte.
+     */
+    public static function revealEmails(string $html): string
+    {
+        $decode = fn (string $hex): string => collect(str_split(substr($hex, 2), 2))
+            ->map(fn (string $pair) => chr(hexdec($pair) ^ hexdec(substr($hex, 0, 2))))
+            ->implode('');
+
+        return Str::of($html)
+            ->replaceMatches('#<(a|span)\b[^>]*data-cfemail="([0-9a-f]+)"[^>]*>.*?</\1>#is', fn (array $match) => e($decode($match[2])))
+            ->replaceMatches('#/cdn-cgi/l/email-protection\#([0-9a-f]+)#i', fn (array $match) => 'mailto:'.$decode($match[1]))
+            ->toString();
     }
 
     /**

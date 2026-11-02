@@ -8,7 +8,12 @@ import type { AxiosError } from "axios"
 import JobApplicationController from "@/actions/App/Http/Controllers/Jobs/JobApplicationController"
 import JobSearchController from "@/actions/App/Http/Controllers/Jobs/JobSearchController"
 import Axios from "@/lib/axios"
-import type { JobApplication, JobApplicationTab, JobSearchState } from "@/types"
+import type {
+	CoverLetterMode,
+	JobApplication,
+	JobApplicationTab,
+	JobSearchState,
+} from "@/types"
 
 type Paginated<T> = {
 	data: T[]
@@ -91,6 +96,22 @@ export function useUploadCv() {
 		form.append("cv", file)
 
 		return Axios.post(JobSearchController.uploadCv.url(), form)
+	})
+}
+
+export function useSaveCoverLetter() {
+	return useJobSearchMutation(
+		(variables: { coverLetter: string; coverLetterMode: CoverLetterMode }) =>
+			Axios.put(JobSearchController.updateCoverLetter.url(), variables)
+	)
+}
+
+export function useUploadCoverLetter() {
+	return useJobSearchMutation((file: File) => {
+		const form = new FormData()
+		form.append("coverLetter", file)
+
+		return Axios.post(JobSearchController.uploadCoverLetter.url(), form)
 	})
 }
 

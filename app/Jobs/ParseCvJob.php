@@ -3,7 +3,9 @@
 namespace App\Jobs;
 
 use App\Agents\CvProfileAgent;
+use App\Models\AiUsage;
 use App\Models\JobSeekerProfile;
+use App\Services\AiUsageService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -32,16 +34,20 @@ class ParseCvJob implements ShouldQueue
         }
 
         try {
-            $response = CvProfileAgent::make()->prompt(
-                'Summarise this CV.',
-                attachments: [Document::fromStorage($profile->cv_path, 'local')],
-                model: config('job_search.model'),
-            );
+            $response = CvProfileAgent::make()
+                ->prompt(
+                    'Summarise this CV.',
+                    attachments: [Document::fromStorage($profile->cv_path, 'local')],
+                    model: config('job_search.model'),
+                );
         } catch (Throwable $exception) {
             Log::warning('CV parsing failed', ['profile_id' => $profile->id, 'error' => $exception->getMessage()]);
 
             return;
         }
+
+        app(AiUsageService::class)
+            ->record($profile->user_id, AiUsage::FEATURE_CV_PARSE, $response, $profile);
 
         $profile->update([
             'profile' => $response->toArray(),
