@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import { formatDistanceToNow } from "date-fns"
 import { Bell, CheckCheck, Trash2 } from "lucide-react"
 import Heading from "@/components/heading"
@@ -12,9 +13,10 @@ import { cn } from "@/lib/utils"
 import type { Notification } from "@/types"
 
 /**
- * Every notification, newest first. Opening one marks it read (and follows
- * its link if it has one); all can be marked read at once, and each can be
- * deleted, or all cleared at once.
+ * Every notification, newest first. A notification is marked read once it
+ * has been seen (scrolled into view while the tab is visible), and opening one
+ * follows its link if it has one; all can be marked read at once, and each can
+ * be deleted, or all cleared at once.
  */
 export default function Notifications() {
 	const {
@@ -101,6 +103,7 @@ export default function Notifications() {
 									notification={notification}
 									deleting={deletingId === notification.id}
 									onOpen={() => markAsRead(notification.id)}
+									onSeen={() => markAsRead(notification.id)}
 									onDelete={() => remove(notification.id)}
 								/>
 							))}
@@ -120,14 +123,59 @@ function NotificationRow({
 	notification,
 	deleting,
 	onOpen,
+	onSeen,
 	onDelete,
 }: {
 	notification: Notification
 	deleting: boolean
 	onOpen: () => void
+	onSeen: () => void
 	onDelete: () => void
 }) {
 	const unread = !notification.readAt
+	const rowRef = useRef<HTMLLIElement>(null)
+	const onSeenRef = useRef(onSeen)
+
+	useEffect(() => {
+		onSeenRef.current = onSeen
+	})
+
+	// Mark an unread notification read once at least half of it is on screen
+	// while the tab is visible (a page left open in a background tab doesn't
+	// count until the user comes back to it).
+	useEffect(() => {
+		const row = rowRef.current
+
+		if (!unread || !row) {
+			return
+		}
+
+		let inView = false
+		let seen = false
+
+		const markIfSeen = () => {
+			if (!seen && inView && document.visibilityState === "visible") {
+				seen = true
+				onSeenRef.current()
+			}
+		}
+
+		const observer = new IntersectionObserver(
+			([entry]) => {
+				inView = entry.isIntersecting
+				markIfSeen()
+			},
+			{ threshold: 0.5 }
+		)
+
+		observer.observe(row)
+		document.addEventListener("visibilitychange", markIfSeen)
+
+		return () => {
+			observer.disconnect()
+			document.removeEventListener("visibilitychange", markIfSeen)
+		}
+	}, [unread])
 
 	const content = (
 		<>
@@ -170,7 +218,9 @@ function NotificationRow({
 		"flex min-w-0 flex-1 items-start gap-3 rounded-lg p-2 text-left transition-colors hover:bg-muted/60"
 
 	return (
-		<li className={cn("flex items-start gap-2 p-2 sm:p-3", deleting && "opacity-50")}>
+		<li
+			ref={rowRef}
+			className={cn("flex items-start gap-2 p-2 sm:p-3", deleting && "opacity-50")}>
 			{notification.url ? (
 				<Link
 					variant="unstyled"

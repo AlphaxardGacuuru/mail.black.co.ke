@@ -23,3 +23,17 @@ This also applies to backend response messages (e.g. a controller's JSON `messag
 # Naming conventions
 
 Events and listeners must carry the matching suffix: an event class ends in `Event` (e.g. `UserCreatedEvent`) and the listener that handles it ends in `Listener` (e.g. `UserCreatedListener`).
+
+# Form inputs
+
+Wrap every form input in JSX comments marking where it starts and ends, named after the field:
+
+```tsx
+{/* Name Start */}
+<Input
+	label="Name"
+	value={name}
+	onChange={(e) => setName(e.target.value)}
+/>
+{/* Name End */}
+```
