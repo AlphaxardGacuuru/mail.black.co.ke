@@ -238,7 +238,7 @@ function SelectField({
                     error
                       ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 dark:border-red-500 dark:focus:border-red-500 dark:focus:ring-red-500/30"
                       : "border-neutral-300 focus:border-neutral-500 focus:ring-2 focus:ring-neutral-400/20 dark:border-white/20 dark:focus:border-white/40 dark:focus:ring-white/10",
-                    "[&_span]:text-left [&_span]:capitalize [&_span]:text-neutral-900 dark:[&_span]:text-white [&_span[data-placeholder]]:text-neutral-500 dark:[&_span[data-placeholder]]:text-white/50",
+                    "[&_span]:text-left [&_span]:text-neutral-900 dark:[&_span]:text-white [&_span[data-placeholder]]:text-neutral-500 dark:[&_span[data-placeholder]]:text-white/50",
                     triggerClassName
                   )}
                   onFocus={handleFocus}
