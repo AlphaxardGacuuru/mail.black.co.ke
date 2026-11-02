@@ -654,6 +654,8 @@ function SettingsForm({ state }: { state: JobSearchState }) {
 					</SelectField>
 				</div>
 
+				<hr />
+
 				<div className="space-y-4">
 					<Heading
 						variant="small"
@@ -691,6 +693,8 @@ function SettingsForm({ state }: { state: JobSearchState }) {
 						}
 					/>
 				</div>
+
+				<hr />
 
 				<div className="space-y-4">
 					<Heading
@@ -732,13 +736,23 @@ function SettingsForm({ state }: { state: JobSearchState }) {
 				</div>
 			</form>
 
+			<hr />
+
 			<CvSection state={state} />
+
+			<hr />
 
 			<CoverLetterSection state={state} />
 
+			<hr />
+
 			<JobAlertsSection state={state} />
 
+			<hr />
+
 			<CareerPagesSection state={state} />
+
+			<hr />
 
 			<div className="space-y-4">
 				<Heading
