@@ -482,11 +482,10 @@ function CareerPagesSection({ state }: { state: JobSearchState }) {
 					onSubmit={submit}
 					className="flex flex-col gap-2 sm:flex-row sm:items-start">
 					<Input
-						label="Careers page link"
+						label="Careers page link - (https://company.co.ke/careers)"
 						type="url"
 						required
 						value={url}
-						placeholder="https://company.co.ke/careers"
 						onChange={(event) => setUrl(event.target.value)}
 					/>
 					<Button
@@ -588,9 +587,12 @@ function SettingsForm({ state }: { state: JobSearchState }) {
 					<label className="flex items-center justify-between gap-4 rounded-lg border p-4">
 						<span>
 							<span className="block text-sm font-medium">
-								Apply for jobs for me
+								Turn on job search
 							</span>
 							<span className="block text-xs text-muted-foreground">
+								{form.mode === "autopilot"
+									? "Finds matching jobs and sends strong matches for you."
+									: "Finds matching jobs and drafts applications for you to approve."}{" "}
 								Turning this off stops anything not yet sent.
 							</span>
 						</span>
