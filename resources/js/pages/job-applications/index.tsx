@@ -181,14 +181,28 @@ function ApplicationCard({
 			{tab === "review" && <DraftEditor application={application} />}
 
 			<div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-				<a
-					href={posting.url}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
-					<ExternalLink className="size-3.5" />
-					View on {posting.sourceName}
-				</a>
+				{/* Applying on the site is the only way to act on these. */}
+				{tab === "manual" ? (
+					<Link
+						href={posting.url}
+						target="_blank"
+						rel="noopener noreferrer"
+						variant="solid"
+						size="sm"
+						className="normal-case">
+						Apply on {posting.sourceName}
+						<ExternalLink />
+					</Link>
+				) : (
+					<a
+						href={posting.url}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
+						<ExternalLink className="size-3.5" />
+						View on {posting.sourceName}
+					</a>
+				)}
 				{application.mailThreadId && (
 					<Link
 						variant="unstyled"

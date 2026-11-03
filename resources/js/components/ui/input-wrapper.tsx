@@ -88,11 +88,6 @@ const InputWrapper = forwardRef<HTMLDivElement, InputWrapperProps>(
 								--input-shimmer-strong: var(--color-primary);
 						}
 
-						.dark .input-wrapper-shimmer {
-							--input-shimmer-soft: rgba(255, 255, 255, 0.1);
-							--input-shimmer-strong: rgba(255, 255, 255, 0.8);
-						}
-
 						@keyframes input-wrapper-focus-spin {
 							from {
 								transform: rotate(180deg);
