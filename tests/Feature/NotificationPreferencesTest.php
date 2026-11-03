@@ -87,7 +87,7 @@ class NotificationPreferencesTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->assertSame(['database', 'broadcast', WebPushChannel::class], (new JobApplicationsReadyNotification(2))->via($user));
+        $this->assertSame(['database', 'broadcast', WebPushChannel::class, 'mail'], (new JobApplicationsReadyNotification(2))->via($user));
 
         $user->notification_preferences = [
             'job_applications_ready' => ['push' => false, 'email' => true],

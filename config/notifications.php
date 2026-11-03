@@ -19,14 +19,14 @@ return [
             'group' => 'Job search',
             'label' => 'Applications to review',
             'description' => 'Jobs matched your CV and drafts are waiting for your approval.',
-            'defaults' => ['in_app' => true, 'push' => true, 'email' => false],
+            'defaults' => ['in_app' => true, 'push' => true, 'email' => true],
         ],
 
         'jobs_to_apply_manually' => [
             'group' => 'Job search',
             'label' => 'Jobs to apply for yourself',
             'description' => 'Good matches that take applications on the employer\'s own site.',
-            'defaults' => ['in_app' => true, 'push' => true, 'email' => false],
+            'defaults' => ['in_app' => true, 'push' => true, 'email' => true],
         ],
 
         'job_application_sent' => [
