@@ -9,10 +9,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class MailMessage extends Model
 {
     use HasFactory, HasUuids;
+
+    // Matches the `snippet` column's length.
+    public const SNIPPET_LENGTH = 160;
 
     protected $guarded = [];
 
@@ -44,6 +48,18 @@ class MailMessage extends Model
 
             $message->search_index = trim(($message->subject ?? '') . ' ' . $bodyExcerpt . ' ' . $participants);
         });
+    }
+
+    /**
+     * A preview of the body that always fits the column: Str::limit appends
+     * "..." after the limit, so the limit leaves room for it.
+     */
+    public static function snippet(?string $text): string
+    {
+        return Str::of((string) $text)
+            ->trim()
+            ->limit(self::SNIPPET_LENGTH - 3)
+            ->toString();
     }
 
     public function thread(): BelongsTo

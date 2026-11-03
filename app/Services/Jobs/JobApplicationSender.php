@@ -101,7 +101,7 @@ class JobApplicationSender
                 'subject' => $application->subject,
                 'body_html' => $bodyHtml,
                 'body_text' => $application->cover_letter,
-                'snippet' => Str::limit($application->cover_letter, 160),
+                'snippet' => MailMessage::snippet($application->cover_letter),
                 'status' => MailStatus::QUEUED->value,
                 'is_read' => true,
                 'has_attachments' => true,

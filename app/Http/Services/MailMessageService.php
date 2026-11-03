@@ -13,7 +13,6 @@ use App\Models\TemporaryUpload;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class MailMessageService extends Service
@@ -184,7 +183,7 @@ class MailMessageService extends Service
         $mailMessage->subject = $fields['subject'];
         $mailMessage->body_html = $bodyHtml;
         $mailMessage->body_text = $bodyText;
-        $mailMessage->snippet = Str::limit($bodyText, 160);
+        $mailMessage->snippet = MailMessage::snippet($bodyText);
         $mailMessage->in_reply_to = $fields['inReplyTo'] ?? null;
         $mailMessage->references = $fields['references'] ?? null;
         $mailMessage->status = MailStatus::QUEUED->value;

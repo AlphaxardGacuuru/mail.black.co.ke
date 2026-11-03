@@ -902,6 +902,25 @@ class JobSearchTest extends TestCase
         $this->assertSame(1, JobApplication::where('status', JobApplicationStatus::QUEUED)->count());
     }
 
+    public function test_a_long_cover_letter_is_sent_with_a_snippet_that_fits(): void
+    {
+        Queue::fake([SendMailMessageJob::class]);
+        $this->duringWorkingHours();
+        $profile = $this->readyProfile();
+        $application = $this->queuedApplication($this->posting('Accountant'), [
+            'cover_letter' => str_repeat('I would like to apply for this role. ', 30),
+        ]);
+
+        $this->assertTrue(app(JobApplicationSender::class)->sendNext($profile));
+        $this->assertSame(JobApplicationStatus::APPLIED, $application->fresh()->status);
+        $this->assertLessThanOrEqual(
+            MailMessage::SNIPPET_LENGTH,
+            mb_strlen(MailMessage::query()
+                ->findOrFail($application->fresh()->mail_message_id)
+                ->snippet),
+        );
+    }
+
     public function test_the_same_company_is_not_applied_to_twice_within_the_cooldown(): void
     {
         Queue::fake([SendMailMessageJob::class]);

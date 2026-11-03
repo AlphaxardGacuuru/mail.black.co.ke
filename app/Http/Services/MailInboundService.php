@@ -81,7 +81,7 @@ class MailInboundService
         $mailMessage->subject = $subject;
         $mailMessage->body_html = $bodyHtml;
         $mailMessage->body_text = $bodyText;
-        $mailMessage->snippet = Str::limit(trim(strip_tags($bodyText ?: (string) $bodyHtml)), 160);
+        $mailMessage->snippet = MailMessage::snippet(strip_tags($bodyText ?: (string) $bodyHtml));
         $mailMessage->message_id = $messageId ?: null;
         $mailMessage->in_reply_to = $inReplyTo ?: null;
         $mailMessage->references = $references ?: null;
