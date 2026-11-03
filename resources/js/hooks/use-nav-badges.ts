@@ -1,13 +1,15 @@
-import {
-	JOB_APPLICATION_TABS,
-	jobApplicationTabUrl,
-} from "@/lib/job-application-tabs"
+import { jobApplicationTabUrl } from "@/lib/job-application-tabs"
 import { useJobApplicationCounts } from "@/queries/job-search"
 import { useUnreadInboxCount } from "@/queries/mail"
+import type { JobApplicationTab } from "@/types"
+
+// Only tabs with something to act on: drafts to approve, applications you
+// can still stop, and jobs to apply to yourself.
+const BADGED_TABS: JobApplicationTab[] = ["review", "queued", "manual"]
 
 /**
  * The count to show beside each nav link, by href: unread mail on the
- * inbox, and how many applications each tab holds.
+ * inbox, and the job application tabs waiting on you.
  */
 export function useNavBadges(): Record<string, number> {
 	const { data: unread } = useUnreadInboxCount()
@@ -16,10 +18,7 @@ export function useNavBadges(): Record<string, number> {
 	return {
 		"/mail": unread ?? 0,
 		...Object.fromEntries(
-			JOB_APPLICATION_TABS.map((tab) => [
-				jobApplicationTabUrl(tab.key),
-				counts?.[tab.key] ?? 0,
-			])
+			BADGED_TABS.map((tab) => [jobApplicationTabUrl(tab), counts?.[tab] ?? 0])
 		),
 	}
 }
