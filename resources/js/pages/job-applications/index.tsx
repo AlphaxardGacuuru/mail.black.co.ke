@@ -14,6 +14,10 @@ import { GlassCard } from "@/components/ui/glass-card"
 import { Input } from "@/components/ui/input"
 import { Link } from "@/components/ui/link"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+	JOB_APPLICATION_TABS,
+	JOB_APPLICATIONS_URL,
+} from "@/lib/job-application-tabs"
 import { Head } from "@/lib/spa"
 import toast from "@/lib/toast"
 import { cn } from "@/lib/utils"
@@ -26,22 +30,6 @@ import {
 	useSkipApplication,
 } from "@/queries/job-search"
 import type { JobApplication, JobApplicationTab } from "@/types"
-
-const TABS: { key: JobApplicationTab; label: string; empty: string }[] = [
-	{
-		key: "review",
-		label: "To review",
-		empty: "Nothing to review. New matches appear here.",
-	},
-	{ key: "queued", label: "Queued", empty: "Nothing waiting to be sent." },
-	{ key: "sent", label: "Sent", empty: "No applications sent yet." },
-	{
-		key: "manual",
-		label: "Apply yourself",
-		empty: "Matches without an apply email appear here.",
-	},
-	{ key: "closed", label: "Skipped", empty: "Nothing skipped or bounced." },
-]
 
 function ScoreBadge({ score }: { score: number | null }) {
 	if (score === null) {
@@ -251,16 +239,21 @@ function ApplicationCard({
 /**
  * Applications found by job search: drafts to review, what's queued,
  * what's been sent (replies arrive in the inbox), and matches to apply to
- * by hand.
+ * by hand. Each tab has its own URL, linked from the sidebar and bottom nav.
  */
-export default function JobApplications() {
-	const [tab, setTab] = useState<JobApplicationTab>("review")
+export default function JobApplications({
+	tab = "review",
+}: {
+	tab?: JobApplicationTab
+}) {
 	const [page, setPage] = useState(1)
 	const { data: settings } = useJobSearch()
 	const { data, isLoading, isFetching } = useJobApplications(tab, page)
 	const applications = data?.data ?? []
 	const lastPage = data?.meta.last_page ?? 1
-	const current = TABS.find((item) => item.key === tab) ?? TABS[0]
+	const current =
+		JOB_APPLICATION_TABS.find((item) => item.key === tab) ??
+		JOB_APPLICATION_TABS[0]
 
 	return (
 		<>
@@ -313,38 +306,6 @@ export default function JobApplications() {
 						</Link>
 					</GlassCard>
 				)}
-
-				<div
-					role="tablist"
-					aria-label="Application status"
-					className="flex gap-1 overflow-x-auto pb-1">
-					{TABS.map((item) => {
-						const count = data?.counts[item.key] ?? 0
-
-						return (
-							<button
-								key={item.key}
-								type="button"
-								role="tab"
-								aria-selected={tab === item.key}
-								onClick={() => {
-									setTab(item.key)
-									setPage(1)
-								}}
-								className={cn(
-									"shrink-0 rounded-full px-3 py-1.5 text-sm transition-colors",
-									tab === item.key
-										? "bg-primary text-primary-foreground"
-										: "hover:bg-muted"
-								)}>
-								{item.label}
-								{count > 0 && (
-									<span className="ml-1.5 opacity-80">{count}</span>
-								)}
-							</button>
-						)
-					})}
-				</div>
 
 				<GlassCard
 					className={cn(
@@ -401,5 +362,5 @@ export default function JobApplications() {
 }
 
 JobApplications.layout = {
-	breadcrumbs: [{ title: "Job applications", href: "/job-applications" }],
+	breadcrumbs: [{ title: "Job applications", href: JOB_APPLICATIONS_URL }],
 }

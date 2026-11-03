@@ -1,7 +1,6 @@
 import { Link } from "@/components/ui/link"
 import {
 	Archive,
-	Briefcase,
 	Download,
 	Inbox,
 	Send,
@@ -10,7 +9,7 @@ import {
 } from "lucide-react"
 import { AdminNav } from "@/components/admin/AdminNav"
 import AppLogo from "@/components/app-logo"
-import { MailNav } from "@/components/mail-nav"
+import { JobApplicationsNav, MailNav } from "@/components/mail-nav"
 import MailRealtimeNotifier from "@/components/mail/MailRealtimeNotifier"
 import { NavFooter } from "@/components/nav-footer"
 import { NavUser } from "@/components/nav-user"
@@ -55,13 +54,12 @@ export function findActiveNavHref(
 	return best
 }
 
-export const mainNavItems: NavItem[] = [
+export const mailNavItems: NavItem[] = [
 	{ title: "Inbox", href: "/mail", icon: Inbox },
 	{ title: "Starred", href: "/mail/starred", icon: Star },
 	{ title: "Sent", href: "/mail/sent", icon: Send },
 	{ title: "Archive", href: "/mail/archive", icon: Archive },
 	{ title: "Trash", href: "/mail/trash", icon: Trash2 },
-	{ title: "Job applications", href: "/job-applications", icon: Briefcase },
 ]
 
 const footerNavItems: NavItem[] = [
@@ -111,6 +109,7 @@ export function AppSidebar() {
 
 			<SidebarContent>
 				<MailNav />
+				<JobApplicationsNav />
 				{isAdmin && <AdminNav />}
 			</SidebarContent>
 

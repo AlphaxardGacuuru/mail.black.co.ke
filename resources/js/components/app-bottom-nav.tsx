@@ -1,11 +1,12 @@
 import { Link } from "@/components/ui/link"
-import { findActiveNavHref, mainNavItems } from "@/components/app-sidebar"
+import { findActiveNavHref, mailNavItems } from "@/components/app-sidebar"
 import { useCurrentUrl } from "@/hooks/use-current-url"
 import { shouldHideBottomNav } from "@/lib/bottom-nav"
+import {
+	JOB_APPLICATIONS_URL,
+	jobApplicationNavItems,
+} from "@/lib/job-application-tabs"
 import { cn } from "@/lib/utils"
-
-// The bottom nav only fits the mail folders; other sections stay sidebar-only
-const bottomNavItems = mainNavItems.filter((item) => item.href !== "/job-applications")
 
 export function AppBottomNav() {
 	const { currentUrl } = useCurrentUrl()
@@ -14,6 +15,14 @@ export function AppBottomNav() {
 		return null
 	}
 
+	// Shows the menu of the section you're in; everywhere outside job
+	// applications (settings, notifications) keeps the mail folders.
+	const inJobApplications =
+		currentUrl === JOB_APPLICATIONS_URL ||
+		currentUrl.startsWith(`${JOB_APPLICATIONS_URL}/`)
+	const bottomNavItems = inJobApplications
+		? jobApplicationNavItems
+		: mailNavItems
 	const activeHref = findActiveNavHref(currentUrl, bottomNavItems)
 
 	return (

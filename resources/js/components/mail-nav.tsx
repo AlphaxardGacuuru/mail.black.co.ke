@@ -1,6 +1,7 @@
 import { Tag } from "lucide-react"
+import type { ReactNode } from "react"
 import { Link } from "@/components/ui/link"
-import { mainNavItems } from "@/components/app-sidebar"
+import { mailNavItems } from "@/components/app-sidebar"
 import {
 	SidebarGroup,
 	SidebarGroupLabel,
@@ -10,12 +11,20 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar"
 import { useCurrentUrl } from "@/hooks/use-current-url"
+import { jobApplicationNavItems } from "@/lib/job-application-tabs"
 import { toUrl } from "@/lib/utils"
 import { useLabels } from "@/queries/mail"
 
-export function MailNav() {
+function NavLinkItem({
+	href,
+	title,
+	icon,
+}: {
+	href: string
+	title: string
+	icon: ReactNode
+}) {
 	const { isCurrentUrl } = useCurrentUrl()
-	const { data: labels } = useLabels()
 	const { isMobile, setOpen, setOpenMobile } = useSidebar()
 
 	function closeSidebar(): void {
@@ -28,45 +37,72 @@ export function MailNav() {
 	}
 
 	return (
+		<SidebarMenuItem>
+			<SidebarMenuButton
+				asChild
+				isActive={isCurrentUrl(href)}
+				tooltip={title}>
+				<Link
+					href={href}
+					onClick={closeSidebar}>
+					{icon}
+					<span>{title}</span>
+				</Link>
+			</SidebarMenuButton>
+		</SidebarMenuItem>
+	)
+}
+
+export function MailNav() {
+	const { data: labels } = useLabels()
+
+	return (
 		<SidebarGroup className="px-2 py-0">
-			<SidebarGroupLabel>Platform</SidebarGroupLabel>
+			<SidebarGroupLabel>Mail</SidebarGroupLabel>
 			<SidebarMenu>
-				{mainNavItems.map((item) => {
-					const href = toUrl(item.href)
+				{mailNavItems.map((item) => {
 					const Icon = item.icon
 
 					return (
-						<SidebarMenuItem key={href}>
-							<SidebarMenuButton
-								asChild
-								isActive={isCurrentUrl(href)}
-								tooltip={item.title}>
-								<Link
-									href={href}
-									onClick={closeSidebar}>
-									{Icon ? <Icon /> : null}
-									<span>{item.title}</span>
-								</Link>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
+						<NavLinkItem
+							key={toUrl(item.href)}
+							href={toUrl(item.href)}
+							title={item.title}
+							icon={Icon ? <Icon /> : null}
+						/>
 					)
 				})}
 
 				{labels?.map((label) => (
-					<SidebarMenuItem key={label.id}>
-						<SidebarMenuButton
-							asChild
-							isActive={isCurrentUrl(`/mail/labels/${label.id}`)}
-							tooltip={label.name}>
-							<Link
-								href={`/mail/labels/${label.id}`}
-								onClick={closeSidebar}>
-								<Tag style={label.color ? { color: label.color } : undefined} />
-								<span>{label.name}</span>
-							</Link>
-						</SidebarMenuButton>
-					</SidebarMenuItem>
+					<NavLinkItem
+						key={label.id}
+						href={`/mail/labels/${label.id}`}
+						title={label.name}
+						icon={<Tag style={label.color ? { color: label.color } : undefined} />}
+					/>
 				))}
+			</SidebarMenu>
+		</SidebarGroup>
+	)
+}
+
+export function JobApplicationsNav() {
+	return (
+		<SidebarGroup className="px-2 py-0">
+			<SidebarGroupLabel>Job applications</SidebarGroupLabel>
+			<SidebarMenu>
+				{jobApplicationNavItems.map((item) => {
+					const Icon = item.icon
+
+					return (
+						<NavLinkItem
+							key={toUrl(item.href)}
+							href={toUrl(item.href)}
+							title={item.title}
+							icon={Icon ? <Icon /> : null}
+						/>
+					)
+				})}
 			</SidebarMenu>
 		</SidebarGroup>
 	)
