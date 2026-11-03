@@ -12,7 +12,7 @@ export const JOB_APPLICATION_TABS: {
 }[] = [
 	{
 		key: "review",
-		label: "To review",
+		label: "Review",
 		icon: ClipboardList,
 		empty: "Nothing to review. New matches appear here.",
 	},
@@ -30,7 +30,7 @@ export const JOB_APPLICATION_TABS: {
 	},
 	{
 		key: "manual",
-		label: "Apply yourself",
+		label: "Self Apply",
 		icon: Hand,
 		empty: "Matches without an apply email appear here.",
 	},

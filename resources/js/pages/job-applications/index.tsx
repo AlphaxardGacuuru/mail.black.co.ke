@@ -91,7 +91,7 @@ function DraftEditor({ application }: { application: JobApplication }) {
 			<div className="flex flex-wrap justify-end gap-2">
 				<Button
 					type="button"
-					variant="ghost"
+					variant="secondary"
 					disabled={busy}
 					onClick={() =>
 						skip
@@ -108,7 +108,7 @@ function DraftEditor({ application }: { application: JobApplication }) {
 				{edited && (
 					<Button
 						type="button"
-						variant="outline"
+						variant="secondary"
 						disabled={busy}
 						onClick={() =>
 							saveDraft
@@ -187,7 +187,7 @@ function ApplicationCard({
 						href={posting.url}
 						target="_blank"
 						rel="noopener noreferrer"
-						variant="solid"
+						variant="outline"
 						size="sm"
 						className="normal-case">
 						Apply on {posting.sourceName}
@@ -228,7 +228,7 @@ function ApplicationCard({
 				{(tab === "queued" || tab === "manual") && (
 					<Button
 						type="button"
-						variant="ghost"
+						variant="secondary"
 						size="sm"
 						className="ml-auto"
 						disabled={skip.isPending}
@@ -297,7 +297,7 @@ export default function JobApplications({
 						</span>
 						<Link
 							href="/settings/job-search"
-							variant="solid"
+							variant="outline"
 							size="sm">
 							Set up
 						</Link>
@@ -352,7 +352,7 @@ export default function JobApplications({
 				{lastPage > 1 && (
 					<div className="flex items-center justify-between text-sm">
 						<Button
-							variant="outline"
+							variant="secondary"
 							size="sm"
 							disabled={page <= 1}
 							onClick={() => setPage(page - 1)}>
@@ -362,7 +362,7 @@ export default function JobApplications({
 							Page {page} of {lastPage}
 						</span>
 						<Button
-							variant="outline"
+							variant="secondary"
 							size="sm"
 							disabled={page >= lastPage}
 							onClick={() => setPage(page + 1)}>

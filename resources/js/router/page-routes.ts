@@ -55,11 +55,25 @@ export function discoverPageRoutes(
 		}, [])
 }
 
-export function buildClientRoutePathSet(
+// Matches concrete paths against the page routes, including dynamic ones:
+// "/job-applications/sent" matches "/job-applications/$tab".
+export function buildClientRouteMatcher(
 	modulePaths: string[],
 	pagesPrefix: string
-): Set<string> {
-	return new Set(
-		discoverPageRoutes(modulePaths, pagesPrefix).map((route) => route.path)
+): (pathname: string) => boolean {
+	const patterns = discoverPageRoutes(modulePaths, pagesPrefix).map(
+		(route) =>
+			new RegExp(
+				`^${route.path
+					.split("/")
+					.map((segment) =>
+						segment.startsWith("$")
+							? "[^/]+"
+							: segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+					)
+					.join("/")}$`
+			)
 	)
+
+	return (pathname) => patterns.some((pattern) => pattern.test(pathname))
 }

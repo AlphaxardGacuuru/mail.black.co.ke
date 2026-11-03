@@ -3,7 +3,7 @@ import { Link as RouterLink } from "@tanstack/react-router"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
-import { buildClientRoutePathSet } from "@/router/page-routes"
+import { buildClientRouteMatcher } from "@/router/page-routes"
 
 const linkVariants = cva(
 	"inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,box-shadow,background-color,border-color] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] no-underline capitalize",
@@ -46,7 +46,7 @@ type LinkProps = Omit<React.ComponentPropsWithoutRef<"a">, "href"> &
 		text?: string
 	}
 
-const clientRoutePaths = buildClientRoutePathSet(
+const isClientRoute = buildClientRouteMatcher(
 	Object.keys(import.meta.glob("../../pages/**/*.tsx", { eager: false })),
 	"../../pages/"
 )
@@ -82,7 +82,7 @@ const Link = ({
 	const canUseClientNavigation =
 		!isExternalHref(href) &&
 		props.target !== "_blank" &&
-		clientRoutePaths.has(routePathname)
+		isClientRoute(routePathname)
 
 	const content = (
 		<>
