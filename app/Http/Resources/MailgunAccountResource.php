@@ -23,6 +23,7 @@ class MailgunAccountResource extends JsonResource
             'mailgunEndpoint' => $this->mailgunDomain?->endpoint,
             'signature' => $this->signature,
             'avatar' => $this->avatar,
+            'isPlatform' => $this->resource->isPlatform(),
             'isActive' => $this->id === $request->user()?->active_mailgun_account_id,
         ];
     }

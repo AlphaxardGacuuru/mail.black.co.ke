@@ -5,6 +5,7 @@ import MailSearchBar from "@/components/mail/MailSearchBar"
 import MailThreadListRow from "@/components/mail/MailThreadListRow"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useJobSearchOnly } from "@/hooks/use-job-search-only"
 import { useMailThreads } from "@/queries/mail"
 import type { MailThreadFilters } from "@/queries/mail"
 
@@ -28,6 +29,7 @@ export default function MailThreadList({
 	onCompose,
 }: Props) {
 	const { data, isLoading } = useMailThreads(filters)
+	const jobSearchOnly = useJobSearchOnly()
 
 	const threads = data?.data ?? []
 	const meta = data?.meta
@@ -98,14 +100,19 @@ export default function MailThreadList({
 				</div>
 			)}
 
-			<Button
-				size="icon"
-				aria-label="Compose"
-				title="Compose"
-				className="fixed right-6 bottom-26 z-50 size-14 rounded-full shadow-lg md:bottom-6"
-				onClick={onCompose}>
-				<MailPlus className="size-6" strokeWidth={1.5} />
-			</Button>
+			{!jobSearchOnly && (
+				<Button
+					size="icon"
+					aria-label="Compose"
+					title="Compose"
+					className="fixed right-6 bottom-26 z-50 size-14 rounded-full shadow-lg md:bottom-6"
+					onClick={onCompose}>
+					<MailPlus
+						className="size-6"
+						strokeWidth={1.5}
+					/>
+				</Button>
+			)}
 		</div>
 	)
 }

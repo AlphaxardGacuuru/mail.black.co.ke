@@ -13,6 +13,8 @@ export type MailgunAccount = {
 	mailgunEndpoint: string
 	signature: string | null
 	avatar: string | null
+	// A job search address on the app's own domain.
+	isPlatform: boolean
 	isActive: boolean
 }
 

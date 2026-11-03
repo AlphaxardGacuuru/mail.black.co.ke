@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Jobs;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CompanyCareerPageResource;
 use App\Http\Resources\JobSeekerProfileResource;
+use App\Http\Resources\MailgunAccountResource;
 use App\Http\Services\CoverLetterService;
+use App\Http\Services\JobSearchMailboxService;
 use App\Jobs\DiscoverCareerPagesJob;
 use App\Jobs\MatchJobsForUserJob;
 use App\Jobs\ParseCvJob;
@@ -217,6 +219,36 @@ class JobSearchController extends Controller
         return response()->json(['message' => 'Job Search Data Deleted', ...$this->state($user->fresh())]);
     }
 
+    /**
+     * Addresses on the app's own domain for a user without a mailbox to
+     * choose from.
+     */
+    public function mailboxSuggestions(Request $request, JobSearchMailboxService $mailboxService): JsonResponse
+    {
+        return response()->json([
+            'suggestions' => $request->user()->mailgunAccounts()->exists()
+                ? []
+                : $mailboxService->suggestions($request->user()),
+        ]);
+    }
+
+    public function storeMailbox(Request $request, JobSearchMailboxService $mailboxService): JsonResponse
+    {
+        $data = $request->validate([
+            'address' => 'required|string|email|max:255',
+            'consent' => 'accepted',
+        ]);
+
+        $user = $request->user();
+        $account = $mailboxService->create($user, $data['address']);
+
+        return response()->json([
+            'message' => 'Address Created',
+            'account' => MailgunAccountResource::make($account)->resolve(),
+            ...$this->state($user->fresh()),
+        ]);
+    }
+
     public function storeCareerPage(Request $request, SafePageFetcher $fetcher): JsonResponse
     {
         $user = $request->user();
@@ -286,7 +318,7 @@ class JobSearchController extends Controller
         $errors = array_filter([
             'consent' => $profile->consented_at ? null : 'Agree to let the app apply for jobs on your behalf.',
             'cv' => $profile->parsed_at ? null : 'Upload your CV and wait for it to be read first.',
-            'mailgunAccountId' => $profile->sendingAccount()?->mailbox_address ? null : 'Add a mail account to send applications from.',
+            'mailgunAccountId' => $profile->sendingAccount()?->mailbox_address ? null : 'Create your job search address first.',
         ]);
 
         if ($errors) {
@@ -306,6 +338,9 @@ class JobSearchController extends Controller
             // The address to sign up for other sites' job alerts with.
             'alertAddress' => $profile?->sendingAccount()?->mailbox_address
                 ?? $user->activeMailgunAccount?->mailbox_address,
+            // Without a mailbox, the user picks an address on this domain.
+            'needsMailbox' => ! $user->mailgunAccounts()->exists(),
+            'mailboxDomain' => config('services.mailgun.domain'),
             'careerPages' => CompanyCareerPageResource::collection(
                 $user->companyCareerPages()->active()->orderBy('source', 'desc')->latest()->get()
             )->resolve(),

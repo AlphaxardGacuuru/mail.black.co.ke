@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from "date-fns"
 import {
+	AtSign,
 	BellRing,
 	Copy,
 	ExternalLink,
@@ -24,11 +25,14 @@ import { useApp } from "@/contexts/AppContext"
 import { KENYA_LOCATIONS } from "@/lib/kenya-locations"
 import { Head } from "@/lib/spa"
 import toast from "@/lib/toast"
+import { cn } from "@/lib/utils"
 import {
 	errorMessage,
 	useAddCareerPage,
+	useCreateMailbox,
 	useDeleteJobSearch,
 	useJobSearch,
+	useMailboxSuggestions,
 	useRemoveCareerPage,
 	useSaveCoverLetter,
 	useSaveJobSearch,
@@ -283,6 +287,131 @@ function CoverLetterSection({ state }: { state: JobSearchState }) {
 	)
 }
 
+// ─── Address ─────────────────────────────────────────────────────────────────
+
+/**
+ * For users without a mailbox: pick an address on our domain to apply
+ * from. Once created it's their mail account, and this section goes away.
+ */
+function MailboxSection({ state }: { state: JobSearchState }) {
+	const hasCv =
+		state.profile?.cvStatus !== undefined &&
+		state.profile.cvStatus !== "missing"
+	const suggestions = useMailboxSuggestions(hasCv)
+	const create = useCreateMailbox()
+	const [chosen, setChosen] = useState<string | null>(null)
+	const [consent, setConsent] = useState(false)
+	const address = chosen ?? suggestions.data?.[0] ?? null
+
+	function submit(event: FormEvent): void {
+		event.preventDefault()
+
+		if (!address) {
+			return
+		}
+
+		create
+			.mutateAsync(address)
+			.then((data) => toast.success(data.message))
+			.catch((error) => {
+				toast.error(errorMessage(error, "Unable to create the address."))
+				// Someone may have just taken it: offer fresh ones.
+				setChosen(null)
+				suggestions.refetch()
+			})
+	}
+
+	return (
+		<form
+			onSubmit={submit}
+			className="space-y-4">
+			<Heading
+				variant="small"
+				title="Your job search address"
+				description="Applications are sent from this address, and employers' replies arrive in your inbox here. Use it to sign up for job alerts too."
+			/>
+
+			{!hasCv ? (
+				<p className="text-sm text-muted-foreground">
+					Upload your CV above first, then choose your address here.
+				</p>
+			) : suggestions.isLoading ? (
+				<div className="space-y-2">
+					<Skeleton className="h-12 w-full" />
+					<Skeleton className="h-12 w-full" />
+				</div>
+			) : suggestions.isError || !suggestions.data?.length ? (
+				<Alert variant="destructive">
+					<AlertTitle>No address available right now</AlertTitle>
+					<AlertDescription>
+						Try again in a moment.
+						<Button
+							type="button"
+							variant="secondary"
+							size="sm"
+							className="mt-2"
+							onClick={() => suggestions.refetch()}>
+							Try again
+						</Button>
+					</AlertDescription>
+				</Alert>
+			) : (
+				<>
+					{/* Address Start */}
+					<div
+						role="radiogroup"
+						aria-label="Address"
+						className="space-y-2">
+						{suggestions.data.map((suggestion) => (
+							<label
+								key={suggestion}
+								className={cn(
+									"flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm",
+									suggestion === address && "border-primary bg-primary/5"
+								)}>
+								<input
+									type="radio"
+									name="address"
+									value={suggestion}
+									checked={suggestion === address}
+									onChange={() => setChosen(suggestion)}
+									className="accent-primary"
+								/>
+								<AtSign className="size-4 shrink-0 text-muted-foreground" />
+								<span className="truncate font-medium">{suggestion}</span>
+							</label>
+						))}
+					</div>
+					{/* Address End */}
+
+					{/* Consent Start */}
+					<label className="flex items-start gap-3 text-sm">
+						<Checkbox
+							className="mt-0.5"
+							checked={consent}
+							onCheckedChange={(checked) => setConsent(checked === true)}
+						/>
+						<span>
+							Create {address} for me. It's only for job applications and
+							replies to them, and can't be changed or removed later.
+						</span>
+					</label>
+					{/* Consent End */}
+
+					<div className="flex justify-end">
+						<Button disabled={!consent || create.isPending}>
+							{create.isPending && (
+								<LoaderCircle className="size-4 animate-spin" />
+							)}
+							Create address
+						</Button>
+					</div>
+				</>
+			)}
+		</form>
+	)
+}
+
 // ─── Settings ────────────────────────────────────────────────────────────────
 
 function SettingsForm({ state }: { state: JobSearchState }) {
@@ -371,24 +500,33 @@ function SettingsForm({ state }: { state: JobSearchState }) {
 					</SelectItem>
 				</SelectField>
 
-				<SelectField
-					label="Send from"
-					value={form.mailgunAccountId ?? ACTIVE_ACCOUNT}
-					onValueChange={(value) =>
-						setForm({
-							...form,
-							mailgunAccountId: value === ACTIVE_ACCOUNT ? null : value,
-						})
-					}>
-					<SelectItem value={ACTIVE_ACCOUNT}>My active mail account</SelectItem>
-					{accounts.map((account) => (
-						<SelectItem
-							key={account.id}
-							value={account.id}>
-							{account.mailboxAddress}
-						</SelectItem>
-					))}
-				</SelectField>
+				{/* With one mailbox there's nothing to choose. */}
+				{accounts.length > 1 && (
+					<>
+						{/* Send From Start */}
+						<SelectField
+							label="Send from"
+							value={form.mailgunAccountId ?? ACTIVE_ACCOUNT}
+							onValueChange={(value) =>
+								setForm({
+									...form,
+									mailgunAccountId: value === ACTIVE_ACCOUNT ? null : value,
+								})
+							}>
+							<SelectItem value={ACTIVE_ACCOUNT}>
+								My active mail account
+							</SelectItem>
+							{accounts.map((account) => (
+								<SelectItem
+									key={account.id}
+									value={account.id}>
+									{account.mailboxAddress}
+								</SelectItem>
+							))}
+						</SelectField>
+						{/* Send From End */}
+					</>
+				)}
 			</div>
 
 			<div className="space-y-4">
@@ -777,6 +915,14 @@ function JobSearchSections({ state }: { state: JobSearchState }) {
 			<CoverLetterSection state={state} />
 
 			<hr />
+
+			{state.needsMailbox && (
+				<>
+					<MailboxSection state={state} />
+
+					<hr />
+				</>
+			)}
 
 			<SettingsForm
 				key={formKey}

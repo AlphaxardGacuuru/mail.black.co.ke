@@ -6,6 +6,7 @@ use App\Enums\MailFolder;
 use App\Enums\MailStatus;
 use App\Http\Services\Concerns\ResolvesMailThread;
 use App\Jobs\SendMailMessageJob;
+use App\Models\JobApplication;
 use App\Models\MailAttachment;
 use App\Models\MailMessage;
 use App\Models\MailThread;
@@ -32,6 +33,7 @@ class MailMessageService extends Service
         $user = User::findOrFail($this->id);
 
         $this->ensureMailboxConfigured($user);
+        $this->ensureMaySend($user);
 
         $to = $this->normalizeAddresses($request->input('to', []));
         $cc = $this->normalizeAddresses($request->input('cc', []));
@@ -60,6 +62,7 @@ class MailMessageService extends Service
         $this->ensureMailboxConfigured($user);
 
         $parent = MailMessage::where('user_id', $this->id)->findOrFail($messageId);
+        $this->ensureMaySend($user, $mode === 'forward' ? null : $parent);
 
         $to = match ($mode) {
             'forward' => $this->normalizeAddresses($request->input('to', [])),
@@ -127,6 +130,30 @@ class MailMessageService extends Service
         if (! $user->activeMailgunAccount?->mailbox_address) {
             throw ValidationException::withMessages([
                 'mailbox_address' => ['Set up your mailbox address in Settings before sending mail.'],
+            ]);
+        }
+    }
+
+    /**
+     * A job search address only sends job applications and replies in
+     * their conversations, so it can't be used to send anything else.
+     */
+    protected function ensureMaySend(User $user, ?MailMessage $repliedTo = null): void
+    {
+        $account = $user->activeMailgunAccount;
+
+        if (! $account?->isPlatform()) {
+            return;
+        }
+
+        $inApplicationThread = $repliedTo && JobApplication::query()
+            ->where('user_id', $user->id)
+            ->where('mail_thread_id', $repliedTo->mail_thread_id)
+            ->exists();
+
+        if (! $inApplicationThread) {
+            throw ValidationException::withMessages([
+                'mailbox_address' => ["{$account->mailbox_address} only sends job applications and replies to them."],
             ]);
         }
     }

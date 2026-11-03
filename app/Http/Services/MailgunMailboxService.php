@@ -3,9 +3,11 @@
 namespace App\Http\Services;
 
 use App\Models\MailgunDomain;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Mailgun\Exception\HttpClientException;
 use Mailgun\Mailgun;
+use Mailgun\Model\Domain\CredentialResponseItem;
 
 class MailgunMailboxService
 {
@@ -21,21 +23,55 @@ class MailgunMailboxService
      */
     public function createMailbox(MailgunDomain $domain, string $mailboxAddress): string
     {
+        return $this->createNewMailbox($domain, $mailboxAddress) ?? Str::random(24);
+    }
+
+    /**
+     * Like createMailbox, but an address that already exists on Mailgun is
+     * someone else's: returns null instead of a password.
+     */
+    public function createNewMailbox(MailgunDomain $domain, string $mailboxAddress): ?string
+    {
         $password = Str::random(24);
 
         try {
-            $this->client($domain)->domains()->createCredential(
-                $domain->domain,
-                Str::lower($mailboxAddress),
-                $password
-            );
+            $this->client($domain)
+                ->domains()
+                ->createCredential($domain->domain, Str::lower($mailboxAddress), $password);
         } catch (HttpClientException $exception) {
-            if (! $this->mailboxAlreadyExists($exception)) {
-                throw $exception;
+            if ($this->mailboxAlreadyExists($exception)) {
+                return null;
             }
+
+            throw $exception;
         }
 
         return $password;
+    }
+
+    /**
+     * Every address with a mailbox on the domain, lowercased. Credentials
+     * are never deleted, so this includes addresses no longer in use.
+     *
+     * @return Collection<int, string>
+     */
+    public function mailboxAddresses(MailgunDomain $domain): Collection
+    {
+        $addresses = collect();
+        $skip = 0;
+
+        do {
+            $page = collect($this->client($domain)
+                ->domains()
+                ->credentials($domain->domain, 100, $skip)
+                ->getCredentials())
+                ->map(fn (CredentialResponseItem $credential) => Str::lower((string) $credential->getLogin()));
+
+            $addresses = $addresses->merge($page);
+            $skip += 100;
+        } while ($page->count() === 100);
+
+        return $addresses;
     }
 
     protected function client(MailgunDomain $domain): Mailgun

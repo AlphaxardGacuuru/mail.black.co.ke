@@ -2,6 +2,7 @@ import { Forward, Reply, ReplyAll } from "lucide-react"
 import { useState } from "react"
 import MailComposeForm from "@/components/mail/MailComposeForm"
 import { Button } from "@/components/ui/button"
+import { useJobSearchOnly } from "@/hooks/use-job-search-only"
 import { cn } from "@/lib/utils"
 import type { MailMessage } from "@/types/mail"
 
@@ -22,6 +23,7 @@ export default function MailComposeInline({
 	onSent,
 	variant,
 }: Props) {
+	const jobSearchOnly = useJobSearchOnly()
 	const [activeMode, setActiveMode] = useState<
 		"reply" | "reply-all" | "forward" | null
 	>(null)
@@ -48,13 +50,15 @@ export default function MailComposeInline({
 						<ReplyAll className="size-4" />
 						Reply All
 					</Button>
-					<Button
-						variant="outline"
-						className="flex-1"
-						onClick={() => setActiveMode("forward")}>
-						<Forward className="size-4" />
-						Forward
-					</Button>
+					{!jobSearchOnly && (
+						<Button
+							variant="outline"
+							className="flex-1"
+							onClick={() => setActiveMode("forward")}>
+							<Forward className="size-4" />
+							Forward
+						</Button>
+					)}
 				</div>
 			</div>
 		)

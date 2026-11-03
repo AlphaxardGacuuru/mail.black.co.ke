@@ -24,4 +24,22 @@ class MailgunDomain extends Model
     {
         return $this->hasMany(MailgunAccount::class);
     }
+
+    /**
+     * The app's own domain (services.mailgun), where job search addresses
+     * are created. It belongs to no user, and its key follows the config.
+     */
+    public static function platform(): self
+    {
+        return static::query()
+            ->updateOrCreate(
+                ['user_id' => null, 'domain' => config('services.mailgun.domain')],
+                ['api_key' => config('services.mailgun.secret'), 'endpoint' => config('services.mailgun.endpoint')]
+            );
+    }
+
+    public function isPlatform(): bool
+    {
+        return $this->user_id === null;
+    }
 }

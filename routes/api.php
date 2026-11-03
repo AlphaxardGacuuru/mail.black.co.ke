@@ -80,6 +80,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('job-search/cover-letter', [JobSearchController::class, 'uploadCoverLetter'])->middleware('throttle:10,1');
     Route::post('job-search/career-pages', [JobSearchController::class, 'storeCareerPage'])->middleware('throttle:10,1');
     Route::delete('job-search/career-pages/{id}', [JobSearchController::class, 'destroyCareerPage']);
+    Route::get('job-search/mailbox', [JobSearchController::class, 'mailboxSuggestions'])->middleware('throttle:20,1');
+    Route::post('job-search/mailbox', [JobSearchController::class, 'storeMailbox'])->middleware('throttle:5,1');
 
     Route::get('job-applications', [JobApplicationController::class, 'index']);
     Route::patch('job-applications/{id}', [JobApplicationController::class, 'update']);

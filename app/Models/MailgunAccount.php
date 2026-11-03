@@ -25,6 +25,15 @@ class MailgunAccount extends Model
         return $this->belongsTo(MailgunDomain::class);
     }
 
+    /**
+     * A job search address on the app's own domain: it only sends job
+     * applications and replies to them, and is never removed or reused.
+     */
+    public function isPlatform(): bool
+    {
+        return (bool) $this->mailgunDomain?->isPlatform();
+    }
+
     protected function avatar(): Attribute
     {
         return Attribute::make(

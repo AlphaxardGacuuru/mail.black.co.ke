@@ -133,6 +133,37 @@ export function useDeleteJobSearch() {
 	)
 }
 
+export function useMailboxSuggestions(enabled: boolean) {
+	return useQuery({
+		queryKey: ["job-search", "mailbox"],
+		queryFn: () =>
+			Axios.get<{ suggestions: string[] }>(
+				JobSearchController.mailboxSuggestions.url()
+			).then((response) => response.data.suggestions),
+		enabled,
+		staleTime: Infinity,
+	})
+}
+
+/**
+ * Creates the chosen address; it becomes the user's mail account.
+ */
+export function useCreateMailbox() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (address: string) =>
+			Axios.post<JobSearchState & { message: string }>(
+				JobSearchController.storeMailbox.url(),
+				{ address, consent: true }
+			).then((response) => response.data),
+		onSuccess: (data) => {
+			queryClient.setQueryData(["job-search"], data)
+			queryClient.invalidateQueries({ queryKey: ["auth"] })
+		},
+	})
+}
+
 export function useJobApplications(tab: JobApplicationTab, page: number) {
 	return useQuery({
 		queryKey: ["job-applications", tab, page],

@@ -114,4 +114,20 @@ return [
     'max_page_chars_for_ai' => 30_000,
 
     'max_cv_kilobytes' => 5120,
+
+    // The address users without a mailbox get on the app's own domain
+    // (services.mailgun.domain), made from their name.
+    'mailbox' => [
+        'suggestions' => 3,
+        'min_length' => 3,
+        'max_length' => 30,
+        // Never given to a user: role addresses, and ones that would look
+        // like they speak for the app.
+        'reserved' => [
+            'abuse', 'admin', 'administrator', 'billing', 'black', 'careers',
+            'contact', 'help', 'hello', 'hostmaster', 'hr', 'info', 'jobs', 'mail',
+            'mailer-daemon', 'no-reply', 'noreply', 'postmaster', 'root', 'sales',
+            'security', 'support', 'team', 'webmaster',
+        ],
+    ],
 ];

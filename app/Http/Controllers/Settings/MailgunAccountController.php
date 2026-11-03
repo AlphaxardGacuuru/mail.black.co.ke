@@ -10,6 +10,7 @@ use App\Models\MailgunAccount;
 use App\Models\MailgunDomain;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class MailgunAccountController extends Controller
 {
@@ -54,7 +55,10 @@ class MailgunAccountController extends Controller
     {
         abort_unless($account->user_id === $request->user()->id, 404);
 
-        $account->update($request->validated());
+        // A job search address stays on the domain it was created on.
+        $account->update(collect($request->validated())
+            ->when($account->isPlatform(), fn ($data) => $data->except(['mailbox_address', 'mailgun_domain_id']))
+            ->all());
 
         $request->user()->refresh();
 
@@ -80,6 +84,11 @@ class MailgunAccountController extends Controller
     public function destroy(Request $request, MailgunAccount $account): JsonResponse
     {
         abort_unless($account->user_id === $request->user()->id, 404);
+
+        if ($account->isPlatform()) {
+            throw ValidationException::withMessages(['account' => ['Your job search address can\'t be removed.']]);
+        }
+
         $wasActive = $request->user()->active_mailgun_account_id === $account->id;
         $account->delete();
 

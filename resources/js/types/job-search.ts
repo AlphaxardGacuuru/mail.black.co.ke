@@ -45,6 +45,9 @@ export type JobSearchState = {
 	profile: JobSeekerProfile | null
 	careerPages: CompanyCareerPage[]
 	alertAddress: string | null
+	// Without a mailbox, the user picks an address on mailboxDomain.
+	needsMailbox: boolean
+	mailboxDomain: string
 	limits: {
 		maxDailyLimit: number
 		minMatchScoreFloor: number
