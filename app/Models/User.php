@@ -52,6 +52,7 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
      */
     protected $casts = [
         'settings' => 'object',
+        'notification_preferences' => 'array',
         'email_verified_at' => 'datetime',
         'updated_at' => 'datetime:d M Y',
         'created_at' => 'datetime:d M Y',
@@ -144,6 +145,51 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         return $domain !== null
             && filled($domain->domain)
             && filled($domain->api_key);
+    }
+
+    /**
+     * Each notification category's channels (in_app, push, email): what the
+     * user saved, else the defaults in config/notifications.php, with any
+     * channel that can't be used switched off.
+     *
+     * @return array<string, array<string, bool>>
+     */
+    public function notificationPreferences(): array
+    {
+        $saved = $this->notification_preferences ?? [];
+
+        return collect(config('notifications.categories'))
+            ->map(fn (array $category, string $key) => collect($category['defaults'])
+                ->map(fn (bool $default, string $channel) => ! $this->notificationChannelBlocked($key, $channel)
+                    && (bool) ($saved[$key][$channel] ?? $default))
+                ->all())
+            ->all();
+    }
+
+    public function wantsNotification(string $category, string $channel): bool
+    {
+        return $this->notificationPreferences()[$category][$channel] ?? false;
+    }
+
+    /**
+     * Why a channel can't be used for a category, or null if it can.
+     */
+    public function notificationChannelBlocked(string $category, string $channel): ?string
+    {
+        // An email about new mail sent to a mailbox hosted here would itself
+        // be new mail, and notify again, forever.
+        if ($category === 'new_mail' && $channel === 'email' && $this->emailIsHostedMailbox()) {
+            return 'Your login email is one of the mailboxes here, so emailing it about new mail would loop.';
+        }
+
+        return null;
+    }
+
+    protected function emailIsHostedMailbox(): bool
+    {
+        return once(fn () => MailgunAccount::query()
+            ->whereRaw('lower(mailbox_address) = ?', [mb_strtolower((string) $this->email)])
+            ->exists());
     }
 
     public function mailgunDomains()
