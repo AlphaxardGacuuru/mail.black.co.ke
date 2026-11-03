@@ -2,12 +2,12 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\RespectsNotificationPreferences;
 use App\Models\JobApplication;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
 /**
@@ -16,7 +16,7 @@ use NotificationChannels\WebPush\WebPushMessage;
  */
 class JobApplicationFailedNotification extends Notification implements ShouldQueue
 {
-	use Queueable;
+	use Queueable, RespectsNotificationPreferences;
 
 	/**
 	 * Create a new notification instance.
@@ -24,14 +24,11 @@ class JobApplicationFailedNotification extends Notification implements ShouldQue
 	public function __construct(protected JobApplication $application) {}
 
 	/**
-	 * Get the notification's delivery channels.
-	 *
-	 * @param  mixed  $notifiable
-	 * @return array<int, string>
+	 * The config/notifications.php category, whose channels the user chooses.
 	 */
-	public function via($notifiable)
+	protected function category(): string
 	{
-		return ['database', 'broadcast', WebPushChannel::class, 'mail'];
+		return 'job_application_failed';
 	}
 
 	/**
@@ -58,7 +55,7 @@ class JobApplicationFailedNotification extends Notification implements ShouldQue
 	{
 		return (new WebPushMessage)
 			->title($this->title())
-			->icon('/android-chrome-192x192.png')
+			->icon('/notification-icon-192x192.png')
 			->body("{$this->application->posting->apply_email} did not accept it. You may want to apply another way.")
 			->data(['url' => '/job-applications'])
 			->options(['TTL' => 86400]);

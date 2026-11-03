@@ -36,7 +36,7 @@ class AdminNewUserSignupNotification extends Notification implements ShouldQueue
     {
         return (new WebPushMessage)
             ->title('New user signup')
-            ->icon('/notification-badge-192x192.png')
+            ->icon('/notification-icon-192x192.png')
             ->badge('/notification-badge-192x192.png')
             ->body($this->bodyLine())
             ->data(['url' => '/admin/users']);

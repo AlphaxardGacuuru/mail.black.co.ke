@@ -2,12 +2,12 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\RespectsNotificationPreferences;
 use App\Models\JobApplication;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
 /**
@@ -16,7 +16,7 @@ use NotificationChannels\WebPush\WebPushMessage;
  */
 class JobApplicationSentNotification extends Notification implements ShouldQueue
 {
-	use Queueable;
+	use Queueable, RespectsNotificationPreferences;
 
 	/**
 	 * Create a new notification instance.
@@ -24,14 +24,11 @@ class JobApplicationSentNotification extends Notification implements ShouldQueue
 	public function __construct(protected JobApplication $application) {}
 
 	/**
-	 * Get the notification's delivery channels.
-	 *
-	 * @param  mixed  $notifiable
-	 * @return array<int, string>
+	 * The config/notifications.php category, whose channels the user chooses.
 	 */
-	public function via($notifiable)
+	protected function category(): string
 	{
-		return ['database', 'broadcast', WebPushChannel::class, 'mail'];
+		return 'job_application_sent';
 	}
 
 	/**
@@ -58,7 +55,7 @@ class JobApplicationSentNotification extends Notification implements ShouldQueue
 	{
 		return (new WebPushMessage)
 			->title($this->title())
-			->icon('/android-chrome-192x192.png')
+			->icon('/notification-icon-192x192.png')
 			->body("Sent to {$this->application->posting->apply_email} with your CV attached.")
 			->data(['url' => $this->url()])
 			->options(['TTL' => 86400]);

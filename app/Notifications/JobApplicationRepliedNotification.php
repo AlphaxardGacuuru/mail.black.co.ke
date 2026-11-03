@@ -2,21 +2,23 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\RespectsNotificationPreferences;
 use App\Models\JobApplication;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * The first reply from an employer to an application. The reply already
  * raises the usual new-mail notification in the app and by web push, so
- * this only emails the user's own address, which they're more likely to
- * check.
+ * by default this only emails the user's own address, which they're more
+ * likely to check.
  */
 class JobApplicationRepliedNotification extends Notification implements ShouldQueue
 {
-	use Queueable;
+	use Queueable, RespectsNotificationPreferences;
 
 	/**
 	 * Create a new notification instance.
@@ -24,14 +26,41 @@ class JobApplicationRepliedNotification extends Notification implements ShouldQu
 	public function __construct(protected JobApplication $application) {}
 
 	/**
-	 * Get the notification's delivery channels.
+	 * The config/notifications.php category, whose channels the user chooses.
+	 */
+	protected function category(): string
+	{
+		return 'job_application_replied';
+	}
+
+	/**
+	 * Get the array representation of the notification.
 	 *
 	 * @param  mixed  $notifiable
-	 * @return array<int, string>
+	 * @return array<string, mixed>
 	 */
-	public function via($notifiable)
+	public function toArray($notifiable)
 	{
-		return ['mail'];
+		return [
+			'url' => $this->url(),
+			'from' => 'Job Search',
+			'message' => $this->title(),
+		];
+	}
+
+	/**
+	 * Get the web push representation of the notification.
+	 *
+	 * @param  mixed  $notifiable
+	 */
+	public function toWebPush($notifiable, $notification): WebPushMessage
+	{
+		return (new WebPushMessage)
+			->title($this->title())
+			->icon('/notification-icon-192x192.png')
+			->body('Read the reply in your inbox.')
+			->data(['url' => $this->url()])
+			->options(['TTL' => 3600]);
 	}
 
 	/**

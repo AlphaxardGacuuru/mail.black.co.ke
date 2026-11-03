@@ -6,7 +6,6 @@ import ProfileController from "@/actions/App/Http/Controllers/Settings/ProfileCo
 import DeleteUser from "@/components/delete-user"
 import Heading from "@/components/heading"
 import InputError from "@/components/input-error"
-import PushNotificationSettings from "@/components/push-notification-settings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Axios from "@/lib/axios"
@@ -166,15 +165,6 @@ export default function Profile({
 						</Button>
 					</div>
 				</form>
-			</div>
-
-			<div className="space-y-6">
-				<Heading
-					variant="small"
-					title="Notifications"
-					description="Choose how you want to be notified about new mail."
-				/>
-				<PushNotificationSettings />
 			</div>
 
 			<DeleteUser />

@@ -2,14 +2,16 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\RespectsNotificationPreferences;
 use App\Models\MailgunAccount;
 use App\Models\MailMessage;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
 class NewMailReceivedNotification extends Notification
 {
+	use RespectsNotificationPreferences;
+
 	/**
 	 * Create a new notification instance.
 	 */
@@ -21,14 +23,23 @@ class NewMailReceivedNotification extends Notification
 	protected MailgunAccount|false|null $account = false;
 
 	/**
-	 * Get the notification's delivery channels.
+	 * The config/notifications.php category, whose channels the user chooses.
+	 */
+	protected function category(): string
+	{
+		return 'new_mail';
+	}
+
+	/**
+	 * This is sent inside the inbound webhook, so it only does the instant
+	 * channels; NewMailReceivedEmailNotification sends the email from the
+	 * queue, where a failed send can't make Mailgun redeliver the message.
 	 *
-	 * @param  mixed  $notifiable
 	 * @return array<int, string>
 	 */
-	public function via($notifiable)
+	protected function handledChannels(): array
 	{
-		return ['database', 'broadcast', WebPushChannel::class];
+		return ['in_app', 'push'];
 	}
 
 	/**
@@ -56,7 +67,7 @@ class NewMailReceivedNotification extends Notification
 	{
 		return (new WebPushMessage)
 			->title($this->from())
-			->icon('/android-chrome-192x192.png')
+			->icon('/notification-icon-192x192.png')
 			->body($this->body())
 			->data(['url' => $this->url()])
 			->options(['TTL' => 300]);

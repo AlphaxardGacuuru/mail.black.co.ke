@@ -35,7 +35,7 @@ export default function PushNotificationSettings() {
 
 			if (enabled) {
 				toast.success("Notifications enabled", {
-					description: "You'll get a native alert when new mail arrives.",
+					description: "You'll get alerts on this device for anything set to Push.",
 				})
 			} else if (permission === "denied") {
 				toast.error("Notifications blocked", {
@@ -83,7 +83,7 @@ export default function PushNotificationSettings() {
 					<p className="text-sm text-muted-foreground">
 						{permission === "denied"
 							? "Notifications are blocked. Allow them for this site in your browser settings."
-							: "Get a native alert when new mail arrives."}
+							: "Allow alerts on this device for anything set to Push below."}
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
@@ -105,7 +105,7 @@ export default function PushNotificationSettings() {
 						<DialogTitle>Enable push notifications?</DialogTitle>
 						<DialogDescription>
 							Your browser will ask you to allow notifications for this site.
-							Allow it so we can alert you when new mail arrives.
+							Allow it so the notifications you set to Push can reach this device.
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>

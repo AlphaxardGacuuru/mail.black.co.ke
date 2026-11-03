@@ -2,16 +2,16 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\RespectsNotificationPreferences;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
 class JobSearchPausedNotification extends Notification implements ShouldQueue
 {
-	use Queueable;
+	use Queueable, RespectsNotificationPreferences;
 
 	/**
 	 * Create a new notification instance.
@@ -19,14 +19,11 @@ class JobSearchPausedNotification extends Notification implements ShouldQueue
 	public function __construct(protected ?string $reason) {}
 
 	/**
-	 * Get the notification's delivery channels.
-	 *
-	 * @param  mixed  $notifiable
-	 * @return array<int, string>
+	 * The config/notifications.php category, whose channels the user chooses.
 	 */
-	public function via($notifiable)
+	protected function category(): string
 	{
-		return ['database', 'broadcast', WebPushChannel::class, 'mail'];
+		return 'job_search_paused';
 	}
 
 	/**
@@ -53,7 +50,7 @@ class JobSearchPausedNotification extends Notification implements ShouldQueue
 	{
 		return (new WebPushMessage)
 			->title('Job Search Paused')
-			->icon('/android-chrome-192x192.png')
+			->icon('/notification-icon-192x192.png')
 			->body($this->reason ?? 'Check your settings before turning it back on.')
 			->data(['url' => '/settings/job-search'])
 			->options(['TTL' => 86400]);

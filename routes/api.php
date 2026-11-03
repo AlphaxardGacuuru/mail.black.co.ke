@@ -15,6 +15,7 @@ use App\Http\Controllers\Mail\MailWebhookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\Settings\NotificationPreferenceController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
@@ -65,6 +66,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('attachments/{id}/download', [MailAttachmentController::class, 'download'])
         ->name('attachments.download');
+
+    // Which notifications arrive in the app, by push and by email
+    Route::get('notification-preferences', [NotificationPreferenceController::class, 'show']);
+    Route::put('notification-preferences', [NotificationPreferenceController::class, 'update']);
 
     // Job search
     Route::get('job-search', [JobSearchController::class, 'show']);

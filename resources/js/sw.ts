@@ -178,6 +178,7 @@ type PushPayload = {
 	title?: string
 	body?: string
 	icon?: string
+	badge?: string
 	data?: { url?: string }
 }
 
@@ -191,8 +192,8 @@ self.addEventListener("push", (event) => {
 	event.waitUntil(
 		self.registration.showNotification(payload.title ?? "New notification", {
 			body: payload.body,
-			icon: payload.icon ?? "/android-chrome-192x192.png",
-			badge: "/badge-monochrome-black.png",
+			icon: payload.icon ?? "/notification-icon-192x192.png",
+			badge: payload.badge ?? "/notification-badge-192x192.png",
 			data: payload.data,
 		})
 	)
