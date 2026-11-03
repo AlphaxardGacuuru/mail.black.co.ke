@@ -37,6 +37,29 @@ function threadsQueryKey(filters: MailThreadFilters) {
 	return ["mail", "threads", filters] as const
 }
 
+const UNREAD_COUNT_KEY = ["mail", "unread-count"]
+
+/**
+ * Refetch the thread lists and the inbox's unread count. The count has its
+ * own key: the list updaters below rewrite every ["mail", "threads", ...].
+ */
+export function invalidateThreadLists(
+	queryClient: ReturnType<typeof useQueryClient>
+) {
+	queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
+	queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_KEY })
+}
+
+export function useUnreadInboxCount() {
+	return useQuery({
+		queryKey: UNREAD_COUNT_KEY,
+		queryFn: () =>
+			Axios.get<{ count: number }>(MailThreadController.unreadCount.url()).then(
+				(response) => response.data.count
+			),
+	})
+}
+
 function updateThreadLists(
 	queryClient: ReturnType<typeof useQueryClient>,
 	threadId: string,
@@ -121,6 +144,9 @@ export function useMailThread(threadId: string | null) {
 					}
 				)
 
+				// Opening it marked it read.
+				queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_KEY })
+
 				return res.data.data
 			}),
 		enabled: !!threadId,
@@ -166,7 +192,7 @@ function useOptimisticThreadMutation(
 			})
 		},
 		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
+			invalidateThreadLists(queryClient)
 		},
 	})
 }
@@ -222,7 +248,7 @@ function useMoveThreadMutation(
 			})
 		},
 		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
+			invalidateThreadLists(queryClient)
 		},
 	})
 }
@@ -258,7 +284,7 @@ export function useDeleteMailThreadPermanently() {
 		mutationFn: (threadId: string) =>
 			Axios.delete(MailThreadController.destroy.url(threadId)),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
+			invalidateThreadLists(queryClient)
 		},
 	})
 }
@@ -270,7 +296,7 @@ export function useSendMail() {
 		mutationFn: (payload: MailComposePayload) =>
 			Axios.post(MailMessageController.store.url(), payload),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
+			invalidateThreadLists(queryClient)
 		},
 	})
 }
@@ -282,7 +308,7 @@ export function useRetryMailMessage(threadId: string | null) {
 		mutationFn: (messageId: string) =>
 			Axios.post(MailMessageController.retry.url(messageId)),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
+			invalidateThreadLists(queryClient)
 
 			if (threadId) {
 				queryClient.invalidateQueries({
@@ -320,7 +346,7 @@ export function useReplyMail(
 				response.data?.data as { threadId?: string } | undefined
 			)?.threadId
 
-			queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
+			invalidateThreadLists(queryClient)
 
 			if (threadId) {
 				queryClient.invalidateQueries({

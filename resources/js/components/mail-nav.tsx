@@ -14,6 +14,7 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar"
 import { useCurrentUrl } from "@/hooks/use-current-url"
+import { badgeLabel, useNavBadges } from "@/hooks/use-nav-badges"
 import {
 	JOB_APPLICATIONS_URL,
 	jobApplicationNavItems,
@@ -41,10 +42,12 @@ function NavSubLink({
 	href,
 	title,
 	icon,
+	badge = 0,
 }: {
 	href: string
 	title: string
 	icon: ReactNode
+	badge?: number
 }) {
 	const { isCurrentUrl } = useCurrentUrl()
 	const closeSidebar = useCloseSidebar()
@@ -59,6 +62,11 @@ function NavSubLink({
 					onClick={closeSidebar}>
 					{icon}
 					<span>{title}</span>
+					{badge > 0 && (
+						<span className="ml-auto text-xs text-sidebar-foreground/70 tabular-nums">
+							{badgeLabel(badge)}
+						</span>
+					)}
 				</Link>
 			</SidebarMenuSubButton>
 		</SidebarMenuSubItem>
@@ -85,6 +93,7 @@ function NavSection({
 	const { currentUrl } = useCurrentUrl()
 	const { isMobile, state } = useSidebar()
 	const closeSidebar = useCloseSidebar()
+	const badges = useNavBadges()
 	const inSection = currentUrl === href || currentUrl.startsWith(`${href}/`)
 	// While its pages are listed, the current page's link is highlighted
 	// instead of the section.
@@ -116,6 +125,7 @@ function NavSection({
 									href={toUrl(item.href)}
 									title={item.title}
 									icon={ItemIcon ? <ItemIcon /> : null}
+									badge={badges[toUrl(item.href)]}
 								/>
 							)
 						})}

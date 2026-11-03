@@ -1,6 +1,7 @@
 import { Link } from "@/components/ui/link"
 import { findActiveNavHref, mailNavItems } from "@/components/app-sidebar"
 import { useCurrentUrl } from "@/hooks/use-current-url"
+import { badgeLabel, useNavBadges } from "@/hooks/use-nav-badges"
 import { shouldHideBottomNav } from "@/lib/bottom-nav"
 import {
 	JOB_APPLICATIONS_URL,
@@ -10,6 +11,7 @@ import { cn } from "@/lib/utils"
 
 export function AppBottomNav() {
 	const { currentUrl } = useCurrentUrl()
+	const badges = useNavBadges()
 
 	if (shouldHideBottomNav(currentUrl)) {
 		return null
@@ -32,6 +34,7 @@ export function AppBottomNav() {
 					const href = typeof item.href === "string" ? item.href : item.href.url
 					const isActive = href === activeHref
 					const Icon = item.icon
+					const badge = badges[href] ?? 0
 
 					return (
 						<Link
@@ -50,10 +53,21 @@ export function AppBottomNav() {
 								)}>
 								<span
 									className={cn(
-										"flex size-11 items-center justify-center rounded-2xl border border-transparent transition-all",
+										"relative flex size-11 items-center justify-center rounded-2xl border border-transparent transition-all",
 										isActive ? "text-secondary" : "text-sidebar-foreground"
 									)}>
 									{Icon ? <Icon className="size-10" /> : null}
+									{badge > 0 && (
+										<span
+											className={cn(
+												"absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums",
+												isActive
+													? "bg-secondary text-primary"
+													: "bg-primary text-secondary"
+											)}>
+											{badgeLabel(badge)}
+										</span>
+									)}
 								</span>
 								<span className="truncate">{item.title}</span>
 							</span>

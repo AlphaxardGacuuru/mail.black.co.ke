@@ -40,7 +40,7 @@ class JobApplicationFailedNotification extends Notification implements ShouldQue
 	public function toArray($notifiable)
 	{
 		return [
-			'url' => '/job-applications',
+			'url' => '/job-applications/closed',
 			'from' => 'Job Search',
 			'message' => $this->title(),
 		];
@@ -57,7 +57,7 @@ class JobApplicationFailedNotification extends Notification implements ShouldQue
 			->title($this->title())
 			->icon('/notification-icon-192x192.png')
 			->body("{$this->application->posting->apply_email} did not accept it. You may want to apply another way.")
-			->data(['url' => '/job-applications'])
+			->data(['url' => '/job-applications/closed'])
 			->options(['TTL' => 86400]);
 	}
 
@@ -78,7 +78,7 @@ class JobApplicationFailedNotification extends Notification implements ShouldQue
 			->line('The address may no longer exist, or the employer\'s mail server refused it.')
 			->when($posting->url, fn (MailMessage $mail) => $mail
 				->line("If you are still interested, check the posting for another way to apply: {$posting->url}"))
-			->action('View Applications', url('/job-applications'));
+			->action('View Applications', url('/job-applications/closed'));
 	}
 
 	protected function title(): string

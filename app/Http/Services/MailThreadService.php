@@ -130,6 +130,19 @@ class MailThreadService extends Service
         $message->save();
     }
 
+    /**
+     * Unread conversations in the active mailbox's inbox.
+     */
+    public function unreadInboxCount(): int
+    {
+        return MailThread::query()
+            ->ownedBy($this->id)
+            ->whereHas('messages', fn ($messageQuery) => $this->scopeToAccount($messageQuery))
+            ->folder(MailFolder::INBOX->value)
+            ->unread()
+            ->count();
+    }
+
     protected function scopeToAccount($query): void
     {
         $account = User::find($this->id)?->activeMailgunAccount;

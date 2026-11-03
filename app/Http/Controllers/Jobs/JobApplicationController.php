@@ -36,16 +36,17 @@ class JobApplicationController extends Controller
             ->orderByDesc($tab === 'sent' ? 'applied_at' : 'created_at')
             ->paginate(20);
 
-        $counts = $user->jobApplications()
-            ->selectRaw('status, count(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
-
         return JobApplicationResource::collection($applications)->additional([
-            'counts' => collect(self::TABS)->map(
-                fn (array $statuses) => collect($statuses)->sum(fn (JobApplicationStatus $status) => (int) ($counts[$status->value] ?? 0))
-            ),
+            'counts' => $this->tabCounts($request),
         ]);
+    }
+
+    /**
+     * How many applications each tab holds, for the nav badges.
+     */
+    public function counts(Request $request): JsonResponse
+    {
+        return response()->json(['counts' => $this->tabCounts($request)]);
     }
 
     /**
@@ -142,5 +143,21 @@ class JobApplicationController extends Controller
             'subject' => isset($data['subject']) ? trim($data['subject']) : null,
             'cover_letter' => isset($data['coverLetter']) ? trim($data['coverLetter']) : null,
         ]);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<string, int>
+     */
+    private function tabCounts(Request $request)
+    {
+        $counts = $request->user()
+            ->jobApplications()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return collect(self::TABS)->map(
+            fn (array $statuses) => collect($statuses)->sum(fn (JobApplicationStatus $status) => (int) ($counts[$status->value] ?? 0))
+        );
     }
 }

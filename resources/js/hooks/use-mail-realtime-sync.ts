@@ -1,6 +1,7 @@
 import { useEcho } from "@laravel/echo-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useApp } from "@/contexts/AppContext"
+import { invalidateThreadLists } from "@/queries/mail"
 
 type MailRealtimeEvent = {
 	threadId: string
@@ -17,8 +18,10 @@ export function useMailRealtimeSync() {
 	const queryClient = useQueryClient()
 
 	function syncThread(event: MailRealtimeEvent) {
-		queryClient.invalidateQueries({ queryKey: ["mail", "threads"] })
-		queryClient.invalidateQueries({ queryKey: ["mail", "thread", event.threadId] })
+		invalidateThreadLists(queryClient)
+		queryClient.invalidateQueries({
+			queryKey: ["mail", "thread", event.threadId],
+		})
 	}
 
 	useEcho(`mail.${auth?.id ?? ""}`, "MailMessageStatusUpdatedEvent", syncThread)

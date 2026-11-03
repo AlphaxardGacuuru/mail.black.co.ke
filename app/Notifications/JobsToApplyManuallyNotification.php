@@ -38,7 +38,7 @@ class JobsToApplyManuallyNotification extends Notification
 	public function toArray($notifiable)
 	{
 		return [
-			'url' => '/job-applications',
+			'url' => '/job-applications/manual',
 			'from' => 'Job Search',
 			'message' => $this->title(),
 		];
@@ -55,7 +55,7 @@ class JobsToApplyManuallyNotification extends Notification
 			->title($this->title())
 			->icon('/notification-icon-192x192.png')
 			->body('These employers take applications on their own sites.')
-			->data(['url' => '/job-applications'])
+			->data(['url' => '/job-applications/manual'])
 			->options(['TTL' => 3600]);
 	}
 
@@ -71,7 +71,7 @@ class JobsToApplyManuallyNotification extends Notification
 			->greeting("Hello {$notifiable->name},")
 			->line($this->count.' '.Str::plural('job', $this->count).' matched your CV, but the '.Str::plural('employer', $this->count).' only '.($this->count === 1 ? 'takes' : 'take').' applications on '.($this->count === 1 ? 'its own site' : 'their own sites').'.')
 			->line('Open each one to apply there yourself.')
-			->action('See Jobs', url('/job-applications'));
+			->action('See Jobs', url('/job-applications/manual'));
 	}
 
 	protected function title(): string

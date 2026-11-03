@@ -40,6 +40,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('auth', [UserController::class, 'auth']);
 
+    // Before the resource routes, which would read it as a thread id.
+    Route::get('threads/unread-count', [MailThreadController::class, 'unreadCount']);
+
     Route::apiResources([
         "users" => UserController::class,
         "notifications" => NotificationController::class,
@@ -84,6 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('job-search/mailbox', [JobSearchController::class, 'storeMailbox'])->middleware('throttle:5,1');
 
     Route::get('job-applications', [JobApplicationController::class, 'index']);
+    Route::get('job-applications/counts', [JobApplicationController::class, 'counts']);
     Route::patch('job-applications/{id}', [JobApplicationController::class, 'update']);
     Route::post('job-applications/{id}/approve', [JobApplicationController::class, 'approve']);
     Route::post('job-applications/{id}/skip', [JobApplicationController::class, 'skip']);

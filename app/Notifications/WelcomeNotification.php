@@ -57,7 +57,7 @@ class WelcomeNotification extends Notification implements ShouldQueue
     public function toArray($notifiable)
     {
         return [
-            'url' => '/',
+            'url' => '/mail',
             'from' => 'Admin',
             'message' => 'Welcome '.$notifiable->name.', to Black Mail.',
         ];

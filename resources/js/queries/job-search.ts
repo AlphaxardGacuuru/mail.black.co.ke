@@ -164,6 +164,21 @@ export function useCreateMailbox() {
 	})
 }
 
+/**
+ * How many applications each tab holds, for the nav badges. New matches
+ * arrive in the background, so it checks back every minute.
+ */
+export function useJobApplicationCounts() {
+	return useQuery({
+		queryKey: ["job-applications", "counts"],
+		queryFn: () =>
+			Axios.get<{ counts: Record<JobApplicationTab, number> }>(
+				JobApplicationController.counts.url()
+			).then((response) => response.data.counts),
+		refetchInterval: 60_000,
+	})
+}
+
 export function useJobApplications(tab: JobApplicationTab, page: number) {
 	return useQuery({
 		queryKey: ["job-applications", tab, page],

@@ -26,6 +26,14 @@ class MailThreadController extends Controller
             ]);
     }
 
+    /**
+     * Unread conversations in the inbox, for the nav badge.
+     */
+    public function unreadCount(): JsonResponse
+    {
+        return response()->json(['count' => $this->service->unreadInboxCount()]);
+    }
+
     public function show(string $id): MailThreadResource
     {
         [$status, $message, $thread] = $this->service->show($id);

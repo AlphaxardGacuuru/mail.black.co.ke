@@ -97,6 +97,6 @@ class JobApplicationSentNotification extends Notification implements ShouldQueue
 	{
 		return $this->application->mail_thread_id
 			? '/mail/'.$this->application->mail_thread_id.'/show'
-			: '/job-applications';
+			: '/job-applications/sent';
 	}
 }
