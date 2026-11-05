@@ -74,7 +74,7 @@ function NavSubLink({
 }
 
 /**
- * A section link (Mail, Job applications) with its pages under it. On small
+ * A section link (Mail, Jobs) with its pages under it. On small
  * screens the bottom nav lists those pages, so only `everyScreen` links stay.
  */
 function NavSection({
@@ -175,7 +175,7 @@ export function JobApplicationsNav() {
 		<SidebarGroup className="px-2 py-0">
 			<SidebarMenu>
 				<NavSection
-					title="Job applications"
+					title="Jobs"
 					href={JOB_APPLICATIONS_URL}
 					icon={Briefcase}
 					items={jobApplicationNavItems}

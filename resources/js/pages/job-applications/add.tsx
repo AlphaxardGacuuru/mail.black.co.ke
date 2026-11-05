@@ -174,7 +174,7 @@ export default function AddJob() {
 				className="mx-auto w-full max-w-3xl space-y-6">
 				<Heading
 					title="Add a job"
-					description="Seen a job in a WhatsApp group or on social media? Paste the post or add pictures of it, and it's added to your applications."
+					description="Seen a job in a WhatsApp group or on social media? Paste the post or add pictures of it, and it's added to your jobs."
 				/>
 
 				<GlassCard className="space-y-4 p-4 sm:p-5">
@@ -261,7 +261,7 @@ export default function AddJob() {
 
 AddJob.layout = {
 	breadcrumbs: [
-		{ title: "Job applications", href: JOB_APPLICATIONS_URL },
+		{ title: "Jobs", href: JOB_APPLICATIONS_URL },
 		{ title: "Add a job", href: `${JOB_APPLICATIONS_URL}/add` },
 	],
 }

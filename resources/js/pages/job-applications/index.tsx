@@ -281,12 +281,12 @@ export default function JobApplications({
 
 	return (
 		<>
-			<Head title="Job applications" />
+			<Head title="Jobs" />
 
 			<div className="mx-auto w-full max-w-3xl space-y-6">
 				<div className="flex flex-wrap items-start justify-between gap-4">
 					<Heading
-						title="Job applications"
+						title="Jobs"
 						description="Jobs matched to your CV, and the applications sent from your mailbox."
 					/>
 					<div className="flex gap-2">
@@ -395,5 +395,5 @@ export default function JobApplications({
 }
 
 JobApplications.layout = {
-	breadcrumbs: [{ title: "Job applications", href: JOB_APPLICATIONS_URL }],
+	breadcrumbs: [{ title: "Jobs", href: JOB_APPLICATIONS_URL }],
 }

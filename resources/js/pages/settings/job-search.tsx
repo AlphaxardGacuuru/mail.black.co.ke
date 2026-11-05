@@ -421,22 +421,20 @@ function SettingsForm({ state }: { state: JobSearchState }) {
 	const accounts = auth?.mailgunAccounts ?? []
 	const profile = state.profile
 
-	// Pick up server-side changes (a pause, a reset) without losing edits
-	// in progress to every background refetch.
+	// Pick up server-side changes (a reset) without losing edits in
+	// progress to every background refetch.
 	useEffect(() => {
-		setForm((current) => ({
-			...current,
-			autoApply: profile?.autoApply ?? false,
-			consent: !!profile?.consentedAt,
-		}))
-	}, [profile?.autoApply, profile?.consentedAt])
+		setForm((current) => ({ ...current, consent: !!profile?.consentedAt }))
+	}, [profile?.consentedAt])
 
+	// The form only shows once the toggle above it is on, so saving it
+	// turns job search on.
 	function submit(event: FormEvent): void {
 		event.preventDefault()
 
 		save
 			.mutateAsync({
-				autoApply: form.autoApply,
+				autoApply: true,
 				consent: form.consent,
 				mode: form.mode,
 				mailgunAccountId: form.mailgunAccountId,
@@ -463,31 +461,7 @@ function SettingsForm({ state }: { state: JobSearchState }) {
 			onSubmit={submit}
 			className="space-y-10">
 			<div className="space-y-4">
-				{profile?.pausedReason && !form.autoApply && (
-					<Alert variant="destructive">
-						<AlertTitle>Job search was paused</AlertTitle>
-						<AlertDescription>{profile.pausedReason}</AlertDescription>
-					</Alert>
-				)}
-
-				<label className="flex items-center justify-between gap-4 rounded-lg border p-4">
-					<span>
-						<span className="block text-sm font-medium">
-							Turn on job search
-						</span>
-						<span className="block text-xs text-muted-foreground">
-							{form.mode === "autopilot"
-								? "Finds matching jobs and sends strong matches for you."
-								: "Finds matching jobs and drafts applications for you to approve."}{" "}
-							Turning this off stops anything not yet sent.
-						</span>
-					</span>
-					<Switch
-						checked={form.autoApply}
-						onCheckedChange={(autoApply) => setForm({ ...form, autoApply })}
-					/>
-				</label>
-
+				{/* Before Sending Start */}
 				<SelectField
 					label="Before sending"
 					value={form.mode}
@@ -499,6 +473,7 @@ function SettingsForm({ state }: { state: JobSearchState }) {
 						Send strong matches automatically
 					</SelectItem>
 				</SelectField>
+				{/* Before Sending End */}
 
 				{/* With one mailbox there's nothing to choose. */}
 				{accounts.length > 1 && (
@@ -620,7 +595,7 @@ function SettingsForm({ state }: { state: JobSearchState }) {
 			<div className="flex justify-end">
 				<Button disabled={save.isPending}>
 					{save.isPending && <LoaderCircle className="size-4 animate-spin" />}
-					Save settings
+					{profile?.autoApply ? "Save settings" : "Turn on job search"}
 				</Button>
 			</div>
 		</form>
@@ -896,9 +871,89 @@ function DeleteSection({
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
+/**
+ * Turning on only reveals the setup below; saving it turns job search on.
+ * Turning off saves straight away, stopping anything not yet sent.
+ */
+function JobSearchToggle({
+	state,
+	on,
+	onChange,
+}: {
+	state: JobSearchState
+	on: boolean
+	onChange: (on: boolean) => void
+}) {
+	const save = useSaveJobSearch()
+	const profile = state.profile
+
+	function turnOff(): void {
+		const form = formFrom(state)
+
+		save
+			.mutateAsync({
+				autoApply: false,
+				consent: form.consent,
+				mode: form.mode,
+				mailgunAccountId: form.mailgunAccountId,
+				preferences: {
+					keywords: textToList(form.keywords),
+					locations: form.locations,
+					remoteOk: form.remoteOk,
+					excludedCompanies: textToList(form.excludedCompanies),
+				},
+				dailyLimit: form.dailyLimit,
+				minMatchScore: form.minMatchScore,
+			})
+			.then((data) => {
+				toast.success(data.message)
+				onChange(false)
+			})
+			.catch((error) =>
+				toast.error(errorMessage(error, "Unable to turn off job search."))
+			)
+	}
+
+	return (
+		<div className="space-y-4">
+			{profile?.pausedReason && !profile.autoApply && (
+				<Alert variant="destructive">
+					<AlertTitle>Job search was paused</AlertTitle>
+					<AlertDescription>{profile.pausedReason}</AlertDescription>
+				</Alert>
+			)}
+
+			{/* Job Search Start */}
+			<label className="flex items-center justify-between gap-4 rounded-lg border p-4">
+				<span>
+					<span className="block text-sm font-medium">Turn on job search</span>
+					<span className="block text-xs text-muted-foreground">
+						{on && !profile?.autoApply
+							? "Finish the steps below, then turn it on at the bottom of the page."
+							: "Finds jobs that match your CV and applies by email from your mailbox. Replies arrive in your inbox."}
+					</span>
+				</span>
+				<Switch
+					checked={on}
+					disabled={save.isPending}
+					onCheckedChange={(checked) =>
+						checked || !profile?.autoApply ? onChange(checked) : turnOff()
+					}
+				/>
+			</label>
+			{/* Job Search End */}
+		</div>
+	)
+}
+
 function JobSearchSections({ state }: { state: JobSearchState }) {
 	// Remounts the settings form after a delete so it starts blank again.
 	const [formKey, setFormKey] = useState(0)
+	const autoApply = !!state.profile?.autoApply
+	const [on, setOn] = useState(autoApply)
+
+	// Follow the server when it turns job search on or pauses it.
+	useEffect(() => setOn(autoApply), [autoApply])
 
 	return (
 		<div className="space-y-10">
@@ -907,6 +962,48 @@ function JobSearchSections({ state }: { state: JobSearchState }) {
 				title="Job search"
 				description="Find jobs that match your CV on Kenyan job boards and employers' careers pages, then apply by email from your mailbox. Replies arrive in your inbox."
 			/>
+
+			<JobSearchToggle
+				state={state}
+				on={on}
+				onChange={setOn}
+			/>
+
+			{on ? (
+				<JobSearchSetup
+					state={state}
+					formKey={formKey}
+					onDeleted={() => setFormKey((key) => key + 1)}
+				/>
+			) : (
+				// Saved data stays deletable while job search is off.
+				state.profile && (
+					<>
+						<hr />
+
+						<DeleteSection
+							state={state}
+							onDeleted={() => setFormKey((key) => key + 1)}
+						/>
+					</>
+				)
+			)}
+		</div>
+	)
+}
+
+function JobSearchSetup({
+	state,
+	formKey,
+	onDeleted,
+}: {
+	state: JobSearchState
+	formKey: number
+	onDeleted: () => void
+}) {
+	return (
+		<>
+			<hr />
 
 			<CvSection state={state} />
 
@@ -941,9 +1038,9 @@ function JobSearchSections({ state }: { state: JobSearchState }) {
 
 			<DeleteSection
 				state={state}
-				onDeleted={() => setFormKey((key) => key + 1)}
+				onDeleted={onDeleted}
 			/>
-		</div>
+		</>
 	)
 }
 
