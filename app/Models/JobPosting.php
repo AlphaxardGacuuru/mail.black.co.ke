@@ -20,6 +20,9 @@ class JobPosting extends Model
 
     public const SOURCE_ALERT = 'alert';
 
+    // A post the user shared from WhatsApp, Telegram and the like.
+    public const SOURCE_SHARED = 'shared';
+
     protected $guarded = [];
 
     protected $casts = [
@@ -45,12 +48,13 @@ class JobPosting extends Model
 
     /**
      * Where the job was found: the board, the site whose job alert it came
-     * in, or the employer's own site.
+     * in, the site a shared post links to, or the employer's own site.
      */
     public function sourceName(): string
     {
         return $this->board?->name
-            ?? ($this->source === self::SOURCE_ALERT ? JobAlertReader::siteName($this->url) : null)
+            ?? ($this->source === self::SOURCE_ALERT ? JobAlertReader::siteName((string) $this->url) : null)
+            ?? ($this->source === self::SOURCE_SHARED && $this->url ? Str::after((string) parse_url($this->url, PHP_URL_HOST), 'www.') : null)
             ?? 'company website';
     }
 

@@ -9,6 +9,8 @@ use App\Agents\JobAlertAgent;
 use App\Agents\JobApplicationAgent;
 use App\Agents\JobMatchAgent;
 use App\Agents\JobPageAgent;
+use App\Agents\SharedJobPostAgent;
+use App\Jobs\DraftJobApplicationJob;
 use App\Enums\JobApplicationStatus;
 use App\Events\MailMessageStatusUpdatedEvent;
 use App\Jobs\FetchJobBoardListingJob;
@@ -1150,5 +1152,117 @@ class JobSearchTest extends TestCase
         Storage::disk('local')->assertMissing($profile->cv_path);
         $this->assertSame(0, JobApplication::count());
         $this->assertSame(0, JobSeekerProfile::count());
+    }
+
+    // ─── Shared posts ────────────────────────────────────────────────────────
+
+    private function sharedJob(array $overrides = []): array
+    {
+        return [
+            'title' => 'Accountant',
+            'company' => 'Acme Ltd',
+            'location' => 'Nairobi',
+            'description' => 'We need a CPA(K) accountant.',
+            'apply_email' => 'jobs@acme.co.ke',
+            'apply_link' => '',
+            'apply_instructions' => 'Send your CV with the subject "Accountant".',
+            'deadline' => '2026-11-30',
+            ...$overrides,
+        ];
+    }
+
+    public function test_a_shared_post_is_added_for_review_whatever_the_score_and_filters(): void
+    {
+        Queue::fake();
+        $this->readyProfile(['mode' => 'autopilot', 'min_match_score' => 90, 'preferences' => ['keywords' => [], 'locations' => ['Mombasa'], 'remote_ok' => false, 'excluded_companies' => []]]);
+        SharedJobPostAgent::fake([['jobs' => [$this->sharedJob()]]]);
+        JobMatchAgent::fake([['results' => [['id' => '1', 'score' => 70, 'reason' => 'Decent fit.']]]]);
+
+        $this->actingAs($this->user, 'sanctum')
+            ->postJson('/api/job-applications/shared', ['text' => 'ACCOUNTANT needed at Acme Ltd, Nairobi. CPA(K). Send CV to jobs@acme.co.ke by 30th Nov.'])
+            ->assertOk()
+            ->assertJsonPath('message', 'Job Added')
+            ->assertJsonPath('data.0.status', 'pending_approval')
+            ->assertJsonPath('data.0.matchScore', 70)
+            ->assertJsonPath('data.0.posting.applyEmail', 'jobs@acme.co.ke')
+            ->assertJsonPath('data.0.posting.url', null);
+
+        $posting = JobPosting::sole();
+        $this->assertSame(JobPosting::SOURCE_SHARED, $posting->source);
+        $this->assertSame($this->user->id, $posting->user_id);
+        $this->assertSame('2026-11-30', $posting->valid_through->toDateString());
+        Queue::assertPushed(DraftJobApplicationJob::class);
+
+        // Even on autopilot, an apply email the AI read is checked first.
+        JobApplicationAgent::fake([['subject' => 'Application for Accountant', 'body' => "Dear Hiring Manager,\n\nHello."]]);
+        app(JobMatcher::class)->draft($this->user->jobSeekerProfile, JobApplication::sole());
+        $this->assertSame(JobApplicationStatus::PENDING_APPROVAL, JobApplication::sole()->status);
+    }
+
+    public function test_an_image_only_post_without_an_email_is_to_apply_for_yourself(): void
+    {
+        $this->readyProfile();
+        SharedJobPostAgent::fake([['jobs' => [
+            $this->sharedJob(['title' => 'Driver', 'apply_email' => '', 'apply_link' => 'https://forms.gle/abc', 'apply_instructions' => 'Apply via the form.']),
+            $this->sharedJob(['title' => 'Cleaner', 'apply_email' => '', 'apply_instructions' => 'Deliver your CV to our Westlands office.']),
+        ]]]);
+        JobMatchAgent::fake([['results' => [['id' => '1', 'score' => 50, 'reason' => 'Different field.']]]]);
+
+        $this->actingAs($this->user, 'sanctum')
+            ->post('/api/job-applications/shared', ['images' => [UploadedFile::fake()->image('poster.jpg')]], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('message', '2 Jobs Added')
+            ->assertJsonPath('data.0.status', 'apply_manually')
+            ->assertJsonPath('data.0.posting.url', 'https://forms.gle/abc')
+            ->assertJsonPath('data.0.posting.sourceName', 'forms.gle')
+            ->assertJsonPath('data.1.posting.url', null)
+            ->assertJsonPath('data.1.posting.applyInstructions', 'Deliver your CV to our Westlands office.');
+
+        SharedJobPostAgent::assertPrompted(fn (AgentPrompt $prompt) => count($prompt->attachments) === 1);
+    }
+
+    public function test_an_email_or_link_not_in_a_text_post_is_dropped(): void
+    {
+        $this->readyProfile();
+        SharedJobPostAgent::fake([['jobs' => [$this->sharedJob(['apply_email' => 'made-up@acme.co.ke', 'apply_link' => 'https://acme.co.ke/made-up'])]]]);
+        JobMatchAgent::fake([['results' => [['id' => '1', 'score' => 80, 'reason' => 'Good fit.']]]]);
+
+        $this->actingAs($this->user, 'sanctum')
+            ->postJson('/api/job-applications/shared', ['text' => 'Accountant needed at Acme Ltd. Apply at the office.'])
+            ->assertOk()
+            ->assertJsonPath('data.0.status', 'apply_manually')
+            ->assertJsonPath('data.0.posting.applyEmail', null)
+            ->assertJsonPath('data.0.posting.url', null);
+    }
+
+    public function test_a_post_without_a_job_or_already_added_is_refused(): void
+    {
+        $this->readyProfile();
+        SharedJobPostAgent::fake([['jobs' => []], ['jobs' => [$this->sharedJob()]], ['jobs' => [$this->sharedJob()]]]);
+        JobMatchAgent::fake([['results' => [['id' => '1', 'score' => 80, 'reason' => 'Good fit.']]]]);
+        Queue::fake();
+
+        $share = fn () => $this->actingAs($this->user, 'sanctum')
+            ->postJson('/api/job-applications/shared', ['text' => 'Accountant at Acme Ltd, send CV to jobs@acme.co.ke']);
+
+        $share()->assertUnprocessable()->assertJsonPath('errors.post.0', 'No job found in this post.');
+        $share()->assertOk();
+        $share()->assertUnprocessable()->assertJsonPath('errors.post.0', 'You already added this job.');
+
+        $this->actingAs($this->user, 'sanctum')
+            ->postJson('/api/job-applications/shared', [])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('post');
+    }
+
+    public function test_sharing_needs_job_search_on(): void
+    {
+        $this->readyProfile(['auto_apply' => false]);
+        SharedJobPostAgent::fake()->preventStrayPrompts();
+
+        $this->actingAs($this->user, 'sanctum')
+            ->postJson('/api/job-applications/shared', ['text' => 'Accountant at Acme Ltd'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.post.0', 'Turn on job search in Settings first.');
     }
 }

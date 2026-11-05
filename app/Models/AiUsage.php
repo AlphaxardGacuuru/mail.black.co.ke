@@ -62,6 +62,11 @@ class AiUsage extends Model
      */
     public const FEATURE_CAREER_PAGE_SEARCH = 'career_page_search';
 
+    /**
+     * Reading a job post the user shared (text, link or images).
+     */
+    public const FEATURE_SHARED_POST_READ = 'shared_post_read';
+
     protected $fillable = [
         'user_id',
         'subject_type',

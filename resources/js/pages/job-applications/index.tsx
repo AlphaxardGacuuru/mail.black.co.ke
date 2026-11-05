@@ -5,6 +5,7 @@ import {
 	ExternalLink,
 	LoaderCircle,
 	MailOpen,
+	Plus,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import Heading from "@/components/heading"
@@ -180,9 +181,17 @@ function ApplicationCard({
 
 			{tab === "review" && <DraftEditor application={application} />}
 
+			{tab === "manual" && posting.applyInstructions && (
+				<p className="text-sm whitespace-pre-line">
+					<span className="font-medium">How to apply: </span>
+					{posting.applyInstructions}
+				</p>
+			)}
+
 			<div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-				{/* Applying on the site is the only way to act on these. */}
-				{tab === "manual" ? (
+				{/* Applying on the site is the only way to act on these. A
+				    shared poster may have no link at all. */}
+				{posting.url && tab === "manual" && (
 					<Link
 						href={posting.url}
 						target="_blank"
@@ -193,7 +202,8 @@ function ApplicationCard({
 						Apply on {posting.sourceName}
 						<ExternalLink />
 					</Link>
-				) : (
+				)}
+				{posting.url && tab !== "manual" && (
 					<a
 						href={posting.url}
 						target="_blank"
@@ -279,12 +289,21 @@ export default function JobApplications({
 						title="Job applications"
 						description="Jobs matched to your CV, and the applications sent from your mailbox."
 					/>
-					<Link
-						href="/settings/job-search"
-						variant="outline"
-						size="sm">
-						Settings
-					</Link>
+					<div className="flex gap-2">
+						<Link
+							href="/settings/job-search"
+							variant="outline"
+							size="sm">
+							Settings
+						</Link>
+						<Link
+							href={`${JOB_APPLICATIONS_URL}/add`}
+							variant="solid"
+							size="sm">
+							<Plus />
+							Add a job
+						</Link>
+					</div>
 				</div>
 
 				{settings && !settings.profile?.autoApply && (

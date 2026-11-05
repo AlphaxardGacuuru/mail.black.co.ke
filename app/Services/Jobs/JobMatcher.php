@@ -233,6 +233,44 @@ class JobMatcher
     }
 
     /**
+     * Add jobs the user shared themselves. They chose these, so the filters
+     * and minimum score don't apply; the score is still shown. One with an
+     * email to apply to is drafted for review, the rest are to apply for
+     * on the employer's site.
+     *
+     * @param  Collection<int, JobPosting>  $postings
+     * @return Collection<int, JobApplication>
+     */
+    public function addShared(JobSeekerProfile $profile, Collection $postings): Collection
+    {
+        $scores = $this->score($profile, $postings->values()) ?? [];
+
+        return $postings->map(function (JobPosting $posting) use ($profile, $scores) {
+            $recentlyApplied = $posting->apply_email && $this->appliedToCompanyRecently($profile, $posting);
+
+            $application = JobApplication::create([
+                'user_id' => $profile->user_id,
+                'job_posting_id' => $posting->id,
+                'status' => match (true) {
+                    ! $posting->apply_email => JobApplicationStatus::APPLY_MANUALLY,
+                    $recentlyApplied => JobApplicationStatus::SKIPPED,
+                    default => JobApplicationStatus::PENDING_APPROVAL,
+                },
+                'match_score' => $scores[$posting->id]['score'] ?? null,
+                'match_reason' => $recentlyApplied
+                    ? "Already applied to {$posting->company} recently."
+                    : ($scores[$posting->id]['reason'] ?? null),
+            ]);
+
+            if ($application->status === JobApplicationStatus::PENDING_APPROVAL) {
+                DraftJobApplicationJob::dispatch($application->id);
+            }
+
+            return $application;
+        });
+    }
+
+    /**
      * Write the subject and cover letter; on autopilot the application is
      * then queued to send, otherwise it waits for the user's approval.
      */
@@ -250,9 +288,13 @@ class JobMatcher
             return;
         }
 
+        // A shared post's apply email was read by the AI, often from an
+        // image, so it's always checked by the user first.
+        $sendsItself = $profile->isAutopilot() && $application->posting->source !== JobPosting::SOURCE_SHARED;
+
         $application->update([
             ...$letter,
-            'status' => $profile->isAutopilot() ? JobApplicationStatus::QUEUED : JobApplicationStatus::PENDING_APPROVAL,
+            'status' => $sendsItself ? JobApplicationStatus::QUEUED : JobApplicationStatus::PENDING_APPROVAL,
         ]);
     }
 

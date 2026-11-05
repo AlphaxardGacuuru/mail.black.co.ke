@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Jobs;
 use App\Enums\JobApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\JobApplicationResource;
+use App\Http\Services\SharedJobPostService;
 use App\Jobs\SendJobApplicationsJob;
 use App\Models\JobApplication;
 use Illuminate\Http\JsonResponse;
@@ -47,6 +48,36 @@ class JobApplicationController extends Controller
     public function counts(Request $request): JsonResponse
     {
         return response()->json(['counts' => $this->tabCounts($request)]);
+    }
+
+    /**
+     * Add the jobs in a post the user shared (from WhatsApp, Telegram and
+     * the like): its text, a link, or images of it.
+     */
+    public function storeShared(Request $request, SharedJobPostService $sharedJobPostService): JsonResponse
+    {
+        $data = $request->validate([
+            'text' => 'nullable|string|max:'.config('job_search.shared.max_text_chars'),
+            'url' => 'nullable|url:http,https|max:2000',
+            'images' => 'nullable|array|max:'.config('job_search.shared.max_images'),
+            'images.*' => 'image|max:'.config('job_search.shared.max_image_kilobytes'),
+        ]);
+
+        $text = collect([$data['text'] ?? null, $data['url'] ?? null])
+            ->map(fn (?string $part) => trim((string) $part))
+            ->filter()
+            ->implode("\n\n");
+
+        if ($text === '' && empty($data['images'])) {
+            throw ValidationException::withMessages(['post' => ['Paste the job post or add a picture of it.']]);
+        }
+
+        $applications = $sharedJobPostService->add($request->user(), $text, $data['images'] ?? []);
+
+        return response()->json([
+            'message' => $applications->count() === 1 ? 'Job Added' : "{$applications->count()} Jobs Added",
+            'data' => JobApplicationResource::collection($applications->each->load('posting.board')),
+        ]);
     }
 
     /**

@@ -90,9 +90,11 @@ export type JobApplication = {
 		title: string
 		company: string | null
 		location: string | null
-		url: string
+		// A shared post (often a poster) may have no link.
+		url: string | null
 		applyEmail: string | null
-		source: "board" | "company_page" | "alert"
+		applyInstructions: string | null
+		source: "board" | "company_page" | "alert" | "shared"
 		sourceName: string
 		postedAt: string | null
 	}

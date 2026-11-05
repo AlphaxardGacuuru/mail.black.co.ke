@@ -88,6 +88,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('job-applications', [JobApplicationController::class, 'index']);
     Route::get('job-applications/counts', [JobApplicationController::class, 'counts']);
+    Route::post('job-applications/shared', [JobApplicationController::class, 'storeShared'])->middleware('throttle:10,1');
     Route::patch('job-applications/{id}', [JobApplicationController::class, 'update']);
     Route::post('job-applications/{id}/approve', [JobApplicationController::class, 'approve']);
     Route::post('job-applications/{id}/skip', [JobApplicationController::class, 'skip']);

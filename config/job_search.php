@@ -109,6 +109,16 @@ return [
         'max_jobs_per_alert' => 30,
     ],
 
+    // Job posts the user shares from WhatsApp, Telegram and the like (text,
+    // a link, or posters and screenshots), read by the AI.
+    'shared' => [
+        'max_per_user_per_day' => 20,
+        'max_images' => 4,
+        'max_image_kilobytes' => 8192,
+        'max_text_chars' => 20_000,
+        'max_jobs_per_post' => 5,
+    ],
+
     // Largest page body read from any site, and the slice of it given to the AI.
     'max_page_bytes' => 2_000_000,
     'max_page_chars_for_ai' => 30_000,

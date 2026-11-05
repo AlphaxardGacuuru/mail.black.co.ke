@@ -227,3 +227,29 @@ export function useSkipApplication() {
 		Axios.post(JobApplicationController.skip.url(id))
 	)
 }
+
+export type SharedPost = { text: string; url: string; images: File[] }
+
+/**
+ * Add the jobs in a post shared from WhatsApp, Telegram and the like.
+ */
+export function useAddSharedPost() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (post: SharedPost) => {
+			const form = new FormData()
+			form.append("text", post.text)
+			form.append("url", post.url)
+			post.images.forEach((image) => form.append("images[]", image))
+
+			return Axios.post<{ message: string; data: JobApplication[] }>(
+				JobApplicationController.storeShared.url(),
+				form
+			).then((response) => response.data)
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["job-applications"] })
+		},
+	})
+}

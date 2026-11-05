@@ -27,6 +27,54 @@ self.addEventListener("message", (event) => {
 })
 self.addEventListener("activate", () => self.clients.claim())
 
+// ─── Share target ─────────────────────────────────────────────────────────────
+// A job post shared to the installed app (text, a link, images) is kept in
+// the "shared-post" cache for the "Add a job" page to pick up, which then
+// opens. See share_target in manifest.webmanifest.
+registerRoute(
+	({ url }) =>
+		url.origin === self.location.origin && url.pathname === "/share-target",
+	async ({ request }) => {
+		const form = await request.formData()
+		const cache = await caches.open("shared-post")
+		const images = form
+			.getAll("images")
+			.filter((value): value is File => value instanceof File && value.size > 0)
+
+		await Promise.all(
+			(await cache.keys()).map((request) => cache.delete(request))
+		)
+		await Promise.all(
+			images.map((image, index) =>
+				cache.put(
+					`/shared-post/image-${index}`,
+					new Response(image, {
+						headers: {
+							"Content-Type": image.type,
+							"X-File-Name": encodeURIComponent(image.name),
+						},
+					})
+				)
+			)
+		)
+		await cache.put(
+			"/shared-post/post",
+			new Response(
+				JSON.stringify({
+					title: String(form.get("title") ?? ""),
+					text: String(form.get("text") ?? ""),
+					url: String(form.get("url") ?? ""),
+					images: images.length,
+				}),
+				{ headers: { "Content-Type": "application/json" } }
+			)
+		)
+
+		return Response.redirect("/job-applications/add?shared=1", 303)
+	},
+	"POST"
+)
+
 // ─── Caching strategies ───────────────────────────────────────────────────────
 
 // Static assets from the Vite build: cache-first, valid for 30 days.
@@ -92,10 +140,7 @@ registerRoute(
 // messages, and labels are what's shown immediately (including while
 // offline), with a background refresh whenever the network is up.
 // Auth-sensitive routes are intentionally excluded — see NETWORK_ONLY_APIS.
-const STALE_WHILE_REVALIDATE_APIS = [
-	"/api/threads",
-	"/api/labels",
-]
+const STALE_WHILE_REVALIDATE_APIS = ["/api/threads", "/api/labels"]
 
 registerRoute(
 	({ url }) =>
