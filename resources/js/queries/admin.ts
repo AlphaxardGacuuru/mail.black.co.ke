@@ -1,4 +1,9 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import {
+	keepPreviousData,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query"
 import Axios from "@/lib/axios"
 
 export type AdminDashboardData = {
@@ -42,6 +47,7 @@ export type AdminUser = {
 	phone: string | null
 	gender: "male" | "female" | "other" | null
 	avatar: string | null
+	verified: boolean
 	createdAt: string
 }
 
@@ -58,6 +64,20 @@ export function useAdminUsers(search: string, page = 1, perPage = 20) {
 				params: { name: search || undefined, page, per_page: perPage },
 			}).then((res) => res.data),
 		placeholderData: keepPreviousData,
+	})
+}
+
+export function useToggleUserVerified() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: ({ userId, verified }: { userId: string; verified: boolean }) =>
+			Axios.patch<{ message: string }>(`api/admin/users/${userId}/verify`, {
+				verified,
+			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
+		},
 	})
 }
 

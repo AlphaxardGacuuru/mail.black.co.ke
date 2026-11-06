@@ -8,6 +8,13 @@ return [
 
     'categories' => [
 
+        'new_chat_message' => [
+            'group' => 'Chats',
+            'label' => 'New message',
+            'description' => 'Someone sends you a chat message.',
+            'defaults' => ['in_app' => false, 'push' => true, 'email' => false],
+        ],
+
         'new_mail' => [
             'group' => 'Mail',
             'label' => 'New mail',

@@ -3,6 +3,7 @@ import MailConnectionStatus from "@/components/mail/MailConnectionStatus"
 import { MailgunAccountSwitcher } from "@/components/mailgun-account-switcher"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useRouterState } from "@tanstack/react-router"
+import { useConversation } from "@/queries/chat"
 import { useLabels, useMailThread } from "@/queries/mail"
 import { cn } from "@/lib/utils"
 import type { BreadcrumbItem as BreadcrumbItemType } from "@/types"
@@ -31,7 +32,7 @@ export function AppSidebarHeader({
 		compose: "New message",
 	}
 	const mailTitle = threadId
-		? (thread?.subject || "(no subject)")
+		? thread?.subject || "(no subject)"
 		: labelId
 			? (labels?.find((label) => label.id === labelId)?.name ?? "Label")
 			: pathname === "/mail" || pathname === "/mail/"
@@ -41,10 +42,19 @@ export function AppSidebarHeader({
 					: folder
 						? (folderTitles[folder] ?? folder.replace(/-/g, " "))
 						: null
-	const displayedBreadcrumbs = mailTitle
-		? [{ title: mailTitle, href: pathname }]
-		: breadcrumbs
-
+	const conversationId = pathname.match(/^\/chats\/([^/]+)\/show/)?.[1]
+	const { data: conversation } = useConversation(conversationId ?? null)
+	const chatTitle = conversationId
+		? (conversation?.conversation.otherUser?.name ?? "Chat")
+		: pathname === "/chats/new"
+			? "New chat"
+			: pathname === "/chats/archived"
+				? "Archived"
+				: pathname === "/chats" || pathname === "/chats/"
+					? "Chats"
+					: null
+	const title = mailTitle ?? chatTitle
+	const displayedBreadcrumbs = title ? [{ title, href: pathname }] : breadcrumbs
 
 	return (
 		<header

@@ -5,11 +5,13 @@ use App\Jobs\DeleteStaleTemporaryUploadsJob;
 use App\Jobs\DiscoverCareerPagesJob;
 use App\Jobs\FetchJobPostingsJob;
 use App\Jobs\MatchJobsForUserJob;
+use App\Jobs\PostCareerNewsStoriesJob;
 use App\Jobs\SendJobApplicationsJob;
 use App\Jobs\SyncCareerPageJob;
 use App\Models\CompanyCareerPage;
 use App\Models\JobPosting;
 use App\Models\JobSeekerProfile;
+use App\Models\Story;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -72,6 +74,13 @@ Schedule::call(function () {
         ->pluck('id')
         ->each(fn (string $id) => MatchJobsForUserJob::dispatch($id));
 })->name('match-jobs')->hourlyAt(25);
+
+// A news story for each career field job seekers are in. Daily at 06:30
+// EAT, so it's there with the morning's first look at the app.
+Schedule::job(new PostCareerNewsStoriesJob)->dailyAt('06:30');
+
+// Stories (and their pictures) are deleted a day after they're posted.
+Schedule::command('model:prune', ['--model' => [Story::class]])->hourly();
 
 // Hourly, at 45 minutes past the hour.
 Schedule::job(new SendJobApplicationsJob)->hourlyAt(45)->withoutOverlapping();

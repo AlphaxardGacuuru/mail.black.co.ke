@@ -73,6 +73,18 @@ return [
             'after_commit' => false,
         ],
 
+        // For jobs that run a headless browser for minutes at a time; a
+        // retry_after shorter than the job would start a second copy of
+        // it (and submit an application twice).
+        'redis-browser' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'browser',
+            'retry_after' => 400,
+            'block_for' => null,
+            'after_commit' => true,
+        ],
+
         'deferred' => [
             'driver' => 'deferred',
         ],

@@ -3,9 +3,14 @@
 use App\Http\Controllers\Admin\AdminAiUsageController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminWebhookController;
+use App\Http\Controllers\Chat\ChatAttachmentController;
+use App\Http\Controllers\Chat\ChatConversationController;
+use App\Http\Controllers\Chat\ChatLocationShareController;
+use App\Http\Controllers\Chat\ChatMessageController;
 use App\Http\Controllers\FilePondController;
 use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\Jobs\JobApplicationController;
+use App\Http\Controllers\Jobs\JobApplicationFormController;
 use App\Http\Controllers\Jobs\JobSearchController;
 use App\Http\Controllers\Mail\MailAttachmentController;
 use App\Http\Controllers\Mail\MailLabelController;
@@ -15,6 +20,7 @@ use App\Http\Controllers\Mail\MailWebhookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\StoryController;
 use App\Http\Controllers\Settings\NotificationPreferenceController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\UserController;
@@ -43,8 +49,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Before the resource routes, which would read it as a thread id.
     Route::get('threads/unread-count', [MailThreadController::class, 'unreadCount']);
 
+    // Only your own account; listing, creating and deleting people is for
+    // the admin (below).
+    Route::apiResource('users', UserController::class)
+        ->only(['show', 'update']);
+
     Route::apiResources([
-        "users" => UserController::class,
         "notifications" => NotificationController::class,
         "integrations" => IntegrationController::class,
         "support-tickets" => SupportTicketController::class,
@@ -55,6 +65,30 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('push-subscriptions', [PushSubscriptionController::class, 'store']);
     Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy']);
+
+    Route::get('stories', [StoryController::class, 'index']);
+    Route::get('stories/{id}', [StoryController::class, 'show']);
+    Route::post('stories/{id}/seen', [StoryController::class, 'seen']);
+
+    Route::get('chat/users', [ChatConversationController::class, 'users']);
+    Route::get('chat/conversations', [ChatConversationController::class, 'index']);
+    Route::post('chat/conversations', [ChatConversationController::class, 'store']);
+    Route::get('chat/conversations/{id}', [ChatConversationController::class, 'show']);
+    Route::post('chat/conversations/{id}/read', [ChatConversationController::class, 'markRead']);
+    Route::post('chat/conversations/{id}/archive', [ChatConversationController::class, 'archive']);
+    Route::delete('chat/conversations/{id}', [ChatConversationController::class, 'destroy']);
+    Route::post('chat/conversations/{id}/messages', [ChatMessageController::class, 'store']);
+    Route::delete('chat/messages/{id}', [ChatMessageController::class, 'destroy']);
+    Route::post('chat/messages/{id}/star', [ChatMessageController::class, 'star']);
+    Route::post('chat/messages/{id}/forward', [ChatMessageController::class, 'forward']);
+
+    Route::post('chat/conversations/{id}/location', [ChatLocationShareController::class, 'start']);
+    Route::patch('chat/conversations/{id}/location', [ChatLocationShareController::class, 'update'])
+        ->middleware('throttle:12,1');
+    Route::delete('chat/conversations/{id}/location', [ChatLocationShareController::class, 'stop']);
+
+    Route::get('chat/attachments/{id}/download', [ChatAttachmentController::class, 'download'])
+        ->name('chat.attachments.download');
 
     Route::post('threads/{id}/labels', [MailThreadController::class, 'attachLabel']);
     Route::delete('threads/{id}/labels/{labelId}', [MailThreadController::class, 'detachLabel']);
@@ -80,6 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('job-search', [JobSearchController::class, 'destroy']);
     Route::post('job-search/cv', [JobSearchController::class, 'uploadCv'])->middleware('throttle:10,1');
     Route::put('job-search/cover-letter', [JobSearchController::class, 'updateCoverLetter']);
+    Route::put('job-search/setup-step', [JobSearchController::class, 'updateSetupStep']);
     Route::post('job-search/cover-letter', [JobSearchController::class, 'uploadCoverLetter'])->middleware('throttle:10,1');
     Route::post('job-search/career-pages', [JobSearchController::class, 'storeCareerPage'])->middleware('throttle:10,1');
     Route::delete('job-search/career-pages/{id}', [JobSearchController::class, 'destroyCareerPage']);
@@ -93,12 +128,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('job-applications/{id}/approve', [JobApplicationController::class, 'approve']);
     Route::post('job-applications/{id}/skip', [JobApplicationController::class, 'skip']);
 
+    // Applying on the employer's own form
+    Route::post('job-applications/{id}/form', [JobApplicationFormController::class, 'prepare'])->middleware('throttle:10,1');
+    Route::patch('job-applications/{id}/form', [JobApplicationFormController::class, 'update']);
+    Route::post('job-applications/{id}/form/submit', [JobApplicationFormController::class, 'submit'])->middleware('throttle:10,1');
+
 });
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('webhooks', [AdminWebhookController::class, 'index'])->name('webhooks');
     Route::get('users', [UserController::class, 'index'])->name('users.index');
+    Route::apiResource('users', UserController::class)
+        ->only(['store', 'destroy']);
+    Route::patch('users/{id}/verify', [UserController::class, 'verify'])->name('users.verify');
 });
 
 // AI spend is for the same people as Telescope (see the viewAiUsage gate).
@@ -120,6 +163,9 @@ Route::prefix('filepond')->group(function () {
 
         Route::post('attachments', 'storeMailAttachment');
         Route::delete('attachments/{id}', 'destroyMailAttachment');
+
+        Route::post('chat-attachments', 'storeChatAttachment');
+        Route::delete('chat-attachments/{id}', 'destroyChatAttachment');
     });
 });
 
@@ -128,6 +174,12 @@ Route::middleware('auth:sanctum')->post(
     'filepond/mailgun-accounts/{account}/avatar',
     [FilePondController::class, 'updateMailgunAccountAvatar']
 );
+
+// Signed links, for <img> tags, which can't send the bearer token.
+Route::get('job-applications/{id}/form/screenshots/{name}', [JobApplicationFormController::class, 'screenshot'])
+    ->whereIn('name', ['form', 'filled', 'confirmation'])
+    ->middleware('signed')
+    ->name('job-application-forms.screenshot');
 
 Route::post('webhooks/mailgun', [MailWebhookController::class, 'mailgunInbound'])
     ->middleware('verify.mailgun.webhook');

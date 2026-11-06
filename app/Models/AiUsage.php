@@ -67,6 +67,22 @@ class AiUsage extends Model
      */
     public const FEATURE_SHARED_POST_READ = 'shared_post_read';
 
+    /**
+     * Finding the day's news for a job seeker's story, with Google Search.
+     */
+    public const FEATURE_CAREER_NEWS = 'career_news';
+
+    /**
+     * Tagging a job seeker's CV with career fields, for their news.
+     */
+    public const FEATURE_CAREER_FIELDS = 'career_fields';
+
+    /**
+     * Suggesting answers to the questions on an employer's application
+     * form.
+     */
+    public const FEATURE_APPLICATION_FORM = 'application_form';
+
     protected $fillable = [
         'user_id',
         'subject_type',

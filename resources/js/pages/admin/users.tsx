@@ -5,8 +5,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
 import { Input } from "@/components/ui/input"
+import { Spinner } from "@/components/ui/spinner"
+import { Switch } from "@/components/ui/switch"
+import { AvatarVerifiedBadge } from "@/components/verified-badge"
 import { Head } from "@/lib/spa"
-import { type AdminUser, useAdminUsers } from "@/queries/admin"
+import toast from "@/lib/toast"
+import {
+	type AdminUser,
+	useAdminUsers,
+	useToggleUserVerified,
+} from "@/queries/admin"
 
 function initials(name?: string | null): string {
 	return (name?.trim() || "?").slice(0, 2).toUpperCase()
@@ -17,6 +25,17 @@ export default function AdminUsers() {
 	const [page, setPage] = useState(1)
 	const [perPage, setPerPage] = useState(20)
 	const { data, isLoading } = useAdminUsers(search, page, perPage)
+	const toggleVerified = useToggleUserVerified()
+
+	function handleToggle(userId: string, verified: boolean): void {
+		toggleVerified.mutate(
+			{ userId, verified },
+			{
+				onSuccess: (response) => toast.success(response.data.message),
+				onError: () => toast.error("Couldn't update this user"),
+			}
+		)
+	}
 
 	const columns: ColumnDef<AdminUser>[] = [
 		{
@@ -25,13 +44,16 @@ export default function AdminUsers() {
 			enableSorting: false,
 			cell: ({ row }) => (
 				<div className="flex items-center gap-3">
-					<Avatar className="size-9 shrink-0">
-						<AvatarImage
-							src={row.original.avatar ?? undefined}
-							alt={row.original.name}
-						/>
-						<AvatarFallback>{initials(row.original.name)}</AvatarFallback>
-					</Avatar>
+					<div className="relative shrink-0">
+						<Avatar className="size-9">
+							<AvatarImage
+								src={row.original.avatar ?? undefined}
+								alt={row.original.name}
+							/>
+							<AvatarFallback>{initials(row.original.name)}</AvatarFallback>
+						</Avatar>
+						{row.original.verified && <AvatarVerifiedBadge />}
+					</div>
 					<span className="min-w-0 truncate font-medium">
 						{row.original.name}
 					</span>
@@ -61,6 +83,39 @@ export default function AdminUsers() {
 			accessorKey: "created_at",
 			header: "Created At",
 			cell: ({ row }) => <span className="">{row.original.createdAt}</span>,
+		},
+		{
+			id: "verified",
+			header: "Verified",
+			enableSorting: false,
+			meta: { className: "text-right" },
+			cell: ({ row }) => {
+				const isTogglingThisUser =
+					toggleVerified.isPending &&
+					toggleVerified.variables?.userId === row.original.id
+
+				return (
+					<div className="flex items-center justify-end gap-2">
+						{isTogglingThisUser && (
+							<Spinner className="size-4 text-muted-foreground" />
+						)}
+						{/* Verified Start */}
+						<Switch
+							checked={row.original.verified}
+							disabled={toggleVerified.isPending}
+							onCheckedChange={(checked) =>
+								handleToggle(row.original.id, checked)
+							}
+							aria-label={
+								row.original.verified
+									? `Remove verified badge from ${row.original.name}`
+									: `Verify ${row.original.name}`
+							}
+						/>
+						{/* Verified End */}
+					</div>
+				)
+			},
 		},
 	]
 

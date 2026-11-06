@@ -1,4 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AvatarVerifiedBadge } from "@/components/verified-badge"
 import { useInitials } from "@/hooks/use-initials"
 import type { User } from "@/types"
 
@@ -25,6 +26,7 @@ export function UserInfo({
 						{getInitials(user.name)}
 					</AvatarFallback>
 				</Avatar>
+				{user.verified && <AvatarVerifiedBadge />}
 			</div>
 			<div className="grid flex-1 text-left text-sm leading-tight cursor-pointer">
 				<span className="truncate font-medium">{user.name}</span>

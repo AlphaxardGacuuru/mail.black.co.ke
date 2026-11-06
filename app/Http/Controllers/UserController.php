@@ -46,8 +46,13 @@ class UserController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(int|string $id): UserResource
+    public function show(Request $request, int|string $id): UserResource
     {
+        abort_unless(
+            $request->user()->id === $id || $request->user()->email === config('admin.email'),
+            403
+        );
+
         $user = $this->service->show($id);
 
         return new UserResource($user);
@@ -64,6 +69,22 @@ class UserController extends Controller
             'status' => $saved,
             'message' => $message,
             'data' => $user,
+        ], 200);
+    }
+
+    /**
+     * Give or take away a user's verified badge (admin only).
+     */
+    public function verify(Request $request, int|string $id): Response
+    {
+        $request->validate(['verified' => ['required', 'boolean']]);
+
+        [$saved, $message, $user] = $this->service->verify($id, $request->boolean('verified'));
+
+        return response([
+            'status' => $saved,
+            'message' => $message,
+            'data' => new UserResource($user),
         ], 200);
     }
 

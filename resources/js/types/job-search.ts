@@ -27,6 +27,7 @@ export type JobSeekerProfile = {
 	dailyLimit: number
 	minMatchScore: number
 	pausedReason: string | null
+	setupStep: JobSearchSetupStep | null
 	lastDiscoveryAt: string | null
 	lastAlertAt: string | null
 	lastAlertSource: string | null
@@ -75,6 +76,62 @@ export type JobApplicationTab =
 	| "manual"
 	| "closed"
 
+// How much the user has to do for an answer on an employer's form.
+export type ApplicationFormEffort = "filled" | "check" | "needs_you" | "optional"
+
+export type ApplicationFormField = {
+	key: string
+	type:
+		| "text"
+		| "email"
+		| "tel"
+		| "url"
+		| "number"
+		| "date"
+		| "textarea"
+		| "select"
+		| "combobox"
+		| "dropdown"
+		| "radio"
+		| "checkbox"
+		| "file"
+		| string
+	label: string
+	required: boolean
+	options: string[]
+	// The question a checkbox in a list belongs to.
+	group: string | null
+	answer: string
+	effort: ApplicationFormEffort
+	note: string | null
+	edited: boolean
+}
+
+export type ApplicationForm = {
+	status:
+		| "preparing"
+		| "ready"
+		| "blocked"
+		| "failed"
+		| "submitting"
+		| "submitted"
+		| "submit_failed"
+	error: string | null
+	url: string | null
+	captcha: string | null
+	// Whether a CAPTCHA solving service is set up to submit past one.
+	captchaSolved: boolean
+	minutesLeft: number
+	preparedAt: string | null
+	submittedAt: string | null
+	fields: ApplicationFormField[]
+	screenshots: {
+		form: string | null
+		filled: string | null
+		confirmation: string | null
+	}
+}
+
 export type JobApplication = {
 	id: string
 	status: JobApplicationStatus
@@ -86,6 +143,8 @@ export type JobApplication = {
 	appliedAt: string | null
 	repliedAt: string | null
 	createdAt: string
+	// Applying on the employer's own form; null until it's first prepared.
+	form: ApplicationForm | null
 	posting: {
 		title: string
 		company: string | null
@@ -99,3 +158,14 @@ export type JobApplication = {
 		postedAt: string | null
 	}
 }
+
+// The steps of the job search setup wizard, in order.
+export const JOB_SEARCH_SETUP_STEPS = [
+	"cv",
+	"address",
+	"cover_letter",
+	"preferences",
+	"sending",
+] as const
+
+export type JobSearchSetupStep = (typeof JOB_SEARCH_SETUP_STEPS)[number]

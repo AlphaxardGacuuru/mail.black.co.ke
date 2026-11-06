@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ApplicationFormStatus;
 use App\Enums\JobApplicationStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +16,10 @@ class JobApplication extends Model
 
     protected $casts = [
         'status' => JobApplicationStatus::class,
+        'form_status' => ApplicationFormStatus::class,
+        'form' => 'array',
+        'form_prepared_at' => 'datetime',
+        'form_submitted_at' => 'datetime',
         'match_score' => 'integer',
         'applied_at' => 'datetime',
         'replied_at' => 'datetime',

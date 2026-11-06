@@ -37,6 +37,7 @@ class JobSeekerProfileResource extends JsonResource
             'dailyLimit' => $this->daily_limit,
             'minMatchScore' => $this->min_match_score,
             'pausedReason' => $this->paused_reason,
+            'setupStep' => $this->setup_step,
             'lastDiscoveryAt' => $this->last_discovery_at,
             'lastAlertAt' => $this->last_alert_at,
             'lastAlertSource' => $this->last_alert_source,

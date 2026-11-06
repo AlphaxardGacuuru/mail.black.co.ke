@@ -259,4 +259,37 @@ class FilePondController extends Controller
 
         return response('Attachment deleted', 200);
     }
+
+    /*
+     * Chat Compose Attachments
+     */
+
+    public function storeChatAttachment(Request $request): Response
+    {
+        $this->validate($request, [
+            'filepond-chat-attachments' => 'required|file|max:25600',
+        ]);
+
+        $temporaryUpload = $this->uploadToTemporaryStore(
+            $request,
+            'filepond-chat-attachments',
+            'temporary-uploads/chat'
+        );
+
+        return response((string) $temporaryUpload->id, 200);
+    }
+
+    public function destroyChatAttachment(int|string $id): Response
+    {
+        $temporaryUpload = TemporaryUpload::find($id);
+
+        if (! $temporaryUpload) {
+            return response('Attachment already removed', 200);
+        }
+
+        Storage::disk($temporaryUpload->disk)->delete($temporaryUpload->path);
+        $temporaryUpload->delete();
+
+        return response('Attachment deleted', 200);
+    }
 }

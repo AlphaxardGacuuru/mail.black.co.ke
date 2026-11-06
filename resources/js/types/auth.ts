@@ -24,6 +24,7 @@ export type User = {
 	email: string
 	avatar?: string
 	email_verified_at: string | null
+	verified?: boolean
 	twoFactorEnabled?: boolean
 	can_view_ai_usage?: boolean
 	created_at: string

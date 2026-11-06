@@ -3,13 +3,14 @@ import {
 	Archive,
 	Download,
 	Inbox,
+	MessageSquareMore,
 	Send,
 	Star,
 	Trash2,
 } from "lucide-react"
 import { AdminNav } from "@/components/admin/AdminNav"
 import AppLogo from "@/components/app-logo"
-import { JobApplicationsNav, MailNav } from "@/components/mail-nav"
+import { ChatsNav, JobApplicationsNav, MailNav } from "@/components/mail-nav"
 import MailRealtimeNotifier from "@/components/mail/MailRealtimeNotifier"
 import { NavFooter } from "@/components/nav-footer"
 import { NavUser } from "@/components/nav-user"
@@ -53,6 +54,21 @@ export function findActiveNavHref(
 
 	return best
 }
+
+export const CHATS_URL = "/chats"
+
+export const chatNavItems: NavItem[] = [
+	{
+		title: "Chats",
+		href: CHATS_URL,
+		icon: MessageSquareMore,
+	},
+	{
+		title: "Archived",
+		href: `${CHATS_URL}/archived`,
+		icon: Archive,
+	},
+]
 
 export const mailNavItems: NavItem[] = [
 	{ title: "Inbox", href: "/mail", icon: Inbox },
@@ -108,6 +124,7 @@ export function AppSidebar() {
 			</SidebarHeader>
 
 			<SidebarContent>
+				<ChatsNav />
 				<MailNav />
 				<JobApplicationsNav />
 				{isAdmin && <AdminNav />}

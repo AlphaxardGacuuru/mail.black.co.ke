@@ -2,6 +2,7 @@ import { format, formatDistanceToNow } from "date-fns"
 import {
 	BellRing,
 	Briefcase,
+	ChevronDown,
 	ExternalLink,
 	LoaderCircle,
 	MailOpen,
@@ -9,12 +10,14 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import Heading from "@/components/heading"
+import { ApplicationFormPanel } from "@/components/job-search/application-form-panel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { GlassCard } from "@/components/ui/glass-card"
 import { Input } from "@/components/ui/input"
 import { Link } from "@/components/ui/link"
 import { Skeleton } from "@/components/ui/skeleton"
+import { StoryCard } from "@/components/story/story-card"
 import {
 	JOB_APPLICATION_TABS,
 	JOB_APPLICATIONS_URL,
@@ -30,6 +33,7 @@ import {
 	useSaveDraft,
 	useSkipApplication,
 } from "@/queries/job-search"
+import { useStories } from "@/queries/stories"
 import type { JobApplication, JobApplicationTab } from "@/types"
 
 function ScoreBadge({ score }: { score: number | null }) {
@@ -154,16 +158,39 @@ function ApplicationCard({
 }) {
 	const skip = useSkipApplication()
 	const { posting } = application
+	// An "apply yourself" match opens to fill in the employer's form.
+	const opens = tab === "manual" && !!posting.url
+	const [open, setOpen] = useState(false)
+
+	const heading = (
+		<>
+			<div className="font-medium">{posting.title}</div>
+			<div className="text-sm text-muted-foreground">
+				{[posting.company, posting.location].filter(Boolean).join(" · ")}
+			</div>
+		</>
+	)
 
 	return (
 		<li className="space-y-3 p-4 sm:p-5">
 			<div className="flex flex-wrap items-start justify-between gap-2">
-				<div className="min-w-0">
-					<div className="font-medium">{posting.title}</div>
-					<div className="text-sm text-muted-foreground">
-						{[posting.company, posting.location].filter(Boolean).join(" · ")}
-					</div>
-				</div>
+				{opens ? (
+					<button
+						type="button"
+						aria-expanded={open}
+						onClick={() => setOpen(!open)}
+						className="flex min-w-0 cursor-pointer items-start gap-2 text-left">
+						<ChevronDown
+							className={cn(
+								"mt-0.5 size-5 shrink-0 text-muted-foreground transition-transform",
+								open && "rotate-180"
+							)}
+						/>
+						<div className="min-w-0">{heading}</div>
+					</button>
+				) : (
+					<div className="min-w-0">{heading}</div>
+				)}
 				<div className="flex items-center gap-2">
 					{application.status === "replied" && <Badge>Replied</Badge>}
 					{application.status === "failed" && (
@@ -186,6 +213,19 @@ function ApplicationCard({
 					<span className="font-medium">How to apply: </span>
 					{posting.applyInstructions}
 				</p>
+			)}
+
+			{opens && open && <ApplicationFormPanel application={application} />}
+
+			{opens && !open && application.form?.status === "ready" && (
+				<button
+					type="button"
+					onClick={() => setOpen(true)}
+					className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+					Answers ready to review
+					{application.form.minutesLeft > 0 &&
+						` · about ${application.form.minutesLeft} min left`}
+				</button>
 			)}
 
 			<div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
@@ -265,6 +305,26 @@ function ApplicationCard({
  * what's been sent (replies arrive in the inbox), and matches to apply to
  * by hand. Each tab has its own URL, linked from the sidebar and bottom nav.
  */
+/** Everyone's stories from the last day, posted by Black Mail. */
+function StoriesRow() {
+	const { data: stories } = useStories()
+
+	if (!stories?.length) {
+		return null
+	}
+
+	return (
+		<div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
+			{stories.map((story) => (
+				<StoryCard
+					key={story.id}
+					story={story}
+				/>
+			))}
+		</div>
+	)
+}
+
 export default function JobApplications({
 	tab = "review",
 }: {
@@ -279,6 +339,46 @@ export default function JobApplications({
 		JOB_APPLICATION_TABS.find((item) => item.key === tab) ??
 		JOB_APPLICATION_TABS[0]
 
+	// Until job search is on there's nothing to show but the way to set it up,
+	// like mail without a mailbox.
+	if (settings && !settings.profile?.autoApply) {
+		return (
+			<>
+				<Head title="Jobs" />
+
+				<div className="mx-auto w-full max-w-3xl">
+					<StoriesRow />
+				</div>
+
+				<div className="flex min-h-[calc(100vh-4rem)] flex-1 flex-col items-center justify-center gap-4 text-center">
+					<Briefcase className="size-10 text-muted-foreground" />
+					<h1 className="text-xl font-semibold">
+						{settings.profile?.pausedReason
+							? "Job search is paused"
+							: "Let jobs find you"}
+					</h1>
+					<p className="max-w-md text-muted-foreground">
+						{settings.profile?.pausedReason ??
+							"Upload your CV and we'll find jobs that match it on Kenyan job boards and careers pages, then apply by email for you."}
+					</p>
+					<Link
+						href={
+							settings.profile?.pausedReason
+								? "/settings/job-search"
+								: `${JOB_APPLICATIONS_URL}/setup`
+						}
+						variant="solid">
+						{settings.profile?.pausedReason
+							? "Turn job search back on"
+							: settings.profile?.setupStep
+								? "Continue setup"
+								: "Set up job search"}
+					</Link>
+				</div>
+			</>
+		)
+	}
+
 	return (
 		<>
 			<Head title="Jobs" />
@@ -289,39 +389,15 @@ export default function JobApplications({
 						title="Jobs"
 						description="Jobs matched to your CV, and the applications sent from your mailbox."
 					/>
-					<div className="flex gap-2">
-						<Link
-							href="/settings/job-search"
-							variant="outline"
-							size="sm">
-							Settings
-						</Link>
-						<Link
-							href={`${JOB_APPLICATIONS_URL}/add`}
-							variant="solid"
-							size="sm">
-							<Plus />
-							Add a job
-						</Link>
-					</div>
+					<Link
+						href="/settings/job-search"
+						variant="outline"
+						size="sm">
+						Settings
+					</Link>
 				</div>
 
-				{settings && !settings.profile?.autoApply && (
-					<GlassCard className="flex flex-wrap items-center gap-3 p-4 text-sm">
-						<Briefcase className="size-5 shrink-0 text-muted-foreground" />
-						<span className="min-w-0 flex-1">
-							{settings.profile?.pausedReason
-								? `Job search is paused: ${settings.profile.pausedReason}`
-								: "Job search is off. Turn it on to start finding jobs."}
-						</span>
-						<Link
-							href="/settings/job-search"
-							variant="outline"
-							size="sm">
-							Set up
-						</Link>
-					</GlassCard>
-				)}
+				<StoriesRow />
 
 				{settings?.profile?.autoApply && !settings.profile.lastAlertAt && (
 					<GlassCard className="flex flex-wrap items-center gap-3 p-4 text-sm">
@@ -345,7 +421,7 @@ export default function JobApplications({
 						"overflow-hidden",
 						isFetching && !isLoading && "opacity-70"
 					)}>
-					{isLoading ? (
+					{isLoading || !settings ? (
 						<div className="space-y-3 p-5">
 							<Skeleton className="h-5 w-1/2" />
 							<Skeleton className="h-4 w-1/3" />
@@ -390,6 +466,21 @@ export default function JobApplications({
 					</div>
 				)}
 			</div>
+
+			{settings && (
+				<Link
+					href={`${JOB_APPLICATIONS_URL}/add`}
+					variant="solid"
+					size="icon"
+					aria-label="Add a job"
+					title="Add a job"
+					className="fixed right-6 bottom-26 z-50 size-14 rounded-full shadow-lg md:bottom-6">
+					<Plus
+						className="size-6"
+						strokeWidth={1.5}
+					/>
+				</Link>
+			)}
 		</>
 	)
 }

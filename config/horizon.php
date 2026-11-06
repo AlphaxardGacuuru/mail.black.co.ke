@@ -210,6 +210,21 @@ return [
             'timeout' => 60,
             'nice' => 0,
         ],
+
+        // Application forms, in a headless browser: one at a time, so only
+        // one browser is ever open (they take a few hundred MB each).
+        'supervisor-browser' => [
+            'connection' => 'redis-browser',
+            'queue' => ['browser'],
+            'balance' => false,
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 256,
+            'tries' => 1,
+            'timeout' => 300,
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [
@@ -219,12 +234,14 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-browser' => [],
         ],
 
         'local' => [
             'supervisor-1' => [
                 'maxProcesses' => 3,
             ],
+            'supervisor-browser' => [],
         ],
     ],
 

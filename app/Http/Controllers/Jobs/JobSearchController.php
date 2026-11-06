@@ -141,6 +141,25 @@ class JobSearchController extends Controller
     }
 
     /**
+     * Remember where the user is in the setup wizard, so leaving it part
+     * way picks up there next time.
+     */
+    public function updateSetupStep(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'step' => 'required|in:cv,address,cover_letter,preferences,sending',
+        ]);
+
+        $user = $request->user();
+
+        $this->profile($user)
+            ->fill(['setup_step' => $data['step']])
+            ->save();
+
+        return response()->json($this->state($user->fresh()));
+    }
+
+    /**
      * The user's own cover letter and how it's used. Without one, the AI
      * writes each letter from the CV.
      */

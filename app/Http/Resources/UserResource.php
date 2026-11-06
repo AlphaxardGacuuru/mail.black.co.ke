@@ -41,6 +41,7 @@ class UserResource extends JsonResource
             "phone" => $this->phone,
             "gender" => $this->gender,
             "avatar" => $this->avatar,
+            "verified" => (bool) $this->verified,
             "accountType" => $this->account_type,
             "emailVerifiedAt" => $this->email_verified_at,
             "settings" => $this->settings,

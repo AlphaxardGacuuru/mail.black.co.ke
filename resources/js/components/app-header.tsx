@@ -37,6 +37,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { UserMenuContent } from "@/components/user-menu-content"
+import { AvatarVerifiedBadge } from "@/components/verified-badge"
 import { useCurrentUrl } from "@/hooks/use-current-url"
 import { useInitials } from "@/hooks/use-initials"
 import { cn, toUrl } from "@/lib/utils"
@@ -198,7 +199,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 							<DropdownMenuTrigger asChild>
 								<Button
 									variant="ghost"
-									className="size-10 rounded-full p-1">
+									className="relative size-10 rounded-full p-1">
 									<Avatar className="size-8 overflow-hidden rounded-full">
 										<AvatarImage
 											src={auth?.avatar}
@@ -208,6 +209,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 											{getInitials(auth?.name ?? "")}
 										</AvatarFallback>
 									</Avatar>
+									{auth?.verified && (
+										<AvatarVerifiedBadge className="right-0.5 bottom-0.5" />
+									)}
 								</Button>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent

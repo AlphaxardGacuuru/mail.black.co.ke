@@ -126,14 +126,23 @@ registerRoute(
 	})
 )
 
-// Notifications change the moment they're read or deleted, so a refetch
-// must reach the network (falling back to the cache only when offline);
-// stale-while-revalidate would hand back the list from before the change.
+// Notifications and chats change the moment they're read or deleted, so a
+// refetch must reach the network (falling back to the cache only when
+// offline); stale-while-revalidate would hand back the list from before the
+// change.
 registerRoute(
 	({ url }) =>
 		url.origin === self.location.origin &&
 		url.pathname.startsWith("/api/notifications"),
 	new NetworkFirst({ cacheName: "api-notifications" })
+)
+
+registerRoute(
+	({ url, request }) =>
+		url.origin === self.location.origin &&
+		url.pathname.startsWith("/api/chat/") &&
+		request.method === "GET",
+	new NetworkFirst({ cacheName: "api-chat", networkTimeoutSeconds: 4 })
 )
 
 // Mail read routes: stale-while-revalidate, so the last-fetched threads,
@@ -219,12 +228,19 @@ registerRoute(
 
 // ─── Web push notifications ───────────────────────────────────────────────────
 
+type PushAction = { action: string; title: string }
+
+type PushNotificationData = { url?: string; conversationId?: string }
+
 type PushPayload = {
 	title?: string
 	body?: string
 	icon?: string
 	badge?: string
-	data?: { url?: string }
+	tag?: string
+	renotify?: boolean
+	actions?: PushAction[]
+	data?: PushNotificationData
 }
 
 self.addEventListener("push", (event) => {
@@ -234,39 +250,142 @@ self.addEventListener("push", (event) => {
 
 	const payload: PushPayload = event.data.json()
 
+	// `renotify` and `actions` (chat's reply/mark read/delete) are real,
+	// supported NotificationOptions fields missing from TypeScript's bundled
+	// DOM lib.
+	const options: NotificationOptions & {
+		renotify?: boolean
+		actions?: PushAction[]
+	} = {
+		body: payload.body,
+		icon: payload.icon ?? "/notification-icon-192x192.png",
+		badge: payload.badge ?? "/notification-badge-192x192.png",
+		tag: payload.tag,
+		renotify: payload.renotify,
+		actions: payload.actions,
+		data: payload.data,
+	}
+
 	event.waitUntil(
-		self.registration.showNotification(payload.title ?? "New notification", {
-			body: payload.body,
-			icon: payload.icon ?? "/notification-icon-192x192.png",
-			badge: payload.badge ?? "/notification-badge-192x192.png",
-			data: payload.data,
-		})
+		self.registration.showNotification(
+			payload.title ?? "New notification",
+			options
+		)
 	)
 })
+
+function openUrl(url: string) {
+	return self.clients
+		.matchAll({ type: "window", includeUncontrolled: true })
+		.then((clients) => {
+			const target = new URL(url, self.location.origin).href
+			const existing = clients.find((client) => client.url === target)
+
+			if (existing) {
+				return existing.focus()
+			}
+
+			return self.clients.openWindow(target)
+		})
+}
+
+// Opens the conversation (or focuses it if already open in some tab), the
+// fallback for a reply that couldn't be sent from the service worker.
+// `draft` prefills the message composer so a typed reply is never lost.
+function openConversation(url: string, draft?: string) {
+	const targetUrl = draft ? `${url}?draft=${encodeURIComponent(draft)}` : url
+
+	return self.clients
+		.matchAll({ type: "window", includeUncontrolled: true })
+		.then((clients) => {
+			const targetPath = new URL(url, self.location.origin).pathname
+			const existing = clients.find(
+				(client) => new URL(client.url).pathname === targetPath
+			)
+
+			if (existing) {
+				return existing.focus()
+			}
+
+			return self.clients.openWindow(
+				new URL(targetUrl, self.location.origin).href
+			)
+		})
+}
+
+// A same-origin request carrying whatever session cookie the browser has.
+// A service worker can't reach the bearer token an open tab keeps in
+// localStorage, so this only authenticates for session-cookie logins and
+// fails silently for everyone else.
+function apiFetch(path: string, method: string, body?: unknown) {
+	return fetch(path, {
+		method,
+		credentials: "include",
+		headers: {
+			Accept: "application/json",
+			"X-Requested-With": "XMLHttpRequest",
+			...(body ? { "Content-Type": "application/json" } : {}),
+		},
+		body: body ? JSON.stringify(body) : undefined,
+	}).then((response) => {
+		if (!response.ok) {
+			throw new Error(`Request to ${path} failed with ${response.status}`)
+		}
+	})
+}
 
 self.addEventListener("notificationclick", (event) => {
 	event.notification.close()
 
-	const url = (event.notification.data as { url?: string } | undefined)?.url
+	const data = event.notification.data as PushNotificationData | undefined
 
-	if (!url) {
+	if (!data?.url) {
 		return
 	}
 
-	event.waitUntil(
-		self.clients
-			.matchAll({ type: "window", includeUncontrolled: true })
-			.then((clients) => {
-				const target = new URL(url, self.location.origin).href
-				const existing = clients.find((client) => client.url === target)
+	const conversationId = data.conversationId
 
-				if (existing) {
-					return existing.focus()
-				}
+	if (!conversationId) {
+		event.waitUntil(openUrl(data.url))
 
-				return self.clients.openWindow(target)
-			})
-	)
+		return
+	}
+
+	// Inline reply text, typed straight into the notification; only some
+	// browsers support it and TypeScript's NotificationEvent lacks it.
+	const reply = (event as unknown as { reply?: string }).reply
+
+	if (event.action === "mark-read") {
+		event.waitUntil(
+			apiFetch(`/api/chat/conversations/${conversationId}/read`, "POST").catch(
+				() => {}
+			)
+		)
+
+		return
+	}
+
+	if (event.action === "delete") {
+		event.waitUntil(
+			apiFetch(`/api/chat/conversations/${conversationId}`, "DELETE").catch(
+				() => {}
+			)
+		)
+
+		return
+	}
+
+	if (event.action === "reply" && reply) {
+		event.waitUntil(
+			apiFetch(`/api/chat/conversations/${conversationId}/messages`, "POST", {
+				body: reply,
+			}).catch(() => openConversation(data.url!, reply))
+		)
+
+		return
+	}
+
+	event.waitUntil(openConversation(data.url))
 })
 
 // ─── SPA navigation fallback ──────────────────────────────────────────────────

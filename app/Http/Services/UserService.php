@@ -77,11 +77,21 @@ class UserService extends Service
 
 		$saved = $user->save();
 
-		if ($request->filled('userRoles')) {
+		// Users can update their own account, but only the admin sets roles.
+		if ($request->filled('userRoles') && $request->user()?->email === config('admin.email')) {
 			$user->syncRoles($request->input('userRoles'));
 		}
 
 		return [$saved, 'Account Updated', $user->fresh()];
+	}
+
+	public function verify(int|string $id, bool $verified): array
+	{
+		$user = User::query()->findOrFail($id);
+		$user->verified = $verified;
+		$saved = $user->save();
+
+		return [$saved, $verified ? 'User Verified' : 'Verification Removed', $user->fresh()];
 	}
 
 	public function destroy(int|string $id): array

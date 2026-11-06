@@ -1,8 +1,8 @@
-import { Briefcase, Mail, Tag } from "lucide-react"
+import { Briefcase, Mail, MessageSquareMore, Tag } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import { Link } from "@/components/ui/link"
-import { mailNavItems } from "@/components/app-sidebar"
+import { CHATS_URL, chatNavItems, mailNavItems } from "@/components/app-sidebar"
 import {
 	SidebarGroup,
 	SidebarMenu,
@@ -74,7 +74,7 @@ function NavSubLink({
 }
 
 /**
- * A section link (Mail, Jobs) with its pages under it. On small
+ * A section link (Chats, Mail, Jobs) with its pages under it. On small
  * screens the bottom nav lists those pages, so only `everyScreen` links stay.
  */
 function NavSection({
@@ -133,6 +133,21 @@ function NavSection({
 				</SidebarMenuSub>
 			)}
 		</SidebarMenuItem>
+	)
+}
+
+export function ChatsNav() {
+	return (
+		<SidebarGroup className="px-2 py-0">
+			<SidebarMenu>
+				<NavSection
+					title="Chats"
+					href={CHATS_URL}
+					icon={MessageSquareMore}
+					items={chatNavItems}
+				/>
+			</SidebarMenu>
+		</SidebarGroup>
 	)
 }
 

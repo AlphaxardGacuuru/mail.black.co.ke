@@ -14,6 +14,7 @@
         "cknow/laravel-money": "^8.5",
         "ezyang/htmlpurifier": "^4.19",
         "inertiajs/inertia-laravel": "^3.0",
+        "intervention/image": "^4.3",
         "kopokopo/k2-connect-php": "^2.0",
         "laragear/two-factor": "^4.0",
         "laravel-notification-channels/webpush": "^11.0",

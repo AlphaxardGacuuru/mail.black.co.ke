@@ -6,8 +6,10 @@ import {
 } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import JobApplicationController from "@/actions/App/Http/Controllers/Jobs/JobApplicationController"
+import JobApplicationFormController from "@/actions/App/Http/Controllers/Jobs/JobApplicationFormController"
 import JobSearchController from "@/actions/App/Http/Controllers/Jobs/JobSearchController"
 import Axios from "@/lib/axios"
+import type { JobSearchSetupStep } from "@/types/job-search"
 import type {
 	CoverLetterMode,
 	JobApplication,
@@ -99,6 +101,12 @@ export function useUploadCv() {
 	})
 }
 
+export function useSaveSetupStep() {
+	return useJobSearchMutation((step: JobSearchSetupStep) =>
+		Axios.put(JobSearchController.updateSetupStep.url(), { step })
+	)
+}
+
 export function useSaveCoverLetter() {
 	return useJobSearchMutation(
 		(variables: { coverLetter: string; coverLetterMode: CoverLetterMode }) =>
@@ -187,6 +195,14 @@ export function useJobApplications(tab: JobApplicationTab, page: number) {
 				JobApplicationController.index.url({ query: { tab, page } })
 			).then((response) => response.data),
 		placeholderData: keepPreviousData,
+		// An application form is read and submitted in the background;
+		// check back until it's done.
+		refetchInterval: (query) =>
+			query.state.data?.data.some((application) =>
+				["preparing", "submitting"].includes(application.form?.status ?? "")
+			)
+				? 4000
+				: false,
 	})
 }
 
@@ -225,6 +241,29 @@ export function useApproveApplication() {
 export function useSkipApplication() {
 	return useJobApplicationMutation((id: string) =>
 		Axios.post(JobApplicationController.skip.url(id))
+	)
+}
+
+type FormAnswers = { id: string; answers?: Record<string, string> }
+
+/**
+ * Reads the employer's application form and suggests answers.
+ */
+export function usePrepareApplicationForm() {
+	return useJobApplicationMutation((id: string) =>
+		Axios.post(JobApplicationFormController.prepare.url(id))
+	)
+}
+
+export function useSaveApplicationFormAnswers() {
+	return useJobApplicationMutation(({ id, answers }: FormAnswers) =>
+		Axios.patch(JobApplicationFormController.update.url(id), { answers })
+	)
+}
+
+export function useSubmitApplicationForm() {
+	return useJobApplicationMutation(({ id, answers }: FormAnswers) =>
+		Axios.post(JobApplicationFormController.submit.url(id), { answers })
 	)
 }
 

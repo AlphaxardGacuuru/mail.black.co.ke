@@ -1,5 +1,10 @@
 import { Link } from "@/components/ui/link"
-import { findActiveNavHref, mailNavItems } from "@/components/app-sidebar"
+import {
+	CHATS_URL,
+	chatNavItems,
+	findActiveNavHref,
+	mailNavItems,
+} from "@/components/app-sidebar"
 import { useCurrentUrl } from "@/hooks/use-current-url"
 import { badgeLabel, useNavBadges } from "@/hooks/use-nav-badges"
 import { shouldHideBottomNav } from "@/lib/bottom-nav"
@@ -17,14 +22,15 @@ export function AppBottomNav() {
 		return null
 	}
 
-	// Shows the menu of the section you're in; everywhere outside job
-	// applications (settings, notifications) keeps the mail folders.
-	const inJobApplications =
-		currentUrl === JOB_APPLICATIONS_URL ||
-		currentUrl.startsWith(`${JOB_APPLICATIONS_URL}/`)
-	const bottomNavItems = inJobApplications
-		? jobApplicationNavItems
-		: mailNavItems
+	// Shows the menu of the section you're in; everywhere outside chats and
+	// jobs (settings, notifications) keeps the mail folders.
+	const inSection = (url: string) =>
+		currentUrl === url || currentUrl.startsWith(`${url}/`)
+	const bottomNavItems = inSection(CHATS_URL)
+		? chatNavItems
+		: inSection(JOB_APPLICATIONS_URL)
+			? jobApplicationNavItems
+			: mailNavItems
 	const activeHref = findActiveNavHref(currentUrl, bottomNavItems)
 
 	return (

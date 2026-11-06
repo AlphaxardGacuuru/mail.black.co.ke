@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 class MyJobMagSource
 {
     /**
-     * @return array{description: ?string, location: ?string, apply_email: ?string, apply_instructions: ?string}
+     * @return array{description: ?string, location: ?string, apply_email: ?string, apply_instructions: ?string, apply_url: ?string}
      */
     public function parseJobPage(string $html): array
     {
@@ -29,11 +29,22 @@ class MyJobMagSource
 
         $instructions = $text('//*[@id="application-method"]/following-sibling::div[1]');
 
+        // "Go to Acme on acme.bamboohr.com to apply" links to MyJobMag's
+        // /apply-now/{id}, which redirects to the employer's form.
+        $applyLink = $xpath->query('//*[@id="application-method"]/following-sibling::div[1]//a[contains(@href, "/apply-now/")]/@href')?->item(0)?->nodeValue;
+
         return [
             'description' => Str::limit($text('//div[contains(@class, "job-details")]'), 20000, '') ?: null,
             'location' => Str::limit($location, 250, '') ?: null,
             'apply_email' => self::firstEmail($instructions),
             'apply_instructions' => Str::limit($instructions, 2000, '') ?: null,
+            'apply_url' => $applyLink
+                ? Str::of($applyLink)
+                    ->unless(Str::startsWith($applyLink, 'http'), fn ($link) => $link
+                        ->start('/')
+                        ->prepend('https://www.myjobmag.co.ke'))
+                    ->toString()
+                : null,
         ];
     }
 

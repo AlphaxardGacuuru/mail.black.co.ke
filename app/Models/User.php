@@ -54,6 +54,8 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         'settings' => 'object',
         'notification_preferences' => 'array',
         'email_verified_at' => 'datetime',
+        'last_seen_at' => 'datetime',
+        'verified' => 'boolean',
         'updated_at' => 'datetime:d M Y',
         'created_at' => 'datetime:d M Y',
     ];
@@ -205,6 +207,11 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     public function activeMailgunAccount()
     {
         return $this->belongsTo(MailgunAccount::class, 'active_mailgun_account_id');
+    }
+
+    public function stories()
+    {
+        return $this->hasMany(Story::class);
     }
 
     public function jobSeekerProfile()

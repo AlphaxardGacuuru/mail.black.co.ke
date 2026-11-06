@@ -5,6 +5,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { UserMenuContent } from '@/components/user-menu-content';
+import { AvatarVerifiedBadge } from '@/components/verified-badge';
 import { useInitials } from '@/hooks/use-initials';
 import { useApp } from '@/contexts/AppContext';
 
@@ -22,7 +23,7 @@ export function FloatingUserAvatar() {
                 <DropdownMenuTrigger asChild>
                     <button
                         type="button"
-                        className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/50 bg-background/90 p-1 shadow-lg backdrop-blur-sm transition-transform duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                        className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/50 bg-background/90 p-1 shadow-lg backdrop-blur-sm transition-transform duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                         aria-label="Open user menu"
                     >
                         <Avatar className="h-10 w-10 overflow-hidden rounded-full">
@@ -34,6 +35,7 @@ export function FloatingUserAvatar() {
                                 {getInitials(auth.name)}
                             </AvatarFallback>
                         </Avatar>
+                        {auth.verified && <AvatarVerifiedBadge className="right-0.5 bottom-0.5 size-4" />}
                     </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" sideOffset={8}>
