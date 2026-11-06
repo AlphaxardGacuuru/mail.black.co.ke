@@ -1,6 +1,7 @@
 import { Link } from "@/components/ui/link"
 import {
 	Archive,
+	CirclePlay,
 	Download,
 	Inbox,
 	MessageSquareMore,
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/sidebar"
 const HOME_URL = "/mail"
 import type { NavItem } from "@/types"
+import { STORIES_URL } from "@/lib/stories"
 import { toUrl } from "@/lib/utils"
 
 // Sibling routes like /chats and /chats/archived both start with "/chats",
@@ -62,6 +64,11 @@ export const chatNavItems: NavItem[] = [
 		title: "Chats",
 		href: CHATS_URL,
 		icon: MessageSquareMore,
+	},
+	{
+		title: "Stories",
+		href: STORIES_URL,
+		icon: CirclePlay,
 	},
 	{
 		title: "Archived",

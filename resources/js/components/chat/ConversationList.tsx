@@ -90,7 +90,7 @@ export default function ConversationList({
 	)
 
 	return (
-		<div className="relative flex h-full flex-col">
+		<div className="relative flex min-h-0 flex-1 flex-col">
 			<div className="flex-1 space-y-1 overflow-y-auto p-1.5 md:space-y-2 md:p-3">
 				{isLoading && (
 					<>

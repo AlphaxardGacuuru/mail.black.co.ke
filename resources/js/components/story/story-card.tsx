@@ -1,5 +1,6 @@
 import { Link } from "@/components/ui/link"
 import { AvatarVerifiedBadge } from "@/components/verified-badge"
+import { storyUrl } from "@/lib/stories"
 import { cn } from "@/lib/utils"
 import type { Story } from "@/types/story"
 
@@ -9,7 +10,7 @@ export function StoryCard({ story }: { story: Story }) {
 
 	return (
 		<Link
-			href={`/stories/${story.id}/view`}
+			href={storyUrl(story.id)}
 			variant="unstyled"
 			className="group w-28 shrink-0 snap-start sm:w-32">
 			<div

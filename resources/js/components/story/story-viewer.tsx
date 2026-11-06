@@ -14,7 +14,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Link } from "@/components/ui/link"
 import { AvatarVerifiedBadge } from "@/components/verified-badge"
-import { JOB_APPLICATIONS_URL } from "@/lib/job-application-tabs"
+import { STORIES_URL, storyUrl } from "@/lib/stories"
 import { cn } from "@/lib/utils"
 import { markStorySeen, storyKeys } from "@/queries/stories"
 import type { Story } from "@/types/story"
@@ -62,7 +62,7 @@ export function StoryViewer({ stories, startId }: Props) {
 
 	const close = useCallback(() => {
 		void queryClient.invalidateQueries({ queryKey: storyKeys.all })
-		void navigate({ to: JOB_APPLICATIONS_URL as never })
+		void navigate({ to: STORIES_URL as never })
 	}, [navigate, queryClient])
 
 	const goToStory = useCallback(
@@ -74,7 +74,7 @@ export function StoryViewer({ stories, startId }: Props) {
 			window.history.replaceState(
 				window.history.state,
 				"",
-				`/stories/${stories[index].id}/view`
+				storyUrl(stories[index].id)
 			)
 		},
 		[stories]

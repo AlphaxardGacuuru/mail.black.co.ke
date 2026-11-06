@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router"
 import ChatEmptyState from "@/components/chat/ChatEmptyState"
 import ConversationList from "@/components/chat/ConversationList"
 import ConversationView from "@/components/chat/ConversationView"
+import { StoriesRow } from "@/components/story/stories-row"
 import { useIsMobile } from "@/hooks/use-mobile"
 import type { ChatConversation } from "@/types/chat"
 
@@ -40,6 +41,7 @@ export default function ChatShell({
 	if (isMobile) {
 		return (
 			<div className="flex h-[calc(100dvh-4rem)] flex-col overflow-hidden">
+				{!archived && <StoriesRow className="shrink-0 px-1.5 pt-1.5 pb-1" />}
 				<ConversationList
 					selectedId={null}
 					onSelect={handleSelect}
@@ -53,7 +55,8 @@ export default function ChatShell({
 
 	return (
 		<div className="flex h-[calc(100vh-6rem)] gap-2">
-			<section className="w-1/3 shrink-0 overflow-hidden rounded-lg border bg-card shadow-sm">
+			<section className="flex w-1/3 shrink-0 flex-col overflow-hidden rounded-lg border bg-card shadow-sm">
+				{!archived && <StoriesRow className="shrink-0 px-3 pt-3" />}
 				<ConversationList
 					selectedId={pane.type === "conversation" ? pane.id : null}
 					onSelect={handleSelect}

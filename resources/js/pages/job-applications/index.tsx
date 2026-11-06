@@ -17,7 +17,6 @@ import { GlassCard } from "@/components/ui/glass-card"
 import { Input } from "@/components/ui/input"
 import { Link } from "@/components/ui/link"
 import { Skeleton } from "@/components/ui/skeleton"
-import { StoryCard } from "@/components/story/story-card"
 import {
 	JOB_APPLICATION_TABS,
 	JOB_APPLICATIONS_URL,
@@ -33,7 +32,6 @@ import {
 	useSaveDraft,
 	useSkipApplication,
 } from "@/queries/job-search"
-import { useStories } from "@/queries/stories"
 import type { JobApplication, JobApplicationTab } from "@/types"
 
 function ScoreBadge({ score }: { score: number | null }) {
@@ -305,26 +303,6 @@ function ApplicationCard({
  * what's been sent (replies arrive in the inbox), and matches to apply to
  * by hand. Each tab has its own URL, linked from the sidebar and bottom nav.
  */
-/** Everyone's stories from the last day, posted by Black Mail. */
-function StoriesRow() {
-	const { data: stories } = useStories()
-
-	if (!stories?.length) {
-		return null
-	}
-
-	return (
-		<div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
-			{stories.map((story) => (
-				<StoryCard
-					key={story.id}
-					story={story}
-				/>
-			))}
-		</div>
-	)
-}
-
 export default function JobApplications({
 	tab = "review",
 }: {
@@ -345,10 +323,6 @@ export default function JobApplications({
 		return (
 			<>
 				<Head title="Jobs" />
-
-				<div className="mx-auto w-full max-w-3xl">
-					<StoriesRow />
-				</div>
 
 				<div className="flex min-h-[calc(100vh-4rem)] flex-1 flex-col items-center justify-center gap-4 text-center">
 					<Briefcase className="size-10 text-muted-foreground" />
@@ -396,8 +370,6 @@ export default function JobApplications({
 						Settings
 					</Link>
 				</div>
-
-				<StoriesRow />
 
 				{settings?.profile?.autoApply && !settings.profile.lastAlertAt && (
 					<GlassCard className="flex flex-wrap items-center gap-3 p-4 text-sm">

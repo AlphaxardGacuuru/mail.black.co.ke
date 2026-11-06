@@ -3,7 +3,7 @@ import { StoryViewer } from "@/components/story/story-viewer"
 import { Link } from "@/components/ui/link"
 import { Spinner } from "@/components/ui/spinner"
 import { Head } from "@/lib/spa"
-import { JOB_APPLICATIONS_URL } from "@/lib/job-application-tabs"
+import { STORIES_URL } from "@/lib/stories"
 import { useStories, useStory } from "@/queries/stories"
 
 /**
@@ -30,7 +30,7 @@ export default function StoryShow({ id }: { id: string }) {
 			) : (
 				<div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black text-white">
 					<Link
-						href={JOB_APPLICATIONS_URL}
+						href={STORIES_URL}
 						variant="ghost"
 						size="icon"
 						aria-label="Close"
