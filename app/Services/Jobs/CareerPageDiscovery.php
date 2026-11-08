@@ -147,7 +147,7 @@ class CareerPageDiscovery
 
         // The answer is cached and shared by everyone looking for the same
         // roles in the same places, so it's billed to the system, not a user.
-        $this->aiUsageService->record(null, AiUsage::FEATURE_CAREER_PAGE_SEARCH, $response);
+        $this->aiUsageService->record(null, AiUsage::FEATURE_CAREER_PAGE_SEARCH, $response, searches: 1);
 
         $candidates = collect();
 

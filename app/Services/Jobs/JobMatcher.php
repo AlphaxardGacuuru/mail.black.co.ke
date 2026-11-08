@@ -13,6 +13,7 @@ use App\Models\JobSeekerProfile;
 use App\Notifications\JobApplicationsReadyNotification;
 use App\Notifications\JobsToApplyManuallyNotification;
 use App\Services\AiUsageService;
+use App\Services\Cv\CvTailorService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -28,7 +29,10 @@ class JobMatcher
 {
     private const DESCRIPTION_CHARS = 1500;
 
-    public function __construct(protected AiUsageService $aiUsageService) {}
+    public function __construct(
+        protected AiUsageService $aiUsageService,
+        protected CvTailorService $tailor,
+    ) {}
 
     /**
      * Score up to $batches batches of new postings (one AI call each, kept
@@ -296,6 +300,10 @@ class JobMatcher
             ...$letter,
             'status' => $sendsItself ? JobApplicationStatus::QUEUED : JobApplicationStatus::PENDING_APPROVAL,
         ]);
+
+        if ($profile->tailorsCv()) {
+            $this->tailor->request($application);
+        }
     }
 
     /**

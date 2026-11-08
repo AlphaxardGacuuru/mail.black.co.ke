@@ -12,7 +12,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 /**
  * The tokens and cost of one AI request, so spend can be totalled per user.
  * Costs are stored in micro-dollars (millionths of a US dollar) because a single
- * request usually costs a small fraction of a cent. Requests no single user
+ * request usually costs a small fraction of a cent. Google searches that
+ * ground an answer and CAPTCHA solves are paid for too, so they're included. Requests no single user
  * asked for (shared careers page searches) have no user and count as "System".
  */
 class AiUsage extends Model
@@ -83,6 +84,23 @@ class AiUsage extends Model
      */
     public const FEATURE_APPLICATION_FORM = 'application_form';
 
+    /**
+     * Rewriting the user's CV (again each time they answer its questions).
+     */
+    public const FEATURE_CV_REVAMP = 'cv_revamp';
+
+    /**
+     * Tailoring the user's revamped CV to one job.
+     */
+    public const FEATURE_CV_TAILOR = 'cv_tailor';
+
+    /**
+     * A CAPTCHA solved by the solving service while submitting an
+     * application form. Not an AI request: no tokens, just the service's
+     * price.
+     */
+    public const FEATURE_CAPTCHA_SOLVE = 'captcha_solve';
+
     protected $fillable = [
         'user_id',
         'subject_type',
@@ -95,6 +113,7 @@ class AiUsage extends Model
         'cached_input_tokens',
         'output_tokens',
         'reasoning_tokens',
+        'searches',
         'cost_micros',
     ];
 
@@ -109,6 +128,7 @@ class AiUsage extends Model
             'cached_input_tokens' => 'integer',
             'output_tokens' => 'integer',
             'reasoning_tokens' => 'integer',
+            'searches' => 'integer',
             'cost_micros' => 'integer',
         ];
     }

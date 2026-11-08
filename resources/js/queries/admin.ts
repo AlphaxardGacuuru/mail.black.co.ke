@@ -139,16 +139,35 @@ export type AdminAiUsageTotals = {
 	costMicros: number
 }
 
+/**
+ * What one feature cost in the month. An item is the thing it was used on
+ * (a CV revamped, an application drafted), which can take several requests,
+ * so costPerItemMicros is what one costs in practice.
+ */
+export type AdminAiUsageFeature = {
+	feature: string
+	requests: number
+	users: number
+	items: number
+	// Google searches that grounded an answer, billed on top of tokens.
+	searches: number
+	costMicros: number
+	costPerRequestMicros: number
+	costPerItemMicros: number
+}
+
 /** One user's AI usage for the month; userId is null for system-wide requests. */
 export type AdminAiUsageUser = AdminAiUsageTotals & {
 	userId: string | null
 	name: string
 	email: string | null
+	features: AdminAiUsageFeature[]
 }
 
 export type AdminAiUsageReport = {
 	month: string
 	users: AdminAiUsageUser[]
+	features: AdminAiUsageFeature[]
 	totals: AdminAiUsageTotals
 }
 

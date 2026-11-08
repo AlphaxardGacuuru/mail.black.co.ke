@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class JobSeekerProfile extends Model
 {
@@ -16,6 +17,7 @@ class JobSeekerProfile extends Model
 
     protected $casts = [
         'auto_apply' => 'boolean',
+        'tailor_cv' => 'boolean',
         'consented_at' => 'datetime',
         'profile' => 'array',
         'preferences' => 'array',
@@ -66,6 +68,34 @@ class JobSeekerProfile extends Model
     public function sendsCoverLetterAsWritten(): bool
     {
         return $this->cover_letter_mode === 'as_is' && trim((string) $this->cover_letter) !== '';
+    }
+
+    /**
+     * The CV employers get: the revamped one once the user has chosen to
+     * use it, else the one they uploaded.
+     *
+     * @return array{path: string, name: string}|null
+     */
+    public function cvToSend(): ?array
+    {
+        $revamp = $this->user?->cvRevamp;
+
+        if ($revamp?->inUse()) {
+            return ['path' => $revamp->pdf_path, 'name' => $revamp->fileName('pdf')];
+        }
+
+        return $this->cv_path && Storage::disk('local')->exists($this->cv_path)
+            ? ['path' => $this->cv_path, 'name' => $this->cv_original_name ?: 'CV.pdf']
+            : null;
+    }
+
+    /**
+     * Whether each application gets a CV tailored to its job, which takes
+     * a revamped CV to work from.
+     */
+    public function tailorsCv(): bool
+    {
+        return $this->tailor_cv && (bool) $this->user?->cvRevamp?->inUse();
     }
 
     public function isAutopilot(): bool

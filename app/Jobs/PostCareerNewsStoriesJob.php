@@ -12,7 +12,9 @@ use Illuminate\Queue\InteractsWithQueue;
 /**
  * The day's news stories: tags any CV that's new since it was last tagged,
  * then posts one story for each career field job seekers are in, so people
- * in similar roles share a story. Scheduled in routes/console.php.
+ * in similar roles share a story. The fields' searches are spread out so
+ * they don't trip Gemini's rate limit together. Scheduled in
+ * routes/console.php.
  */
 class PostCareerNewsStoriesJob implements ShouldQueue
 {
@@ -25,6 +27,12 @@ class PostCareerNewsStoriesJob implements ShouldQueue
      */
     public int $timeout = 900;
 
+    public function __construct()
+    {
+        $this->onConnection('redis-browser');
+        $this->onQueue('long');
+    }
+
     public function handle(CareerFieldsTagger $tagger): void
     {
         JobSeekerProfile::query()
@@ -33,6 +41,8 @@ class PostCareerNewsStoriesJob implements ShouldQueue
             ->get()
             ->flatMap(fn (JobSeekerProfile $profile) => $tagger->tag($profile))
             ->unique()
-            ->each(fn (string $field) => PostCareerNewsStoryJob::dispatch($field));
+            ->values()
+            ->each(fn (string $field, int $index) => PostCareerNewsStoryJob::dispatch($field)
+                ->delay(now()->addMinutes($index)));
     }
 }

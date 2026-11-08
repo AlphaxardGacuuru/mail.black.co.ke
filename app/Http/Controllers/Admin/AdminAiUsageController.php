@@ -13,7 +13,8 @@ class AdminAiUsageController extends Controller
     public function __construct(protected AiUsageService $service) {}
 
     /**
-     * AI requests, tokens and cost per user for a month (this month by default).
+     * AI requests, tokens and cost per user and per feature for a month (this
+     * month by default).
      */
     public function index(Request $request): JsonResponse
     {
@@ -31,6 +32,7 @@ class AdminAiUsageController extends Controller
         return response()->json([
             'month' => $month->format('Y-m'),
             'users' => $users,
+            'features' => $this->service->featureTotals($month),
             'totals' => [
                 'requests' => $users->sum('requests'),
                 'replySuggestions' => $users->sum('replySuggestions'),

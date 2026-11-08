@@ -5,14 +5,17 @@ namespace Tests\Feature;
 use App\Agents\CareerFieldsAgent;
 use App\Agents\CareerNewsAgent;
 use App\Jobs\PostCareerNewsStoriesJob;
+use App\Jobs\PostCareerNewsStoryJob;
 use App\Models\AiUsage;
 use App\Models\JobSeekerProfile;
 use App\Models\Story;
 use App\Models\User;
 use App\Services\Jobs\SafePageFetcher;
+use App\Services\Stories\CareerNewsStoryPoster;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Ai\Exceptions\RateLimitedException;
 use Laravel\Ai\Prompts\AgentPrompt;
 use Tests\TestCase;
 
@@ -145,6 +148,23 @@ class CareerNewsStoryTest extends TestCase
         PostCareerNewsStoriesJob::dispatchSync();
 
         $this->assertSame(0, Story::count());
+    }
+
+    public function test_a_rate_limited_search_is_tried_again(): void
+    {
+        CareerNewsAgent::fake(fn () => throw RateLimitedException::forProvider('gemini'));
+        $this->profile(['Accountant'])
+            ->update(['career_fields' => ['accounting_finance']]);
+
+        $this->expectException(RateLimitedException::class);
+
+        try {
+            (new PostCareerNewsStoryJob('accounting_finance'))
+                ->handle(app(CareerNewsStoryPoster::class));
+        } finally {
+            $this->assertSame(0, Story::count());
+            $this->assertSame([300, 900, 1800], (new PostCareerNewsStoryJob('accounting_finance'))->backoff);
+        }
     }
 
     public function test_nothing_is_posted_without_the_official_account(): void

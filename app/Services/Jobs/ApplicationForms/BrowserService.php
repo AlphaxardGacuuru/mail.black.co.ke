@@ -33,7 +33,7 @@ class BrowserService
      * @param  array<string, string>  $answers  by question key
      * @param  array<string, string>  $files  upload name (e.g. "cv") => local path
      * @param  array{filled: string, confirmation: string}  $screenshots
-     * @return array{submitted?: bool, url?: string, captcha?: ?string, error?: string}
+     * @return array{submitted?: bool, url?: string, captcha?: ?string, captchaSolved?: ?string, error?: string}
      */
     public function submit(string $url, array $fields, array $answers, array $files, array $screenshots): array
     {

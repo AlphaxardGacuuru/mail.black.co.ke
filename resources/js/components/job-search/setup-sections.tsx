@@ -1,4 +1,4 @@
-import { AtSign, FileText, LoaderCircle, Upload } from "lucide-react"
+import { AtSign, FileText, LoaderCircle, Sparkles, Upload } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import type { FormEvent } from "react"
 import Heading from "@/components/heading"
@@ -7,11 +7,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import { Link } from "@/components/ui/link"
 import { MultiSelectField } from "@/components/ui/multi-select"
 import { SelectField, SelectItem } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { useApp } from "@/contexts/AppContext"
+import { CV_REVAMP_URL } from "@/lib/job-application-tabs"
 import { KENYA_LOCATIONS } from "@/lib/kenya-locations"
 import toast from "@/lib/toast"
 import { cn } from "@/lib/utils"
@@ -142,6 +144,23 @@ export function CvSection({ state }: { state: JobSearchState }) {
 					{profile?.cvName ? "Replace CV" : "Upload CV"}
 				</Button>
 			</div>
+
+			{profile?.cvStatus === "ready" && (
+				<div className="flex flex-wrap items-center gap-3 text-sm">
+					<Sparkles className="size-4 shrink-0 text-primary" />
+					<span className="min-w-0 flex-1 text-muted-foreground">
+						{profile.revampedCvInUse
+							? "Employers get your CV as revamped by the AI."
+							: "Get more interviews: have the AI revamp your CV. You review every change first."}
+					</span>
+					<Link
+						href={CV_REVAMP_URL}
+						variant="outline"
+						size="sm">
+						{profile.revampedCvInUse ? "Revamped CV" : "Revamp with AI"}
+					</Link>
+				</div>
+			)}
 
 			{profile?.cvStatus === "ready" &&
 				(profile.profile?.target_titles?.length ?? 0) > 0 && (

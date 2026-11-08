@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
 import JobApplicationController from "@/actions/App/Http/Controllers/Jobs/JobApplicationController"
+import CvRevampController from "@/actions/App/Http/Controllers/Jobs/CvRevampController"
 import JobApplicationFormController from "@/actions/App/Http/Controllers/Jobs/JobApplicationFormController"
 import JobSearchController from "@/actions/App/Http/Controllers/Jobs/JobSearchController"
 import Axios from "@/lib/axios"
@@ -195,11 +196,14 @@ export function useJobApplications(tab: JobApplicationTab, page: number) {
 				JobApplicationController.index.url({ query: { tab, page } })
 			).then((response) => response.data),
 		placeholderData: keepPreviousData,
-		// An application form is read and submitted in the background;
-		// check back until it's done.
+		// Application forms and tailored CVs are made in the background;
+		// check back until they're done.
 		refetchInterval: (query) =>
-			query.state.data?.data.some((application) =>
-				["preparing", "submitting"].includes(application.form?.status ?? "")
+			query.state.data?.data.some(
+				(application) =>
+					["preparing", "submitting"].includes(
+						application.form?.status ?? ""
+					) || application.cv?.status === "tailoring"
 			)
 				? 4000
 				: false,
@@ -264,6 +268,15 @@ export function useSaveApplicationFormAnswers() {
 export function useSubmitApplicationForm() {
 	return useJobApplicationMutation(({ id, answers }: FormAnswers) =>
 		Axios.post(JobApplicationFormController.submit.url(id), { answers })
+	)
+}
+
+/**
+ * Tailor the revamped CV to this application's job.
+ */
+export function useTailorApplicationCv() {
+	return useJobApplicationMutation((id: string) =>
+		Axios.post(CvRevampController.tailor.url(id))
 	)
 }
 

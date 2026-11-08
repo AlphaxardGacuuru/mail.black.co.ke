@@ -28,6 +28,10 @@ class JobSeekerProfileResource extends JsonResource
             'profile' => $this->profile,
             'coverLetter' => $this->cover_letter,
             'coverLetterMode' => $this->cover_letter_mode ?? 'tailor',
+            // Whether applications send the CV revamped by the AI, and get
+            // a copy tailored to each job.
+            'revampedCvInUse' => (bool) $this->user?->cvRevamp?->inUse(),
+            'tailorCv' => $this->tailorsCv(),
             'preferences' => [
                 'keywords' => $this->preference('keywords'),
                 'locations' => $this->preference('locations'),

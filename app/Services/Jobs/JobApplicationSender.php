@@ -5,6 +5,7 @@ namespace App\Services\Jobs;
 use App\Enums\JobApplicationStatus;
 use App\Enums\MailFolder;
 use App\Enums\MailStatus;
+use App\Enums\TailoredCvStatus;
 use App\Events\JobApplicationSentEvent;
 use App\Http\Services\Concerns\ResolvesMailThread;
 use App\Http\Services\MailSanitizerService;
@@ -20,7 +21,8 @@ use Illuminate\Support\Str;
 
 /**
  * Sends queued applications from the user's mailbox with their CV
- * attached. Every guardrail is checked again right before sending, so
+ * attached: the one tailored to the job, else the revamped one, else the
+ * one they uploaded. Every guardrail is checked again right before sending, so
  * switching job search off stops anything not yet sent.
  */
 class JobApplicationSender
@@ -49,6 +51,11 @@ class JobApplicationSender
         $application = $profile->user->jobApplications()
             ->where('status', JobApplicationStatus::QUEUED)
             ->whereNotNull('cover_letter')
+            // Wait for a CV being tailored to the job, but not for ever.
+            ->where(fn ($query) => $query
+                ->whereNull('cv_status')
+                ->orWhere('cv_status', '!=', TailoredCvStatus::TAILORING)
+                ->orWhere('updated_at', '<', now()->subMinutes((int) config('job_search.cv_revamp.tailor_wait_minutes'))))
             ->with('posting')
             ->orderByDesc('match_score')
             ->first();
@@ -61,7 +68,9 @@ class JobApplicationSender
         $posting = $application->posting;
         $account = $profile->sendingAccount();
 
-        if (! $posting?->apply_email || ! $profile->cv_path || ! Storage::disk('local')->exists($profile->cv_path)) {
+        $cv = $application->cvToSend($profile);
+
+        if (! $posting?->apply_email || ! $cv) {
             $application->update(['status' => JobApplicationStatus::APPLY_MANUALLY]);
 
             return false;
@@ -76,7 +85,7 @@ class JobApplicationSender
             return false;
         }
 
-        $mailMessage = DB::transaction(function () use ($profile, $application, $posting, $account) {
+        $mailMessage = DB::transaction(function () use ($profile, $application, $posting, $account, $cv) {
             // Claim the application so an overlapping run can't send it twice.
             $claimed = JobApplication::whereKey($application->id)
                 ->where('status', JobApplicationStatus::QUEUED)
@@ -107,7 +116,7 @@ class JobApplicationSender
                 'has_attachments' => true,
             ]);
 
-            $this->attachCv($profile, $mailMessage);
+            $this->attachCv($cv, $mailMessage);
             $this->refreshThreadAggregates($thread);
 
             $application->update([
@@ -131,13 +140,15 @@ class JobApplicationSender
     /**
      * A private copy of the CV for this message, so deleting or replacing
      * the CV later doesn't break the sent mail.
+     *
+     * @param  array{path: string, name: string}  $cv
      */
-    protected function attachCv(JobSeekerProfile $profile, MailMessage $mailMessage): void
+    protected function attachCv(array $cv, MailMessage $mailMessage): void
     {
-        $name = $profile->cv_original_name ?: 'CV.pdf';
+        $name = $cv['name'];
         $path = "mail-attachments/{$mailMessage->id}/".Str::random(8).'-'.Str::slug(pathinfo($name, PATHINFO_FILENAME)).'.pdf';
 
-        Storage::disk('local')->copy($profile->cv_path, $path);
+        Storage::disk('local')->copy($cv['path'], $path);
 
         MailAttachment::create([
             'mail_message_id' => $mailMessage->id,

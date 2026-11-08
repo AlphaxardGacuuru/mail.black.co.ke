@@ -9,6 +9,7 @@ use App\Http\Controllers\Chat\ChatLocationShareController;
 use App\Http\Controllers\Chat\ChatMessageController;
 use App\Http\Controllers\FilePondController;
 use App\Http\Controllers\IntegrationController;
+use App\Http\Controllers\Jobs\CvRevampController;
 use App\Http\Controllers\Jobs\JobApplicationController;
 use App\Http\Controllers\Jobs\JobApplicationFormController;
 use App\Http\Controllers\Jobs\JobSearchController;
@@ -119,6 +120,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('job-search/career-pages', [JobSearchController::class, 'storeCareerPage'])->middleware('throttle:10,1');
     Route::delete('job-search/career-pages/{id}', [JobSearchController::class, 'destroyCareerPage']);
     Route::get('job-search/mailbox', [JobSearchController::class, 'mailboxSuggestions'])->middleware('throttle:20,1');
+
+    // Revamping the CV with the AI
+    Route::get('job-search/cv-revamp', [CvRevampController::class, 'show']);
+    Route::post('job-search/cv-revamp', [CvRevampController::class, 'store'])->middleware('throttle:5,1');
+    Route::patch('job-search/cv-revamp', [CvRevampController::class, 'update']);
+    Route::post('job-search/cv-revamp/use', [CvRevampController::class, 'use']);
+    Route::delete('job-search/cv-revamp/use', [CvRevampController::class, 'stopUsing']);
+    Route::put('job-search/cv-tailoring', [CvRevampController::class, 'updateTailoring']);
     Route::post('job-search/mailbox', [JobSearchController::class, 'storeMailbox'])->middleware('throttle:5,1');
 
     Route::get('job-applications', [JobApplicationController::class, 'index']);
@@ -127,6 +136,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('job-applications/{id}', [JobApplicationController::class, 'update']);
     Route::post('job-applications/{id}/approve', [JobApplicationController::class, 'approve']);
     Route::post('job-applications/{id}/skip', [JobApplicationController::class, 'skip']);
+    Route::post('job-applications/{id}/cv', [CvRevampController::class, 'tailor'])->middleware('throttle:10,1');
 
     // Applying on the employer's own form
     Route::post('job-applications/{id}/form', [JobApplicationFormController::class, 'prepare'])->middleware('throttle:10,1');
@@ -180,6 +190,15 @@ Route::get('job-applications/{id}/form/screenshots/{name}', [JobApplicationFormC
     ->whereIn('name', ['form', 'filled', 'confirmation'])
     ->middleware('signed')
     ->name('job-application-forms.screenshot');
+
+// Signed links to CVs, which open in a new tab.
+Route::get('cv-revamps/{id}/download/{format}', [CvRevampController::class, 'download'])
+    ->whereIn('format', ['pdf', 'docx'])
+    ->middleware(['signed', 'throttle:20,1'])
+    ->name('cv-revamps.download');
+Route::get('job-applications/{id}/cv/download', [CvRevampController::class, 'downloadTailored'])
+    ->middleware('signed')
+    ->name('job-applications.cv');
 
 Route::post('webhooks/mailgun', [MailWebhookController::class, 'mailgunInbound'])
     ->middleware('verify.mailgun.webhook');

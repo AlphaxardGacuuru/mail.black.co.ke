@@ -7,6 +7,7 @@ use App\Enums\ApplicationFormStatus;
 use App\Enums\JobApplicationStatus;
 use App\Jobs\PrepareApplicationFormJob;
 use App\Jobs\SubmitApplicationFormJob;
+use App\Models\AiUsage;
 use App\Models\JobApplication;
 use App\Models\JobPosting;
 use App\Models\JobSeekerProfile;
@@ -245,6 +246,26 @@ class ApplicationFormTest extends TestCase
         $this->actingAs($this->user, 'sanctum')
             ->postJson("/api/job-applications/{$application->id}/form/submit", $answers)
             ->assertOk();
+    }
+
+    public function test_a_solved_captcha_is_counted_as_paid_usage_even_when_the_form_is_turned_away(): void
+    {
+        config(['job_search.application_forms.captcha.price_per_1000' => 2.99]);
+        $application = $this->prepared('recaptcha_v2');
+        $application->update(['form_status' => ApplicationFormStatus::SUBMITTING]);
+        $this->fakeBrowser(['submitted' => false, 'error' => "The form wasn't accepted.", 'captchaSolved' => 'recaptcha_v2']);
+
+        (new SubmitApplicationFormJob($application->id))->handle(app(ApplicationFormService::class));
+
+        $usage = AiUsage::query()
+            ->where('feature', AiUsage::FEATURE_CAPTCHA_SOLVE)
+            ->sole();
+
+        $this->assertSame($this->user->id, $usage->user_id);
+        $this->assertSame('2captcha', $usage->provider);
+        $this->assertSame('recaptcha_v2', $usage->model);
+        $this->assertSame(2990, $usage->cost_micros);
+        $this->assertTrue($usage->subject->is($application));
     }
 
     public function test_an_answer_typed_once_fills_the_same_question_on_the_next_form(): void

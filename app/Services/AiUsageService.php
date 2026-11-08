@@ -14,9 +14,10 @@ class AiUsageService
 {
     /**
      * Record the tokens an AI response used and what they cost. A null user
-     * is a system-wide request that no single user asked for.
+     * is a system-wide request that no single user asked for. $searches is
+     * how many Google searches grounded the answer, billed on top.
      */
-    public function record(?string $userId, string $feature, TextResponse $response, ?Model $subject = null, ?int $attempt = null): AiUsage
+    public function record(?string $userId, string $feature, TextResponse $response, ?Model $subject = null, ?int $attempt = null, int $searches = 0): AiUsage
     {
         $usage = $response->usage;
         $model = $this->modelName($response->meta->model);
@@ -33,13 +34,45 @@ class AiUsageService
             'cached_input_tokens' => $usage->cacheReadInputTokens,
             'output_tokens' => $usage->completionTokens,
             'reasoning_tokens' => $usage->reasoningTokens,
+            'searches' => $searches,
             'cost_micros' => $this->costInMicros(
                 $model,
                 $usage->promptTokens,
                 $usage->cacheReadInputTokens,
                 $usage->completionTokens + $usage->reasoningTokens,
-            ),
+            ) + $this->searchCostInMicros($searches),
         ]);
+    }
+
+    /**
+     * Record a paid service that isn't billed in tokens, e.g. a CAPTCHA
+     * solve, so it's counted with the AI spend. $model names what was
+     * bought (the CAPTCHA type).
+     */
+    public function recordService(?string $userId, string $feature, string $provider, string $model, int $costMicros, ?Model $subject = null): AiUsage
+    {
+        return AiUsage::create([
+            'user_id' => $userId,
+            'subject_type' => $subject?->getMorphClass(),
+            'subject_id' => $subject?->getKey(),
+            'feature' => $feature,
+            'provider' => $provider,
+            'model' => $model,
+            'input_tokens' => 0,
+            'cached_input_tokens' => 0,
+            'output_tokens' => 0,
+            'reasoning_tokens' => 0,
+            'cost_micros' => $costMicros,
+        ]);
+    }
+
+    /**
+     * A price per 1,000 searches in dollars is a price per search in
+     * thousandths of a dollar, so times 1,000 for micro-dollars.
+     */
+    public function searchCostInMicros(int $searches): int
+    {
+        return (int) round($searches * (float) config('ai.search_pricing') * 1000);
     }
 
     /**
@@ -68,12 +101,16 @@ class AiUsageService
 
     /**
      * Each user's AI requests, tokens and cost for the month, most expensive
-     * first. Requests without a user are totalled together as "System".
+     * first, with what each feature cost them. Requests without a user are
+     * totalled together as "System".
      *
-     * @return Collection<int, array{userId: string|null, name: string, email: string|null, requests: int, replySuggestions: int, inputTokens: int, outputTokens: int, costMicros: int}>
+     * @return Collection<int, array{userId: string|null, name: string, email: string|null, requests: int, replySuggestions: int, inputTokens: int, outputTokens: int, costMicros: int, features: array<int, array<string, mixed>>}>
      */
     public function monthlyTotals(CarbonImmutable $month): Collection
     {
+        $features = $this->featureTotals($month, byUser: true)
+            ->groupBy(fn (array $row) => $row['userId'] ?? '');
+
         return AiUsage::query()
             ->leftJoin('users', 'users.id', '=', 'ai_usages.user_id')
             ->whereBetween('ai_usages.created_at', [$month->startOfMonth(), $month->endOfMonth()])
@@ -98,6 +135,52 @@ class AiUsageService
                 'inputTokens' => (int) $row->input_tokens,
                 'outputTokens' => (int) $row->output_tokens,
                 'costMicros' => (int) $row->cost_micros,
+                'features' => $features
+                    ->get($row->user_id ?? '', collect())
+                    ->map(fn (array $feature) => collect($feature)
+                        ->except('userId')
+                        ->all())
+                    ->values()
+                    ->all(),
+            ]);
+    }
+
+    /**
+     * What each feature cost in the month, most expensive first, for
+     * pricing: how many requests and users, how many things it was used on
+     * (e.g. CVs revamped, applications drafted), and the average cost of
+     * each. A thing can take several requests (a revamp done again with
+     * answers), so the cost per item is what one costs in practice.
+     *
+     * @return Collection<int, array{userId?: string|null, feature: string, requests: int, users: int, items: int, searches: int, costMicros: int, costPerRequestMicros: int, costPerItemMicros: int}>
+     */
+    public function featureTotals(CarbonImmutable $month, bool $byUser = false): Collection
+    {
+        return AiUsage::query()
+            ->whereBetween('created_at', [$month->startOfMonth(), $month->endOfMonth()])
+            ->when($byUser, fn ($query) => $query->groupBy('user_id'))
+            ->groupBy('feature')
+            ->orderByDesc('cost_micros')
+            ->get([
+                ...($byUser ? ['user_id'] : []),
+                'feature',
+                DB::raw('COUNT(*) as requests'),
+                DB::raw('COUNT(DISTINCT user_id) as users'),
+                // A request about nothing in particular counts as its own item.
+                DB::raw("COUNT(DISTINCT COALESCE(CONCAT(subject_type, ':', subject_id), id)) as items"),
+                DB::raw('SUM(searches) as searches'),
+                DB::raw('SUM(cost_micros) as cost_micros'),
+            ])
+            ->map(fn (AiUsage $row): array => [
+                ...($byUser ? ['userId' => $row->user_id] : []),
+                'feature' => $row->feature,
+                'requests' => (int) $row->requests,
+                'users' => (int) $row->users,
+                'items' => (int) $row->items,
+                'searches' => (int) $row->searches,
+                'costMicros' => (int) $row->cost_micros,
+                'costPerRequestMicros' => (int) round($row->cost_micros / max(1, $row->requests)),
+                'costPerItemMicros' => (int) round($row->cost_micros / max(1, $row->items)),
             ]);
     }
 

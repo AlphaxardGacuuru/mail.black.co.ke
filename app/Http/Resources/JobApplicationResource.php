@@ -28,6 +28,16 @@ class JobApplicationResource extends JsonResource
             'repliedAt' => $this->replied_at,
             'createdAt' => $this->created_at,
             'form' => $this->form_status ? $this->form() : null,
+            // The CV tailored to this job, if one was asked for.
+            'cv' => $this->cv_status ? [
+                'status' => $this->cv_status->value,
+                'url' => $this->hasTailoredCv()
+                    ? URL::temporarySignedRoute('job-applications.cv', now()->addHours(2), [
+                        'id' => $this->id,
+                        'v' => $this->updated_at?->timestamp,
+                    ])
+                    : null,
+            ] : null,
             'posting' => [
                 'title' => $this->posting?->title,
                 'company' => $this->posting?->company,

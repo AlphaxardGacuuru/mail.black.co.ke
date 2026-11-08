@@ -4,9 +4,11 @@ import {
 	Briefcase,
 	ChevronDown,
 	ExternalLink,
+	FileText,
 	LoaderCircle,
 	MailOpen,
 	Plus,
+	Sparkles,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import Heading from "@/components/heading"
@@ -18,6 +20,7 @@ import { Input } from "@/components/ui/input"
 import { Link } from "@/components/ui/link"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
+	CV_REVAMP_URL,
 	JOB_APPLICATION_TABS,
 	JOB_APPLICATIONS_URL,
 } from "@/lib/job-application-tabs"
@@ -31,6 +34,7 @@ import {
 	useJobSearch,
 	useSaveDraft,
 	useSkipApplication,
+	useTailorApplicationCv,
 } from "@/queries/job-search"
 import type { JobApplication, JobApplicationTab } from "@/types"
 
@@ -147,6 +151,63 @@ function DraftEditor({ application }: { application: JobApplication }) {
 	)
 }
 
+/**
+ * The CV tailored to this job: a link to it once made, else a button to
+ * make one (when the revamped CV is in use).
+ */
+function TailoredCv({ application }: { application: JobApplication }) {
+	const { data: settings } = useJobSearch()
+	const tailor = useTailorApplicationCv()
+	const { cv } = application
+
+	if (cv?.status === "tailoring" || tailor.isPending) {
+		return (
+			<p className="flex items-center gap-2 text-sm text-muted-foreground">
+				<LoaderCircle className="size-4 animate-spin" />
+				Tailoring your CV to this job…
+			</p>
+		)
+	}
+
+	if (cv?.status === "ready" && cv.url) {
+		return (
+			<a
+				href={cv.url}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+				<FileText className="size-4" />
+				CV tailored to this job
+			</a>
+		)
+	}
+
+	if (!settings?.profile?.revampedCvInUse) {
+		return null
+	}
+
+	return (
+		<div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+			{cv?.status === "failed" && <span>Your CV couldn't be tailored.</span>}
+			<Button
+				type="button"
+				variant="secondary"
+				size="sm"
+				onClick={() =>
+					tailor
+						.mutateAsync(application.id)
+						.then((data) => toast.success(data.message))
+						.catch((error) =>
+							toast.error(errorMessage(error, "Unable to tailor your CV."))
+						)
+				}>
+				<Sparkles />
+				{cv?.status === "failed" ? "Try again" : "Tailor my CV to this job"}
+			</Button>
+		</div>
+	)
+}
+
 function ApplicationCard({
 	application,
 	tab,
@@ -211,6 +272,10 @@ function ApplicationCard({
 					<span className="font-medium">How to apply: </span>
 					{posting.applyInstructions}
 				</p>
+			)}
+
+			{(tab === "review" || tab === "queued" || tab === "manual") && (
+				<TailoredCv application={application} />
 			)}
 
 			{opens && open && <ApplicationFormPanel application={application} />}
@@ -363,12 +428,21 @@ export default function JobApplications({
 						title="Jobs"
 						description="Jobs matched to your CV, and the applications sent from your mailbox."
 					/>
-					<Link
-						href="/settings/job-search"
-						variant="outline"
-						size="sm">
-						Settings
-					</Link>
+					<div className="flex flex-wrap gap-2">
+						<Link
+							href={CV_REVAMP_URL}
+							variant="outline"
+							size="sm">
+							<Sparkles />
+							Revamp CV
+						</Link>
+						<Link
+							href="/settings/job-search"
+							variant="outline"
+							size="sm">
+							Settings
+						</Link>
+					</div>
 				</div>
 
 				{settings?.profile?.autoApply && !settings.profile.lastAlertAt && (

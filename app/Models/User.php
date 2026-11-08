@@ -219,6 +219,11 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
         return $this->hasOne(JobSeekerProfile::class);
     }
 
+    public function cvRevamp()
+    {
+        return $this->hasOne(CvRevamp::class);
+    }
+
     public function jobApplications()
     {
         return $this->hasMany(JobApplication::class);

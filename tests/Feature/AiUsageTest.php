@@ -221,6 +221,22 @@ class AiUsageTest extends TestCase
         $this->assertNull($usage->user_id);
         $this->assertNull($usage->subject_id);
         $this->assertSame(AiUsage::FEATURE_CAREER_PAGE_SEARCH, $usage->feature);
+        // Tokens (60 + 32) plus one Google search at $14 per 1,000.
+        $this->assertSame(1, $usage->searches);
+        $this->assertSame(14092, $usage->cost_micros);
+    }
+
+    public function test_a_paid_service_is_recorded_with_its_price(): void
+    {
+        $user = User::factory()
+            ->create();
+
+        $usage = app(AiUsageService::class)
+            ->recordService($user->id, AiUsage::FEATURE_CAPTCHA_SOLVE, '2captcha', 'recaptcha_v2', 3000);
+
+        $this->assertSame(0, $usage->input_tokens);
+        $this->assertSame(3000, $usage->cost_micros);
+        $this->assertSame('recaptcha_v2', $usage->model);
     }
 
     public function test_usage_is_kept_when_the_message_is_deleted(): void
@@ -302,6 +318,64 @@ class AiUsageTest extends TestCase
             ->getJson(route('admin.ai-usage.index', ['month' => '2026-09']))
             ->assertOk()
             ->assertJsonPath('totals.costMicros', 9999);
+    }
+
+    public function test_admins_see_what_each_feature_costs_per_use(): void
+    {
+        $admin = User::factory()
+            ->create(['email' => self::ADMIN_EMAIL]);
+        $user = User::factory()
+            ->create(['name' => 'Job Seeker']);
+        $other = User::factory()
+            ->create();
+        // What each request was about: a CV, an application.
+        $about = fn (string $type) => ['subject_type' => $type, 'subject_id' => (string) str()->uuid()];
+        $cv = fn (User $owner) => ['subject_type' => 'cv_revamp', 'subject_id' => $owner->id];
+
+        $this->travelTo('2026-10-15 12:00');
+
+        // One CV revamped twice (with answers) and another once: two
+        // revamps, three requests.
+        $revamp = fn (User $owner, int $cost) => AiUsage::factory()
+            ->for($owner)
+            ->create(['feature' => AiUsage::FEATURE_CV_REVAMP, ...$cv($owner), 'cost_micros' => $cost]);
+        $revamp($user, 3000);
+        $revamp($user, 3000);
+        $revamp($other, 6000);
+        AiUsage::factory()
+            ->for($user)
+            ->create(['feature' => AiUsage::FEATURE_CAPTCHA_SOLVE, ...$about('job_application'), 'cost_micros' => 3000]);
+        AiUsage::factory()
+            ->for($other)
+            ->create(['feature' => AiUsage::FEATURE_CAPTCHA_SOLVE, ...$about('job_application'), 'cost_micros' => 3000]);
+        AiUsage::factory()
+            ->system()
+            ->create(['searches' => 1, 'cost_micros' => 14100]);
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->getJson(route('admin.ai-usage.index'))
+            ->assertOk()
+            ->assertJsonPath('features.0.feature', AiUsage::FEATURE_CAREER_PAGE_SEARCH)
+            ->assertJsonPath('features.0.searches', 1)
+            ->assertJsonPath('features.1.feature', AiUsage::FEATURE_CV_REVAMP)
+            ->assertJsonPath('features.1.requests', 3)
+            ->assertJsonPath('features.1.users', 2)
+            ->assertJsonPath('features.1.items', 2)
+            ->assertJsonPath('features.1.costMicros', 12000)
+            ->assertJsonPath('features.1.costPerRequestMicros', 4000)
+            ->assertJsonPath('features.1.costPerItemMicros', 6000)
+            ->assertJsonPath('features.2.feature', AiUsage::FEATURE_CAPTCHA_SOLVE)
+            ->assertJsonPath('features.2.costPerItemMicros', 3000);
+
+        $seeker = collect($response->json('users'))
+            ->firstWhere('name', 'Job Seeker');
+
+        $this->assertSame(
+            [AiUsage::FEATURE_CV_REVAMP => 6000, AiUsage::FEATURE_CAPTCHA_SOLVE => 3000],
+            collect($seeker['features'])
+                ->pluck('costMicros', 'feature')
+                ->all(),
+        );
     }
 
     public function test_the_month_must_be_valid(): void

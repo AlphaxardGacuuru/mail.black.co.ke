@@ -47,8 +47,8 @@ return [
     | AI request cost. These are Google's paid tier list prices for text input
     | (https://ai.google.dev/gemini-api/docs/pricing). Check that page when
     | prices change: costs already recorded keep the price they were charged
-    | at. Google Search grounding (careers page search) is billed separately
-    | per prompt and isn't included.
+    | at. Google Search grounding (careers page search, career news) is billed
+    | per search on top of the tokens: see `search_pricing` below.
     |
     */
 
@@ -64,6 +64,15 @@ return [
             'output' => (float) env('AI_PRICE_GEMINI_2_5_FLASH_LITE_OUTPUT', 0.40),
         ],
     ],
+
+    /*
+    | US dollars per 1,000 Google searches the model runs to ground an answer
+    | (Gemini 3's list price). Each grounded request is counted as one
+    | search, and the monthly free allowance isn't taken off, so this is what
+    | the usage would cost once past it.
+    */
+
+    'search_pricing' => (float) env('AI_PRICE_GOOGLE_SEARCH_PER_1000', 14),
 
     /*
     |--------------------------------------------------------------------------

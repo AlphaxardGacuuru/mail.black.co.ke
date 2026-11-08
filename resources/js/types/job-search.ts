@@ -18,6 +18,10 @@ export type JobSeekerProfile = {
 	} | null
 	coverLetter: string | null
 	coverLetterMode: CoverLetterMode
+	// Applications send the CV revamped by the AI, and (with tailorCv) a
+	// copy tailored to each job.
+	revampedCvInUse: boolean
+	tailorCv: boolean
 	preferences: {
 		keywords: string[]
 		locations: string[]
@@ -77,7 +81,11 @@ export type JobApplicationTab =
 	| "closed"
 
 // How much the user has to do for an answer on an employer's form.
-export type ApplicationFormEffort = "filled" | "check" | "needs_you" | "optional"
+export type ApplicationFormEffort =
+	| "filled"
+	| "check"
+	| "needs_you"
+	| "optional"
 
 export type ApplicationFormField = {
 	key: string
@@ -145,6 +153,8 @@ export type JobApplication = {
 	createdAt: string
 	// Applying on the employer's own form; null until it's first prepared.
 	form: ApplicationForm | null
+	// The CV tailored to this job; null until one is asked for.
+	cv: { status: TailoredCvStatus; url: string | null } | null
 	posting: {
 		title: string
 		company: string | null
@@ -157,6 +167,60 @@ export type JobApplication = {
 		sourceName: string
 		postedAt: string | null
 	}
+}
+
+export type TailoredCvStatus = "tailoring" | "ready" | "failed"
+
+// One part of a CV: a job, a qualification, the profile, the skills.
+export type CvEntry = {
+	title: string
+	subtitle: string
+	period: string
+	text: string
+	bullets: string[]
+}
+
+export type CvRevampSection = {
+	key: string
+	heading: string
+	// What the CV said; null for a section the AI added.
+	original: CvEntry | null
+	revamped: CvEntry
+	why: string | null
+	keep: "revamped" | "original"
+	edited: boolean
+}
+
+// A fact the AI asked for to make the CV stronger.
+export type CvRevampQuestion = {
+	key: string
+	// The section it's about, if any.
+	section: string | null
+	question: string
+	answer: string
+	// Already used in the current rewrite.
+	used: boolean
+}
+
+export type CvRevamp = {
+	status: "drafting" | "ready" | "failed"
+	error: string | null
+	inUse: boolean
+	usedAt: string | null
+	updatedAt: string
+	name: string | null
+	headline: string | null
+	contact: string[]
+	sections: CvRevampSection[]
+	questions: CvRevampQuestion[]
+	downloads: { pdf: string; docx: string } | null
+}
+
+export type CvRevampState = {
+	revamp: CvRevamp | null
+	cvName: string | null
+	canRevamp: boolean
+	tailorCv: boolean
 }
 
 // The steps of the job search setup wizard, in order.

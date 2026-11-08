@@ -199,6 +199,18 @@ return [
         'captcha' => [
             'provider' => env('CAPTCHA_SOLVER', '2captcha'),
             'key' => env('CAPTCHA_SOLVER_KEY'),
+            // US dollars per 1,000 solves, recorded with the AI usage so
+            // the cost of each submitted form is known.
+            'price_per_1000' => (float) env('CAPTCHA_SOLVER_PRICE_PER_1000', 3),
         ],
+    ],
+
+    // Revamping the user's CV with the AI, and tailoring it to each job.
+    'cv_revamp' => [
+        'model' => env('JOB_SEARCH_CV_MODEL', env('JOB_SEARCH_AI_MODEL', 'gemini-3.1-flash-lite')),
+        'max_answer_chars' => 500,
+        // A tailored CV that's still being made after this long is given up
+        // on, and the application goes with the revamped CV.
+        'tailor_wait_minutes' => 30,
     ],
 ];

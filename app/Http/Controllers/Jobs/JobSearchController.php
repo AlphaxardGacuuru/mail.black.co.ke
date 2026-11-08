@@ -135,6 +135,9 @@ class JobSearchController extends Controller
             Storage::disk('local')->delete($previous);
         }
 
+        // A revamp was made from the old CV, so it goes with it.
+        $user->cvRevamp?->delete();
+
         ParseCvJob::dispatch($profile->id, $hash);
 
         return response()->json(['message' => 'CV Uploaded', ...$this->state($user)]);
@@ -216,8 +219,9 @@ class JobSearchController extends Controller
     }
 
     /**
-     * Delete the CV, profile, career pages and applications. Mail already
-     * sent stays in the mailbox like any other mail.
+     * Delete the CV (and its revamp), profile, career pages and
+     * applications. Mail already sent stays in the mailbox like any other
+     * mail.
      */
     public function destroy(Request $request): JsonResponse
     {
@@ -229,6 +233,10 @@ class JobSearchController extends Controller
             if ($profile?->cv_path) {
                 Storage::disk('local')->delete($profile->cv_path);
             }
+
+            // The revamped CV and the CVs tailored to each job.
+            $user->cvRevamp?->delete();
+            Storage::disk('local')->deleteDirectory("job-search/cv/{$user->id}");
 
             $user->jobApplications()->delete();
             $user->companyCareerPages()->delete();

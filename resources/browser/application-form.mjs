@@ -97,6 +97,8 @@ async function submit(page) {
 	}
 
 	const captcha = await detectCaptcha(page)
+	// A solve is paid for whether or not the form then goes through.
+	const captchaSolved = captcha ? captcha.type : null
 
 	if (captcha) {
 		if (!input.captcha?.key) {
@@ -122,10 +124,11 @@ async function submit(page) {
 				? `The form wasn't accepted: ${errors.join("; ")}`
 				: "No confirmation came back after submitting. Check the screenshot, and the site, before trying again.",
 			submitted: false,
+			captchaSolved,
 		}
 	}
 
-	return { submitted: true, url: page.url(), captcha: captcha?.type ?? null }
+	return { submitted: true, url: page.url(), captcha: captcha?.type ?? null, captchaSolved }
 }
 
 /**

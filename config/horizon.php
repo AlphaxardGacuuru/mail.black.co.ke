@@ -212,10 +212,12 @@ return [
         ],
 
         // Application forms, in a headless browser: one at a time, so only
-        // one browser is ever open (they take a few hundred MB each).
+        // one browser is ever open (they take a few hundred MB each). AI
+        // requests that run past the main workers' timeout (CV revamps and
+        // tailoring, career news) share it rather than take another process.
         'supervisor-browser' => [
             'connection' => 'redis-browser',
-            'queue' => ['browser'],
+            'queue' => ['browser', 'long'],
             'balance' => false,
             'maxProcesses' => 1,
             'maxTime' => 0,

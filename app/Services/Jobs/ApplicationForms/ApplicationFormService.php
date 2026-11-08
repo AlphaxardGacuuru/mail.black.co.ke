@@ -160,6 +160,10 @@ class ApplicationFormService
             $result = ['error' => "The application form couldn't be opened. Try again, or apply on the site."];
         }
 
+        if ($result['captchaSolved'] ?? null) {
+            $this->recordCaptchaSolve($application, $result['captchaSolved']);
+        }
+
         if (! ($result['submitted'] ?? false)) {
             $this->fail($application, ApplicationFormStatus::SUBMIT_FAILED, Str::limit($result['error'] ?? 'The form was not submitted.', 900));
 
@@ -410,17 +414,20 @@ class ApplicationFormService
     }
 
     /**
-     * The CV, under its original name: the name the employer sees.
+     * The CV under the name the employer sees: the one tailored to this
+     * job, else the revamped one, else the uploaded one.
      *
      * @return array<string, string>
      */
     protected function files(JobApplication $application, ?JobSeekerProfile $profile): array
     {
-        if (! $profile?->cv_path || ! Storage::disk('local')->exists($profile->cv_path)) {
+        $cv = $profile ? $application->cvToSend($profile) : null;
+
+        if (! $cv) {
             return [];
         }
 
-        $name = Str::of($profile->cv_original_name ?: 'CV.pdf')
+        $name = Str::of($cv['name'])
             ->basename()
             ->replaceMatches('/[^\w.\- ]+/u', '')
             ->whenEmpty(fn () => Str::of('CV.pdf'))
@@ -428,9 +435,23 @@ class ApplicationFormService
         $path = "{$this->directory($application)}/upload/{$name}";
 
         Storage::disk('local')->delete($path);
-        Storage::disk('local')->copy($profile->cv_path, $path);
+        Storage::disk('local')->copy($cv['path'], $path);
 
         return [self::FILE_CV => Storage::disk('local')->path($path)];
+    }
+
+    protected function recordCaptchaSolve(JobApplication $application, string $type): void
+    {
+        $settings = config('job_search.application_forms.captcha');
+
+        $this->aiUsageService->recordService(
+            $application->user_id,
+            AiUsage::FEATURE_CAPTCHA_SOLVE,
+            $settings['provider'],
+            $type,
+            (int) round((float) $settings['price_per_1000'] * 1000),
+            $application,
+        );
     }
 
     protected function fail(JobApplication $application, ApplicationFormStatus $status, string $message): void

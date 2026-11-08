@@ -12,6 +12,7 @@ use App\Services\Jobs\SafePageFetcher;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Laravel\Ai\Exceptions\RateLimitedException;
 use Throwable;
 
 /**
@@ -92,13 +93,16 @@ class CareerNewsStoryPoster
                     ])->implode("\n"),
                     model: config('job_search.news.model'),
                 );
+        } catch (RateLimitedException $exception) {
+            // PostCareerNewsStoryJob tries again later.
+            throw $exception;
         } catch (Throwable $exception) {
             Log::warning('Career news search failed', ['field' => $label, 'error' => $exception->getMessage()]);
 
             return collect();
         }
 
-        $this->aiUsageService->record(null, AiUsage::FEATURE_CAREER_NEWS, $response);
+        $this->aiUsageService->record(null, AiUsage::FEATURE_CAREER_NEWS, $response, searches: 1);
 
         return Str::of((string) $response->text)
             ->explode("\n")

@@ -4,6 +4,8 @@ import type { JobApplicationTab, NavItem } from "@/types"
 
 export const JOB_APPLICATIONS_URL = "/job-applications"
 
+export const CV_REVAMP_URL = `${JOB_APPLICATIONS_URL}/cv`
+
 export const JOB_APPLICATION_TABS: {
 	key: JobApplicationTab
 	label: string
@@ -45,7 +47,9 @@ export const JOB_APPLICATION_TABS: {
 // "To review" is where the section opens, so it keeps the section's own URL
 // (the one notifications link to).
 export function jobApplicationTabUrl(tab: JobApplicationTab): string {
-	return tab === "review" ? JOB_APPLICATIONS_URL : `${JOB_APPLICATIONS_URL}/${tab}`
+	return tab === "review"
+		? JOB_APPLICATIONS_URL
+		: `${JOB_APPLICATIONS_URL}/${tab}`
 }
 
 export function isJobApplicationTab(value: string): value is JobApplicationTab {
