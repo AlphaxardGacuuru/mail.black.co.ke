@@ -48,6 +48,33 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 
+    {{-- Reloads once if the page finished loading but the app never rendered
+         (for example a script that failed to load after the phone sat idle), so it
+         doesn't stay on a blank screen --}}
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                try {
+                    if (document.getElementById('app')?.childElementCount) {
+                        sessionStorage.removeItem('blank-screen-reload');
+
+                        return;
+                    }
+
+                    if (sessionStorage.getItem('blank-screen-reload')) {
+                        return;
+                    }
+
+                    sessionStorage.setItem('blank-screen-reload', '1');
+                } catch (e) {
+                    return;
+                }
+
+                location.reload();
+            }, 8000);
+        });
+    </script>
+
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.tsx'])
 
