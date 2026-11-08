@@ -142,7 +142,8 @@ async function requestSolution(baseUrl, clientKey, task) {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ clientKey, ...body }),
 		})
-		const data = await response.json()
+		// A busy service now and then answers with an HTML error page.
+		const data = await response.json().catch(() => ({ unreadable: true }))
 
 		if (data.errorId) {
 			throw new Error(`CAPTCHA service: ${data.errorDescription || data.errorCode}`)
@@ -151,13 +152,25 @@ async function requestSolution(baseUrl, clientKey, task) {
 		return data
 	}
 
-	const { taskId } = await call("/createTask", { task })
+	const { taskId, unreadable } = await call("/createTask", { task })
 
-	// Solving takes 10–60 seconds; the services ask for a poll every few.
+	if (unreadable) {
+		throw new Error("The CAPTCHA service didn't respond properly.")
+	}
+
+	// Solving takes 10–100 seconds; the services ask for a poll every few.
+	// A poll that fails is tried again on the next one rather than losing
+	// a solve that's already paid for.
 	for (let attempt = 0; attempt < 40; attempt++) {
 		await new Promise((resolve) => setTimeout(resolve, 4000))
 
-		const result = await call("/getTaskResult", { taskId })
+		const result = await call("/getTaskResult", { taskId }).catch((error) => {
+			if (error.message.startsWith("CAPTCHA service:")) {
+				throw error
+			}
+
+			return { unreadable: true }
+		})
 
 		if (result.status === "ready") {
 			return result.solution.gRecaptchaResponse || result.solution.token
