@@ -29,6 +29,9 @@ class JobPosting extends Model
         'posted_at' => 'datetime',
         'valid_through' => 'datetime',
         'details_fetched_at' => 'datetime',
+        // {min: ?int, max: ?int, currency: string, period: string, stated: bool, basis: ?string}
+        'salary' => 'array',
+        'salary_checked_at' => 'datetime',
     ];
 
     protected static function booted(): void

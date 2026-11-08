@@ -31,7 +31,7 @@ class StructuredJobData
      * The job on the page, or null when the page has no JobPosting data.
      * $boardHost keeps the board's own addresses out of the apply email.
      *
-     * @return array{title: string, company: ?string, location: ?string, industry: ?string, description: ?string, apply_email: ?string, apply_instructions: ?string, posted_at: ?Carbon, valid_through: ?Carbon}|null
+     * @return array{title: string, company: ?string, location: ?string, industry: ?string, description: ?string, salary: ?array<string, mixed>, apply_email: ?string, apply_instructions: ?string, posted_at: ?Carbon, valid_through: ?Carbon}|null
      */
     public function read(string $html, string $boardHost): ?array
     {
@@ -66,6 +66,7 @@ class StructuredJobData
             'location' => $this->location($job, $boardHost),
             'industry' => Str::limit(self::text(is_string($job['industry'] ?? null) ? $job['industry'] : null), 250, '') ?: null,
             'description' => Str::limit($description, 20000, '') ?: null,
+            'salary' => $this->salary($job['baseSalary'] ?? null),
             'apply_email' => $this->applyEmail($instructions ?? $description, $boardHost),
             'apply_instructions' => $instructions ? Str::limit($instructions, 2000, '') : null,
             'posted_at' => $this->date($job['datePosted'] ?? null),
@@ -223,5 +224,45 @@ class StructuredJobData
         } catch (Throwable) {
             return null;
         }
+    }
+
+    /**
+     * The pay the posting states in its "baseSalary": one amount or a
+     * range, with how often it's paid.
+     *
+     * @return array{min: ?int, max: int, currency: string, period: string, stated: true, basis: null}|null
+     */
+    protected function salary(mixed $salary): ?array
+    {
+        if (! is_array($salary)) {
+            return null;
+        }
+
+        $value = is_array($salary['value'] ?? null) ? $salary['value'] : ['value' => $salary['value'] ?? null];
+        $amount = fn (string $key) => is_numeric($value[$key] ?? null) ? (int) round((float) $value[$key]) : null;
+        $max = $amount('maxValue') ?? $amount('value');
+
+        if (! $max) {
+            return null;
+        }
+
+        return [
+            'min' => $amount('minValue') ?? ($amount('value') !== $max ? $amount('value') : null),
+            'max' => $max,
+            'currency' => Str::of(is_string($salary['currency'] ?? null) ? $salary['currency'] : '')
+                ->trim()
+                ->upper()
+                ->whenEmpty(fn () => Str::of('KES'))
+                ->toString(),
+            'period' => match (Str::upper((string) ($value['unitText'] ?? ''))) {
+                'YEAR' => 'year',
+                'WEEK' => 'week',
+                'DAY' => 'day',
+                'HOUR' => 'hour',
+                default => 'month',
+            },
+            'stated' => true,
+            'basis' => null,
+        ];
     }
 }

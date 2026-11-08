@@ -166,7 +166,29 @@ export type JobApplication = {
 		source: "board" | "company_page" | "alert" | "shared"
 		sourceName: string
 		postedAt: string | null
+		// Null until the job is first opened and priced.
+		salary: JobSalary | null
 	}
+}
+
+// What a job pays: the posting's own figure (stated) or the AI's estimate
+// of the usual range for the role. min is null for "up to" figures.
+export type JobSalary = {
+	min: number | null
+	max: number
+	currency: string
+	period: "month" | "year" | "week" | "day" | "hour"
+	stated: boolean
+	basis: string | null
+}
+
+// The whole job, loaded when it's opened.
+export type JobDetails = {
+	description: string | null
+	industry: string | null
+	closesAt: string | null
+	salary: JobSalary | null
+	salaryStatus: "estimating" | "ready" | "unknown"
 }
 
 export type TailoredCvStatus = "tailoring" | "ready" | "failed"

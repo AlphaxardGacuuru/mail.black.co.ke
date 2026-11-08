@@ -9,10 +9,12 @@ import {
 	MailOpen,
 	Plus,
 	Sparkles,
+	Wallet,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import Heading from "@/components/heading"
 import { ApplicationFormPanel } from "@/components/job-search/application-form-panel"
+import { JobDetailsSheet } from "@/components/job-search/job-details-sheet"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { GlassCard } from "@/components/ui/glass-card"
@@ -24,6 +26,7 @@ import {
 	JOB_APPLICATION_TABS,
 	JOB_APPLICATIONS_URL,
 } from "@/lib/job-application-tabs"
+import { formatSalary } from "@/lib/salary"
 import { Head } from "@/lib/spa"
 import toast from "@/lib/toast"
 import { cn } from "@/lib/utils"
@@ -220,36 +223,39 @@ function ApplicationCard({
 	// An "apply yourself" match opens to fill in the employer's form.
 	const opens = tab === "manual" && !!posting.url
 	const [open, setOpen] = useState(false)
-
-	const heading = (
-		<>
-			<div className="font-medium">{posting.title}</div>
-			<div className="text-sm text-muted-foreground">
-				{[posting.company, posting.location].filter(Boolean).join(" · ")}
-			</div>
-		</>
-	)
+	const [detailsOpen, setDetailsOpen] = useState(false)
 
 	return (
 		<li className="space-y-3 p-4 sm:p-5">
 			<div className="flex flex-wrap items-start justify-between gap-2">
-				{opens ? (
-					<button
-						type="button"
-						aria-expanded={open}
-						onClick={() => setOpen(!open)}
-						className="flex min-w-0 cursor-pointer items-start gap-2 text-left">
-						<ChevronDown
-							className={cn(
-								"mt-0.5 size-5 shrink-0 text-muted-foreground transition-transform",
-								open && "rotate-180"
-							)}
-						/>
-						<div className="min-w-0">{heading}</div>
-					</button>
-				) : (
-					<div className="min-w-0">{heading}</div>
-				)}
+				<button
+					type="button"
+					onClick={() => setDetailsOpen(true)}
+					className="group min-w-0 cursor-pointer text-left">
+					<div className="font-medium group-hover:underline">
+						{posting.title}
+					</div>
+					<div className="text-sm text-muted-foreground">
+						{[posting.company, posting.location].filter(Boolean).join(" · ")}
+					</div>
+					{posting.salary && (
+						<div
+							className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground"
+							title={
+								posting.salary.stated
+									? "As stated in the posting"
+									: "An estimate, not from the employer"
+							}>
+							<Wallet className="size-3.5" />
+							{formatSalary(posting.salary, true)}
+						</div>
+					)}
+				</button>
+				<JobDetailsSheet
+					application={application}
+					open={detailsOpen}
+					onOpenChange={setDetailsOpen}
+				/>
 				<div className="flex items-center gap-2">
 					{application.status === "replied" && <Badge>Replied</Badge>}
 					{application.status === "failed" && (
@@ -337,6 +343,19 @@ function ApplicationCard({
 							addSuffix: true,
 						})}
 					</span>
+				)}
+				{opens && (
+					<Button
+						type="button"
+						variant="secondary"
+						size="sm"
+						aria-expanded={open}
+						onClick={() => setOpen(!open)}>
+						<ChevronDown
+							className={cn("transition-transform", open && "rotate-180")}
+						/>
+						{open ? "Hide the form" : "Apply for me"}
+					</Button>
 				)}
 				{(tab === "queued" || tab === "manual") && (
 					<Button

@@ -21,6 +21,7 @@ const FEATURES: Record<string, { label: string; unit: string }> = {
 	career_page_read: { label: "Reading careers pages", unit: "per page" },
 	career_page_search: { label: "Finding careers pages", unit: "per search" },
 	job_page_read: { label: "Reading job pages", unit: "per job" },
+	job_salary: { label: "Estimating job pay", unit: "per job" },
 	job_alert_read: { label: "Reading job alerts", unit: "per email" },
 	shared_post_read: {
 		label: "Reading shared job posts",

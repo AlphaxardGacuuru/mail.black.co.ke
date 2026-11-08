@@ -15,6 +15,7 @@ import type {
 	CoverLetterMode,
 	JobApplication,
 	JobApplicationTab,
+	JobDetails,
 	JobSearchState,
 } from "@/types"
 
@@ -206,6 +207,26 @@ export function useJobApplications(tab: JobApplicationTab, page: number) {
 					) || application.cv?.status === "tailoring"
 			)
 				? 4000
+				: false,
+	})
+}
+
+/**
+ * The whole job, loaded when it's opened. The first open prices it in the
+ * background, so it checks back for a minute or so until that's done.
+ */
+export function useJobDetails(id: string, enabled: boolean) {
+	return useQuery({
+		queryKey: ["job-applications", "details", id],
+		queryFn: () =>
+			Axios.get<JobDetails>(JobApplicationController.show.url(id)).then(
+				(response) => response.data
+			),
+		enabled,
+		refetchInterval: (query) =>
+			query.state.data?.salaryStatus === "estimating" &&
+			query.state.dataUpdateCount < 20
+				? 3000
 				: false,
 	})
 }

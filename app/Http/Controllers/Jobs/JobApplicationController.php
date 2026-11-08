@@ -8,6 +8,7 @@ use App\Http\Resources\JobApplicationResource;
 use App\Http\Services\SharedJobPostService;
 use App\Jobs\SendJobApplicationsJob;
 use App\Models\JobApplication;
+use App\Services\Jobs\JobSalaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -39,6 +40,35 @@ class JobApplicationController extends Controller
 
         return JobApplicationResource::collection($applications)->additional([
             'counts' => $this->tabCounts($request),
+        ]);
+    }
+
+    /**
+     * The whole job, as its posting describes it, and what it pays: the
+     * AI prices it in the background the first time anyone opens it.
+     */
+    public function show(Request $request, JobSalaryService $salaryService, string $id): JsonResponse
+    {
+        $posting = $request->user()
+            ->jobApplications()
+            ->with('posting')
+            ->findOrFail($id)
+            ->posting;
+
+        abort_unless($posting, 404);
+
+        $salaryService->request($posting);
+
+        return response()->json([
+            'description' => $posting->description,
+            'industry' => $posting->industry,
+            'closesAt' => $posting->valid_through,
+            'salary' => $posting->salary,
+            'salaryStatus' => match (true) {
+                $posting->salary !== null => 'ready',
+                $salaryService->pending($posting) => 'estimating',
+                default => 'unknown',
+            },
         ]);
     }
 

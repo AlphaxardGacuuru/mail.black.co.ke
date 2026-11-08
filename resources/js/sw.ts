@@ -1,12 +1,7 @@
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching"
 import { registerRoute } from "workbox-routing"
-import {
-	CacheFirst,
-	NetworkFirst,
-	NetworkOnly,
-	StaleWhileRevalidate,
-} from "workbox-strategies"
+import { CacheFirst, NetworkFirst, NetworkOnly } from "workbox-strategies"
 import { ExpirationPlugin } from "workbox-expiration"
 import { BackgroundSyncPlugin } from "workbox-background-sync"
 
@@ -25,7 +20,14 @@ self.addEventListener("message", (event) => {
 		self.skipWaiting()
 	}
 })
-self.addEventListener("activate", () => self.clients.claim())
+self.addEventListener("activate", (event) => {
+	// Mail used to be cached under "api-stale"; it's "api-mail" now.
+	event.waitUntil(
+		caches
+			.delete("api-stale")
+			.then(() => self.clients.claim())
+	)
+})
 
 // ─── Share target ─────────────────────────────────────────────────────────────
 // A job post shared to the installed app (text, a link, images) is kept in
@@ -145,20 +147,22 @@ registerRoute(
 	new NetworkFirst({ cacheName: "api-chat", networkTimeoutSeconds: 4 })
 )
 
-// Mail read routes: stale-while-revalidate, so the last-fetched threads,
-// messages, and labels are what's shown immediately (including while
-// offline), with a background refresh whenever the network is up.
+// Mail read routes: network-first, for the same reason. New mail is
+// announced over Reverb and the list refetched; stale-while-revalidate
+// answered that refetch with the list from before the mail arrived, so it
+// only showed up on the next visit while the unread badge already counted
+// it. The cache still serves threads, messages and labels offline or on a
+// network too slow to answer in time.
 // Auth-sensitive routes are intentionally excluded — see NETWORK_ONLY_APIS.
-const STALE_WHILE_REVALIDATE_APIS = ["/api/threads", "/api/labels"]
+const MAIL_APIS = ["/api/threads", "/api/labels"]
 
 registerRoute(
 	({ url }) =>
 		url.origin === self.location.origin &&
-		STALE_WHILE_REVALIDATE_APIS.some((prefix) =>
-			url.pathname.startsWith(prefix)
-		),
-	new StaleWhileRevalidate({
-		cacheName: "api-stale",
+		MAIL_APIS.some((prefix) => url.pathname.startsWith(prefix)),
+	new NetworkFirst({
+		cacheName: "api-mail",
+		networkTimeoutSeconds: 4,
 		plugins: [
 			new ExpirationPlugin({
 				maxEntries: 200,

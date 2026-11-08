@@ -101,6 +101,12 @@ class AiUsage extends Model
      */
     public const FEATURE_CAPTCHA_SOLVE = 'captcha_solve';
 
+    /**
+     * Finding or estimating a job's pay, the first time anyone opens it.
+     * Kept on the posting and shared by everyone, so it has no user.
+     */
+    public const FEATURE_JOB_SALARY = 'job_salary';
+
     protected $fillable = [
         'user_id',
         'subject_type',

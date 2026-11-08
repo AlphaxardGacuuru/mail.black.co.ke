@@ -48,6 +48,9 @@ class JobApplicationResource extends JsonResource
                 'source' => $this->posting?->source,
                 'sourceName' => $this->posting?->sourceName(),
                 'postedAt' => $this->posting?->posted_at,
+                // Once known: opening the job works it out (see
+                // JobApplicationController::show).
+                'salary' => $this->posting?->salary,
             ],
         ];
     }
