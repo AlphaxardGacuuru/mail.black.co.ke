@@ -137,6 +137,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('job-applications/{id}', [JobApplicationController::class, 'update']);
     Route::post('job-applications/{id}/approve', [JobApplicationController::class, 'approve']);
     Route::post('job-applications/{id}/skip', [JobApplicationController::class, 'skip']);
+    Route::post('job-applications/{id}/applied', [JobApplicationController::class, 'markApplied']);
     Route::post('job-applications/{id}/cv', [CvRevampController::class, 'tailor'])->middleware('throttle:10,1');
 
     // Applying on the employer's own form

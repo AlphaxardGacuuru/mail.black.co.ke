@@ -269,6 +269,16 @@ export function useSkipApplication() {
 	)
 }
 
+/**
+ * The user applied on the employer's site themselves, or takes it back.
+ */
+export function useMarkApplied() {
+	return useJobApplicationMutation(
+		({ id, applied }: { id: string; applied: boolean }) =>
+			Axios.post(JobApplicationController.markApplied.url(id), { applied })
+	)
+}
+
 type FormAnswers = { id: string; answers?: Record<string, string> }
 
 /**

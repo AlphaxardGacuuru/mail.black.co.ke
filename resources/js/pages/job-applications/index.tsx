@@ -3,6 +3,7 @@ import {
 	BellRing,
 	Briefcase,
 	ChevronDown,
+	CircleCheck,
 	ExternalLink,
 	FileText,
 	LoaderCircle,
@@ -35,6 +36,7 @@ import {
 	useApproveApplication,
 	useJobApplications,
 	useJobSearch,
+	useMarkApplied,
 	useSaveDraft,
 	useSkipApplication,
 	useTailorApplicationCv,
@@ -219,14 +221,34 @@ function ApplicationCard({
 	tab: JobApplicationTab
 }) {
 	const skip = useSkipApplication()
+	const markApplied = useMarkApplied()
 	const { posting } = application
+	// Applied to on the site by the user: kept under "Self Apply", done.
+	const selfApplied = tab === "manual" && !!application.appliedAt
 	// An "apply yourself" match opens to fill in the employer's form.
-	const opens = tab === "manual" && !!posting.url
+	const opens = tab === "manual" && !!posting.url && !selfApplied
 	const [open, setOpen] = useState(false)
 	const [detailsOpen, setDetailsOpen] = useState(false)
 
+	function setApplied(applied: boolean) {
+		markApplied
+			.mutateAsync({ id: application.id, applied })
+			.then((data) => toast.success(data.message))
+			.catch((error) =>
+				toast.error(errorMessage(error, "Unable to update this job."))
+			)
+	}
+
 	return (
-		<li className="space-y-3 p-4 sm:p-5">
+		<li
+			className={cn(
+				"space-y-3 p-4 sm:p-5",
+				// Still to apply to stands out; done fades back.
+				tab === "manual" && "border-l-4",
+				tab === "manual" && !selfApplied && "border-l-primary",
+				selfApplied &&
+					"border-l-transparent opacity-60 transition-opacity hover:opacity-100"
+			)}>
 			<div className="flex flex-wrap items-start justify-between gap-2">
 				<button
 					type="button"
@@ -280,9 +302,8 @@ function ApplicationCard({
 				</p>
 			)}
 
-			{(tab === "review" || tab === "queued" || tab === "manual") && (
-				<TailoredCv application={application} />
-			)}
+			{(tab === "review" || tab === "queued" || tab === "manual") &&
+				!selfApplied && <TailoredCv application={application} />}
 
 			{opens && open && <ApplicationFormPanel application={application} />}
 
@@ -333,7 +354,8 @@ function ApplicationCard({
 				)}
 				{application.appliedAt && (
 					<span className="text-muted-foreground">
-						Sent {format(new Date(application.appliedAt), "d MMM yyyy, HH:mm")}
+						{selfApplied ? "Applied" : "Sent"}{" "}
+						{format(new Date(application.appliedAt), "d MMM yyyy, HH:mm")}
 					</span>
 				)}
 				{tab !== "sent" && tab !== "review" && (
@@ -344,40 +366,67 @@ function ApplicationCard({
 						})}
 					</span>
 				)}
-				{opens && (
-					<Button
-						type="button"
-						variant="secondary"
-						size="sm"
-						aria-expanded={open}
-						onClick={() => setOpen(!open)}>
-						<ChevronDown
-							className={cn("transition-transform", open && "rotate-180")}
-						/>
-						{open ? "Hide the form" : "Apply for me"}
-					</Button>
-				)}
-				{(tab === "queued" || tab === "manual") && (
-					<Button
-						type="button"
-						variant="secondary"
-						size="sm"
-						className="ml-auto"
-						disabled={skip.isPending}
-						onClick={() =>
-							skip
-								.mutateAsync(application.id)
-								.then((data) => toast.success(data.message))
-								.catch((error) =>
-									toast.error(
-										errorMessage(error, "Unable to skip this application.")
-									)
-								)
-						}>
-						{tab === "manual" ? "Dismiss" : "Don't send"}
-					</Button>
-				)}
 			</div>
+
+			{/* What to do with it, always last: letting it go on the left,
+			    applying on the right. */}
+			{(tab === "queued" || tab === "manual") && (
+				<div className="flex flex-wrap items-center justify-between gap-2">
+					{selfApplied ? (
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							disabled={markApplied.isPending}
+							onClick={() => setApplied(false)}>
+							Not applied yet
+						</Button>
+					) : (
+						<Button
+							type="button"
+							variant="secondary"
+							size="sm"
+							disabled={skip.isPending}
+							onClick={() =>
+								skip
+									.mutateAsync(application.id)
+									.then((data) => toast.success(data.message))
+									.catch((error) =>
+										toast.error(
+											errorMessage(error, "Unable to skip this application.")
+										)
+									)
+							}>
+							{tab === "manual" ? "Dismiss" : "Don't send"}
+						</Button>
+					)}
+					{tab === "manual" && !selfApplied && (
+						<div className="flex flex-wrap items-center gap-2">
+							<Button
+								type="button"
+								variant="secondary"
+								size="sm"
+								disabled={markApplied.isPending}
+								onClick={() => setApplied(true)}>
+								<CircleCheck />
+								I've applied
+							</Button>
+							{opens && (
+								<Button
+									type="button"
+									size="sm"
+									aria-expanded={open}
+									onClick={() => setOpen(!open)}>
+									<ChevronDown
+										className={cn("transition-transform", open && "rotate-180")}
+									/>
+									{open ? "Hide the form" : "Apply for me"}
+								</Button>
+							)}
+						</div>
+					)}
+				</div>
+			)}
 		</li>
 	)
 }

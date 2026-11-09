@@ -35,6 +35,9 @@ class JobApplicationController extends Controller
         $applications = $user->jobApplications()
             ->whereIn('status', self::TABS[$tab])
             ->with('posting.board')
+            // Jobs the user has applied to on the site stay in the tab, after
+            // the ones still to apply to.
+            ->when($tab === 'manual', fn ($query) => $query->orderByRaw('applied_at is not null'))
             ->orderByDesc($tab === 'sent' ? 'applied_at' : 'created_at')
             ->paginate(20);
 
@@ -158,6 +161,23 @@ class JobApplicationController extends Controller
         ]);
     }
 
+    /**
+     * The user applied on the employer's site themselves (or takes that
+     * back). The job stays under "Self Apply", marked as done.
+     */
+    public function markApplied(Request $request, string $id): JsonResponse
+    {
+        $applied = $request->validate(['applied' => 'required|boolean'])['applied'];
+        $application = $this->application($request, $id, [JobApplicationStatus::APPLY_MANUALLY]);
+
+        $application->update(['applied_at' => $applied ? now() : null]);
+
+        return response()->json([
+            'message' => $applied ? 'Marked As Applied' : 'Marked As Not Applied',
+            'data' => JobApplicationResource::make($application->load('posting.board')),
+        ]);
+    }
+
     public function skip(Request $request, string $id): JsonResponse
     {
         $application = $this->application($request, $id, [
@@ -213,6 +233,10 @@ class JobApplicationController extends Controller
     {
         $counts = $request->user()
             ->jobApplications()
+            // A job applied to on the site is done: it isn't waiting on the user.
+            ->where(fn ($query) => $query
+                ->where('status', '!=', JobApplicationStatus::APPLY_MANUALLY)
+                ->orWhereNull('applied_at'))
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status');

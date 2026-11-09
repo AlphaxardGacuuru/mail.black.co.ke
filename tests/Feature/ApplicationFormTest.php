@@ -15,6 +15,7 @@ use App\Models\MailgunAccount;
 use App\Models\MailgunDomain;
 use App\Models\User;
 use App\Services\Jobs\ApplicationForms\ApplicationFormService;
+use App\Services\Jobs\JobMatcher;
 use App\Services\Jobs\MyJobMagSource;
 use App\Services\Jobs\SafePageFetcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -194,6 +195,48 @@ class ApplicationFormTest extends TestCase
 
         Queue::assertPushedOn('browser', SubmitApplicationFormJob::class);
         $this->assertSame('+254 700 000 000', $this->user->jobSeekerProfile->fresh()->form_answers['phone']['answer']);
+    }
+
+    public function test_a_job_applied_to_on_the_site_stays_under_self_apply_marked_as_done(): void
+    {
+        $applied = $this->manualApplication();
+        $waiting = JobApplication::create([
+            'user_id' => $this->user->id,
+            'job_posting_id' => JobPosting::create([
+                'source' => JobPosting::SOURCE_BOARD,
+                'fingerprint' => JobPosting::fingerprint('test', 'Auditor'),
+                'title' => 'Auditor',
+                'company' => 'Beta Ltd',
+                'url' => 'https://www.myjobmag.co.ke/jobs/auditor-at-beta',
+            ])->id,
+            'status' => JobApplicationStatus::APPLY_MANUALLY,
+            'created_at' => now()->subDay(),
+        ]);
+
+        $this->actingAs($this->user, 'sanctum')
+            ->postJson("/api/job-applications/{$applied->id}/applied", ['applied' => true])
+            ->assertOk()
+            ->assertJsonPath('message', 'Marked As Applied')
+            ->assertJsonPath('data.status', 'apply_manually');
+
+        // Still listed, after the one waiting on the user, and not counted.
+        $this->actingAs($this->user, 'sanctum')
+            ->getJson('/api/job-applications?tab=manual')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $waiting->id)
+            ->assertJsonPath('data.1.id', $applied->id)
+            ->assertJsonPath('counts.manual', 1);
+
+        // Another job at the same company isn't applied to again.
+        $this->assertTrue(app(JobMatcher::class)->appliedToCompanyRecently($this->user->jobSeekerProfile, $applied->posting, $waiting->id));
+
+        $this->actingAs($this->user, 'sanctum')
+            ->postJson("/api/job-applications/{$applied->id}/applied", ['applied' => false])
+            ->assertOk()
+            ->assertJsonPath('message', 'Marked As Not Applied');
+
+        $this->assertNull($applied->fresh()->applied_at);
+        $this->assertFalse(app(JobMatcher::class)->appliedToCompanyRecently($this->user->jobSeekerProfile, $applied->posting, $waiting->id));
     }
 
     public function test_a_submitted_form_counts_as_applied(): void

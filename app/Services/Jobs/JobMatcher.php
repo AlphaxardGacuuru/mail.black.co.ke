@@ -390,14 +390,20 @@ class JobMatcher
 
         return $profile->user->jobApplications()
             ->when($exceptApplicationId, fn ($query) => $query->whereKeyNot($exceptApplicationId))
-            ->whereIn('status', [
-                JobApplicationStatus::QUEUED,
-                JobApplicationStatus::APPLIED,
-                JobApplicationStatus::REPLIED,
-            ])
             ->where(fn ($query) => $query
-                ->whereNull('applied_at')
-                ->orWhere('applied_at', '>=', now()->subDays(config('job_search.company_cooldown_days'))))
+                ->where(fn ($query) => $query
+                    ->whereIn('status', [
+                        JobApplicationStatus::QUEUED,
+                        JobApplicationStatus::APPLIED,
+                        JobApplicationStatus::REPLIED,
+                    ])
+                    ->where(fn ($query) => $query
+                        ->whereNull('applied_at')
+                        ->orWhere('applied_at', '>=', now()->subDays(config('job_search.company_cooldown_days')))))
+                // Applied to on the employer's site by the user themselves.
+                ->orWhere(fn ($query) => $query
+                    ->where('status', JobApplicationStatus::APPLY_MANUALLY)
+                    ->where('applied_at', '>=', now()->subDays(config('job_search.company_cooldown_days')))))
             ->with('posting:id,company')
             ->get()
             ->contains(fn (JobApplication $application) => JobPosting::normalizeCompany($application->posting?->company) === $company);
