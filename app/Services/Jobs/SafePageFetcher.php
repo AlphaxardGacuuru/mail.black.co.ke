@@ -72,11 +72,37 @@ class SafePageFetcher
      */
     public function finalUrl(string $url): string
     {
+        return $this->follow($url)[0];
+    }
+
+    /**
+     * Like finalUrl(), but throws when the page doesn't exist. A site that
+     * turns bots away (a 403, say) still has the page, so that counts as
+     * existing; news sites often do.
+     */
+    public function existingUrl(string $url): string
+    {
+        [$url, $response] = $this->follow($url);
+
+        if (in_array($response->status(), [404, 410], true)) {
+            throw new RuntimeException("The page returned HTTP {$response->status()}.");
+        }
+
+        return $url;
+    }
+
+    /**
+     * Follows redirects without reading the page.
+     *
+     * @return array{0: string, 1: Response}
+     */
+    protected function follow(string $url): array
+    {
         for ($redirects = 0; $redirects <= self::MAX_REDIRECTS; $redirects++) {
             $response = $this->request($url);
 
             if (! $response->redirect()) {
-                return $url;
+                return [$url, $response];
             }
 
             $url = $this->absoluteUrl($url, (string) $response->header('Location'));

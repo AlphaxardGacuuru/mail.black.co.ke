@@ -145,13 +145,14 @@ class CareerNewsStoryPoster
 
     /**
      * The article's own address after redirects (search results come back
-     * as Google redirect links), or null when it doesn't load.
+     * as Google redirect links), or null when the page doesn't exist or the
+     * site doesn't answer. The page itself isn't read: many news sites turn
+     * bots away, and the link is for people.
      */
     protected function realUrl(string $url): ?string
     {
         try {
-            $url = $this->fetcher->finalUrl($url);
-            $this->fetcher->fetch($url);
+            $url = $this->fetcher->existingUrl($url);
         } catch (Throwable) {
             return null;
         }

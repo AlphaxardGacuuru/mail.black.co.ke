@@ -26,7 +26,8 @@ class CareerNewsStoryTest extends TestCase
     private const ANSWER = <<<'TEXT'
     KRA changes VAT rules for SMEs | Business Daily | https://news.example.com/kra-vat | Accountants filing for small businesses need to update returns.
     Big Four firm hires 200 auditors | The Star | https://news.example.com/audit-hiring | Audit firms in Nairobi are hiring this quarter.
-    A made-up story | Nowhere | https://news.example.com/missing | Should be dropped because the page doesn't load.
+    Treasury picks new auditor general | Nation | https://news.example.com/bot-blocked | Kept: the site turns bots away, but the page is there.
+    A made-up story | Nowhere | https://news.example.com/missing | Should be dropped because the page doesn't exist.
     Not an article line
     TEXT;
 
@@ -56,6 +57,7 @@ class CareerNewsStoryTest extends TestCase
         Http::fake([
             '*/robots.txt' => Http::response('', 404),
             '*/missing' => Http::response('', 404),
+            '*/bot-blocked' => Http::response('', 403),
             '*' => Http::response('<html><body>Article</body></html>'),
         ]);
 
@@ -110,7 +112,8 @@ class CareerNewsStoryTest extends TestCase
         $this->assertSame($this->account->id, $story->user_id);
         $this->assertSame('accounting_finance', $story->career_field);
         $this->assertSame('Accounting & finance', $story->text);
-        $this->assertCount(2, $story->media);
+        $this->assertCount(3, $story->media);
+        $this->assertSame('https://news.example.com/bot-blocked', $story->media[2]['url']);
         $this->assertSame('https://news.example.com/kra-vat', $story->media[0]['url']);
         $this->assertSame('Business Daily', $story->media[0]['source']);
         Storage::disk('public')->assertExists($story->media[0]['image']);
