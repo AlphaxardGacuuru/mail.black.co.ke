@@ -240,193 +240,198 @@ function ApplicationCard({
 	}
 
 	return (
-		<li
-			className={cn(
-				"space-y-3 p-4 sm:p-5",
-				// Still to apply to stands out; done fades back.
-				tab === "manual" && "border-l-4",
-				tab === "manual" && !selfApplied && "border-l-primary",
-				selfApplied &&
-					"border-l-transparent opacity-60 transition-opacity hover:opacity-100"
-			)}>
-			<div className="flex flex-wrap items-start justify-between gap-2">
-				<button
-					type="button"
-					onClick={() => setDetailsOpen(true)}
-					className="group min-w-0 cursor-pointer text-left">
-					<div className="font-medium group-hover:underline">
-						{posting.title}
-					</div>
-					<div className="text-sm text-muted-foreground">
-						{[posting.company, posting.location].filter(Boolean).join(" · ")}
-					</div>
-					{posting.salary && (
-						<div
-							className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground"
-							title={
-								posting.salary.stated
-									? "As stated in the posting"
-									: "An estimate, not from the employer"
-							}>
-							<Wallet className="size-3.5" />
-							{formatSalary(posting.salary, true)}
+		<li>
+			<GlassCard
+				className={cn(
+					"space-y-3 p-4 sm:p-5",
+					// Still to apply to stands out; done fades back.
+					tab === "manual" &&
+						!selfApplied &&
+						"border-primary/60 ring-1 ring-primary/30 dark:border-primary/60",
+					selfApplied && "opacity-60 transition-opacity hover:opacity-100"
+				)}>
+				<div className="flex flex-wrap items-start justify-between gap-2">
+					<button
+						type="button"
+						onClick={() => setDetailsOpen(true)}
+						className="group min-w-0 cursor-pointer text-left">
+						<div className="font-medium group-hover:underline">
+							{posting.title}
 						</div>
-					)}
-				</button>
-				<JobDetailsSheet
-					application={application}
-					open={detailsOpen}
-					onOpenChange={setDetailsOpen}
-				/>
-				<div className="flex items-center gap-2">
-					{application.status === "replied" && <Badge>Replied</Badge>}
-					{application.status === "failed" && (
-						<Badge variant="destructive">Bounced</Badge>
-					)}
-					<ScoreBadge score={application.matchScore} />
+						<div className="text-sm text-muted-foreground">
+							{[posting.company, posting.location].filter(Boolean).join(" · ")}
+						</div>
+						{posting.salary && (
+							<div
+								className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground"
+								title={
+									posting.salary.stated
+										? "As stated in the posting"
+										: "An estimate, not from the employer"
+								}>
+								<Wallet className="size-3.5" />
+								{formatSalary(posting.salary, true)}
+							</div>
+						)}
+					</button>
+					<JobDetailsSheet
+						application={application}
+						open={detailsOpen}
+						onOpenChange={setDetailsOpen}
+					/>
+					<div className="flex items-center gap-2">
+						{application.status === "replied" && <Badge>Replied</Badge>}
+						{application.status === "failed" && (
+							<Badge variant="destructive">Bounced</Badge>
+						)}
+						<ScoreBadge score={application.matchScore} />
+					</div>
 				</div>
-			</div>
 
-			{application.matchReason && (
-				<p className="text-sm text-muted-foreground">
-					{application.matchReason}
-				</p>
-			)}
+				{application.matchReason && (
+					<p className="text-sm text-muted-foreground">
+						{application.matchReason}
+					</p>
+				)}
 
-			{tab === "review" && <DraftEditor application={application} />}
+				{tab === "review" && <DraftEditor application={application} />}
 
-			{tab === "manual" && posting.applyInstructions && (
-				<p className="text-sm whitespace-pre-line">
-					<span className="font-medium">How to apply: </span>
-					{posting.applyInstructions}
-				</p>
-			)}
+				{tab === "manual" && posting.applyInstructions && (
+					<p className="text-sm whitespace-pre-line">
+						<span className="font-medium">How to apply: </span>
+						{posting.applyInstructions}
+					</p>
+				)}
 
-			{(tab === "review" || tab === "queued" || tab === "manual") &&
-				!selfApplied && <TailoredCv application={application} />}
+				{(tab === "review" || tab === "queued" || tab === "manual") &&
+					!selfApplied && <TailoredCv application={application} />}
 
-			{opens && open && <ApplicationFormPanel application={application} />}
+				{opens && open && <ApplicationFormPanel application={application} />}
 
-			{opens && !open && application.form?.status === "ready" && (
-				<button
-					type="button"
-					onClick={() => setOpen(true)}
-					className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-					Answers ready to review
-					{application.form.minutesLeft > 0 &&
-						` · about ${application.form.minutesLeft} min left`}
-				</button>
-			)}
+				{opens && !open && application.form?.status === "ready" && (
+					<button
+						type="button"
+						onClick={() => setOpen(true)}
+						className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+						Answers ready to review
+						{application.form.minutesLeft > 0 &&
+							` · about ${application.form.minutesLeft} min left`}
+					</button>
+				)}
 
-			<div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-				{/* Applying on the site is the only way to act on these. A
+				<div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+					{/* Applying on the site is the only way to act on these. A
 				    shared poster may have no link at all. */}
-				{posting.url && tab === "manual" && (
-					<Link
-						href={posting.url}
-						target="_blank"
-						rel="noopener noreferrer"
-						variant="outline"
-						size="sm"
-						className="normal-case">
-						Apply on {posting.sourceName}
-						<ExternalLink />
-					</Link>
-				)}
-				{posting.url && tab !== "manual" && (
-					<a
-						href={posting.url}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
-						<ExternalLink className="size-3.5" />
-						View on {posting.sourceName}
-					</a>
-				)}
-				{application.mailThreadId && (
-					<Link
-						variant="unstyled"
-						href={`/mail/${application.mailThreadId}/show`}
-						className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
-						<MailOpen className="size-3.5" />
-						Open conversation
-					</Link>
-				)}
-				{application.appliedAt && (
-					<span className="text-muted-foreground">
-						{selfApplied ? "Applied" : "Sent"}{" "}
-						{format(new Date(application.appliedAt), "d MMM yyyy, HH:mm")}
-					</span>
-				)}
-				{tab !== "sent" && tab !== "review" && (
-					<span className="text-muted-foreground">
-						Matched{" "}
-						{formatDistanceToNow(new Date(application.createdAt), {
-							addSuffix: true,
-						})}
-					</span>
-				)}
-			</div>
-
-			{/* What to do with it, always last: letting it go on the left,
-			    applying on the right. */}
-			{(tab === "queued" || tab === "manual") && (
-				<div className="flex flex-wrap items-center justify-between gap-2">
-					{selfApplied ? (
-						<Button
-							type="button"
-							variant="ghost"
+					{posting.url && tab === "manual" && (
+						<Link
+							href={posting.url}
+							target="_blank"
+							rel="noopener noreferrer"
+							variant="outline"
 							size="sm"
-							disabled={markApplied.isPending}
-							onClick={() => setApplied(false)}>
-							Not applied yet
-						</Button>
-					) : (
-						<Button
-							type="button"
-							variant="secondary"
-							size="sm"
-							disabled={skip.isPending}
-							onClick={() =>
-								skip
-									.mutateAsync(application.id)
-									.then((data) => toast.success(data.message))
-									.catch((error) =>
-										toast.error(
-											errorMessage(error, "Unable to skip this application.")
-										)
-									)
-							}>
-							{tab === "manual" ? "Dismiss" : "Don't send"}
-						</Button>
+							className="normal-case">
+							Apply on {posting.sourceName}
+							<ExternalLink />
+						</Link>
 					)}
-					{tab === "manual" && !selfApplied && (
-						<div className="flex flex-wrap items-center gap-2">
+					{posting.url && tab !== "manual" && (
+						<a
+							href={posting.url}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
+							<ExternalLink className="size-3.5" />
+							View on {posting.sourceName}
+						</a>
+					)}
+					{application.mailThreadId && (
+						<Link
+							variant="unstyled"
+							href={`/mail/${application.mailThreadId}/show`}
+							className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
+							<MailOpen className="size-3.5" />
+							Open conversation
+						</Link>
+					)}
+					{application.appliedAt && (
+						<span className="text-muted-foreground">
+							{selfApplied ? "Applied" : "Sent"}{" "}
+							{format(new Date(application.appliedAt), "d MMM yyyy, HH:mm")}
+						</span>
+					)}
+					{tab !== "sent" && tab !== "review" && (
+						<span className="text-muted-foreground">
+							Matched{" "}
+							{formatDistanceToNow(new Date(application.createdAt), {
+								addSuffix: true,
+							})}
+						</span>
+					)}
+				</div>
+
+				{/* What to do with it, always last: letting it go on the left,
+			    applying on the right. */}
+				{(tab === "queued" || tab === "manual") && (
+					<div className="flex flex-wrap items-center justify-between gap-2">
+						{selfApplied ? (
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								disabled={markApplied.isPending}
+								onClick={() => setApplied(false)}>
+								Not applied yet
+							</Button>
+						) : (
 							<Button
 								type="button"
 								variant="secondary"
 								size="sm"
-								disabled={markApplied.isPending}
-								onClick={() => setApplied(true)}>
-								<CircleCheck />
-								I've applied
+								disabled={skip.isPending}
+								onClick={() =>
+									skip
+										.mutateAsync(application.id)
+										.then((data) => toast.success(data.message))
+										.catch((error) =>
+											toast.error(
+												errorMessage(error, "Unable to skip this application.")
+											)
+										)
+								}>
+								{tab === "manual" ? "Dismiss" : "Don't send"}
 							</Button>
-							{opens && (
+						)}
+						{tab === "manual" && !selfApplied && (
+							<div className="flex flex-wrap items-center gap-2">
 								<Button
 									type="button"
+									variant="secondary"
 									size="sm"
-									aria-expanded={open}
-									onClick={() => setOpen(!open)}>
-									<ChevronDown
-										className={cn("transition-transform", open && "rotate-180")}
-									/>
-									{open ? "Hide the form" : "Apply for me"}
+									disabled={markApplied.isPending}
+									onClick={() => setApplied(true)}>
+									<CircleCheck />
+									I've applied
 								</Button>
-							)}
-						</div>
-					)}
-				</div>
-			)}
+								{opens && (
+									<Button
+										type="button"
+										size="sm"
+										aria-expanded={open}
+										onClick={() => setOpen(!open)}>
+										<ChevronDown
+											className={cn(
+												"transition-transform",
+												open && "rotate-180"
+											)}
+										/>
+										{open ? "Hide the form" : "Apply for me"}
+									</Button>
+								)}
+							</div>
+						)}
+					</div>
+				)}
+			</GlassCard>
 		</li>
 	)
 }
@@ -530,33 +535,27 @@ export default function JobApplications({
 					</GlassCard>
 				)}
 
-				<GlassCard
-					className={cn(
-						"overflow-hidden",
-						isFetching && !isLoading && "opacity-70"
-					)}>
-					{isLoading || !settings ? (
-						<div className="space-y-3 p-5">
-							<Skeleton className="h-5 w-1/2" />
-							<Skeleton className="h-4 w-1/3" />
-							<Skeleton className="h-24 w-full" />
-						</div>
-					) : applications.length === 0 ? (
-						<p className="p-8 text-center text-sm text-muted-foreground">
-							{current.empty}
-						</p>
-					) : (
-						<ul className="divide-y divide-border/60">
-							{applications.map((application) => (
-								<ApplicationCard
-									key={application.id}
-									application={application}
-									tab={tab}
-								/>
-							))}
-						</ul>
-					)}
-				</GlassCard>
+				{isLoading || !settings ? (
+					<GlassCard className="space-y-3 p-5">
+						<Skeleton className="h-5 w-1/2" />
+						<Skeleton className="h-4 w-1/3" />
+						<Skeleton className="h-24 w-full" />
+					</GlassCard>
+				) : applications.length === 0 ? (
+					<GlassCard className="p-8 text-center text-sm text-muted-foreground">
+						{current.empty}
+					</GlassCard>
+				) : (
+					<ul className={cn("space-y-3", isFetching && "opacity-70")}>
+						{applications.map((application) => (
+							<ApplicationCard
+								key={application.id}
+								application={application}
+								tab={tab}
+							/>
+						))}
+					</ul>
+				)}
 
 				{lastPage > 1 && (
 					<div className="flex items-center justify-between text-sm">
