@@ -49,34 +49,42 @@ export default function CvRevampPage() {
 				{isLoading || !state ? (
 					<Skeleton className="h-40 w-full rounded-xl" />
 				) : !state.canRevamp ? (
-					<GlassCard className="flex flex-wrap items-center gap-3 p-4 text-sm">
-						<FileText className="size-5 shrink-0 text-muted-foreground" />
-						<span className="min-w-0 flex-1">
-							Upload your CV first. Once it's been read, it can be revamped.
-						</span>
-						<Link
-							href="/settings/job-search"
-							variant="outline"
-							size="sm">
-							Upload CV
-						</Link>
+					<GlassCard className="space-y-3 p-4 text-sm">
+						<div className="flex gap-3">
+							<FileText className="size-5 shrink-0 text-muted-foreground" />
+							<span className="min-w-0">
+								Upload your CV first. Once it's been read, it can be revamped.
+							</span>
+						</div>
+						<div className="flex justify-end">
+							<Link
+								href="/settings/job-search"
+								variant="outline"
+								size="sm">
+								Upload CV
+							</Link>
+						</div>
 					</GlassCard>
 				) : !revamp ? (
-					<GlassCard className="flex flex-wrap items-center gap-3 p-4 text-sm">
-						<Sparkles className="size-5 shrink-0 text-primary" />
-						<span className="min-w-0 flex-1">
-							Revamp {state.cvName ?? "your CV"}: stronger bullet points, the
-							words employers search for and a clean layout recruitment software
-							reads. You review every change before it's used.
-						</span>
-						<Button
-							type="button"
-							size="sm"
-							disabled={start.isPending}
-							onClick={begin}>
-							{start.isPending && <LoaderCircle className="animate-spin" />}
-							Revamp my CV
-						</Button>
+					<GlassCard className="space-y-3 p-4 text-sm">
+						<div className="flex gap-3">
+							<Sparkles className="size-5 shrink-0 text-primary" />
+							<span className="min-w-0">
+								Revamp {state.cvName ?? "your CV"}: stronger bullet points, the
+								words employers search for and a clean layout recruitment
+								software reads. You review every change before it's used.
+							</span>
+						</div>
+						<div className="flex justify-end">
+							<Button
+								type="button"
+								size="sm"
+								disabled={start.isPending}
+								onClick={begin}>
+								{start.isPending && <LoaderCircle className="animate-spin" />}
+								Revamp my CV
+							</Button>
+						</div>
 					</GlassCard>
 				) : revamp.status === "drafting" ? (
 					<GlassCard className="flex items-center gap-3 p-4 text-sm text-muted-foreground">
@@ -84,17 +92,19 @@ export default function CvRevampPage() {
 						Rewriting your CV. This takes about a minute.
 					</GlassCard>
 				) : revamp.status === "failed" ? (
-					<GlassCard className="flex flex-wrap items-center gap-3 p-4 text-sm">
-						<span className="min-w-0 flex-1">{revamp.error}</span>
-						<Button
-							type="button"
-							variant="secondary"
-							size="sm"
-							disabled={start.isPending}
-							onClick={begin}>
-							<RotateCcw />
-							Try again
-						</Button>
+					<GlassCard className="space-y-3 p-4 text-sm">
+						<p>{revamp.error}</p>
+						<div className="flex justify-end">
+							<Button
+								type="button"
+								variant="secondary"
+								size="sm"
+								disabled={start.isPending}
+								onClick={begin}>
+								<RotateCcw />
+								Try again
+							</Button>
+						</div>
 					</GlassCard>
 				) : (
 					<CvRevampReview

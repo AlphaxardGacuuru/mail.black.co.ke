@@ -146,19 +146,23 @@ export function CvSection({ state }: { state: JobSearchState }) {
 			</div>
 
 			{profile?.cvStatus === "ready" && (
-				<div className="flex flex-wrap items-center gap-3 text-sm">
-					<Sparkles className="size-4 shrink-0 text-primary" />
-					<span className="min-w-0 flex-1 text-muted-foreground">
-						{profile.revampedCvInUse
-							? "Employers get your CV as revamped by the AI."
-							: "Get more interviews: have the AI revamp your CV. You review every change first."}
-					</span>
-					<Link
-						href={CV_REVAMP_URL}
-						variant="outline"
-						size="sm">
-						{profile.revampedCvInUse ? "Revamped CV" : "Revamp with AI"}
-					</Link>
+				<div className="space-y-3 text-sm">
+					<div className="flex gap-3">
+						<Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
+						<span className="min-w-0 text-muted-foreground">
+							{profile.revampedCvInUse
+								? "Employers get your CV as revamped by the AI."
+								: "Get more interviews: have the AI revamp your CV. You review every change first."}
+						</span>
+					</div>
+					<div className="flex justify-end">
+						<Link
+							href={CV_REVAMP_URL}
+							variant="outline"
+							size="sm">
+							{profile.revampedCvInUse ? "Revamped CV" : "Revamp with AI"}
+						</Link>
+					</div>
 				</div>
 			)}
 

@@ -77,20 +77,24 @@ export function ApplicationFormPanel({
 
 	if (!form) {
 		return (
-			<div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/60 p-4 text-sm">
-				<ScanSearch className="size-5 shrink-0 text-muted-foreground" />
-				<span className="min-w-0 flex-1">
-					Read this job's application form and get a suggested answer to every
-					question, with how long the rest will take you.
-				</span>
-				<Button
-					type="button"
-					size="sm"
-					disabled={prepare.isPending}
-					onClick={read}>
-					{prepare.isPending && <LoaderCircle className="animate-spin" />}
-					Prepare application
-				</Button>
+			<div className="space-y-3 rounded-lg border border-border/60 p-4 text-sm">
+				<div className="flex gap-3">
+					<ScanSearch className="size-5 shrink-0 text-muted-foreground" />
+					<span className="min-w-0">
+						Read this job's application form and get a suggested answer to every
+						question, with how long the rest will take you.
+					</span>
+				</div>
+				<div className="flex justify-end">
+					<Button
+						type="button"
+						size="sm"
+						disabled={prepare.isPending}
+						onClick={read}>
+						{prepare.isPending && <LoaderCircle className="animate-spin" />}
+						Prepare application
+					</Button>
+				</div>
 			</div>
 		)
 	}
@@ -123,18 +127,20 @@ export function ApplicationFormPanel({
 
 	if (form.status === "blocked" || form.status === "failed") {
 		return (
-			<div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/60 p-4 text-sm">
-				<span className="min-w-0 flex-1">{form.error}</span>
+			<div className="space-y-3 rounded-lg border border-border/60 p-4 text-sm">
+				<p>{form.error}</p>
 				{form.status === "failed" && (
-					<Button
-						type="button"
-						variant="secondary"
-						size="sm"
-						disabled={prepare.isPending}
-						onClick={read}>
-						<RotateCcw />
-						Try again
-					</Button>
+					<div className="flex justify-end">
+						<Button
+							type="button"
+							variant="secondary"
+							size="sm"
+							disabled={prepare.isPending}
+							onClick={read}>
+							<RotateCcw />
+							Try again
+						</Button>
+					</div>
 				)}
 			</div>
 		)
@@ -276,7 +282,9 @@ function FormReview({
 								.mutateAsync({ id: application.id, answers: changed })
 								.then((data) => toast.success(data.message))
 								.catch((error) =>
-									toast.error(errorMessage(error, "Unable to save the answers."))
+									toast.error(
+										errorMessage(error, "Unable to save the answers.")
+									)
 								)
 						}>
 						Save answers
