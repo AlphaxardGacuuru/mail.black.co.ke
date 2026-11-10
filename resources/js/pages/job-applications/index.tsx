@@ -369,10 +369,10 @@ function ApplicationCard({
 					)}
 				</div>
 
-				{/* What to do with it, always last: letting it go on the left,
-			    applying on the right. */}
+				{/* What to do with it, always last and on the right: letting it
+			    go, then applying. */}
 				{(tab === "queued" || tab === "manual") && (
-					<div className="flex flex-wrap items-center justify-between gap-2">
+					<div className="flex flex-wrap items-center justify-end gap-2">
 						{selfApplied ? (
 							<Button
 								type="button"
