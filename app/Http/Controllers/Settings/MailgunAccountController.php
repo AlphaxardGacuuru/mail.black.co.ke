@@ -10,7 +10,6 @@ use App\Models\MailgunAccount;
 use App\Models\MailgunDomain;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\ValidationException;
 
 class MailgunAccountController extends Controller
 {
@@ -85,23 +84,12 @@ class MailgunAccountController extends Controller
     {
         abort_unless($account->user_id === $request->user()->id, 404);
 
-        if ($account->isPlatform()) {
-            throw ValidationException::withMessages(['account' => ['Your job search address can\'t be removed.']]);
-        }
-
-        $wasActive = $request->user()->active_mailgun_account_id === $account->id;
-        $account->delete();
-
-        if ($wasActive) {
-            $request->user()->update([
-                'active_mailgun_account_id' => $request->user()->mailgunAccounts()->value('id'),
-            ]);
-        }
+        $this->mailboxService->removeAccount($account);
 
         return response()
             ->json([
-                'message' => 'Mailgun account removed.',
-                'accounts' => $this->accounts($request->user())
+                'message' => 'Mailbox Removed',
+                'accounts' => $this->accounts($request->user()->refresh()),
             ]);
     }
 

@@ -2,9 +2,11 @@
 
 namespace App\Http\Services;
 
+use App\Models\MailgunAccount;
 use App\Models\MailgunDomain;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Mailgun\Exception\HttpClientException;
 use Mailgun\Mailgun;
 use Mailgun\Model\Domain\CredentialResponseItem;
@@ -50,8 +52,57 @@ class MailgunMailboxService
     }
 
     /**
-     * Every address with a mailbox on the domain, lowercased. Credentials
-     * are never deleted, so this includes addresses no longer in use.
+     * Removes a mailbox from the app and deletes it on Mailgun. The user's
+     * active mailbox moves to another of theirs. A job search address is
+     * never removed, so it's never given to anyone else.
+     */
+    public function removeAccount(MailgunAccount $account): void
+    {
+        if ($account->isPlatform()) {
+            throw ValidationException::withMessages(['account' => ['A job search address can\'t be removed.']]);
+        }
+
+        if ($account->mailgunDomain) {
+            try {
+                $this->deleteMailbox($account->mailgunDomain, $account->mailbox_address);
+            } catch (HttpClientException $exception) {
+                throw ValidationException::withMessages([
+                    'account' => ["Mailgun couldn't delete {$account->mailbox_address}: {$exception->getMessage()}"],
+                ]);
+            }
+        }
+
+        $account->delete();
+
+        $account->user()
+            ->where('active_mailgun_account_id', $account->id)
+            ->update([
+                'active_mailgun_account_id' => MailgunAccount::query()
+                    ->where('user_id', $account->user_id)
+                    ->value('id'),
+            ]);
+    }
+
+    /**
+     * Deletes the address's mailbox (its SMTP credential) on Mailgun. One
+     * that's already gone counts as deleted.
+     */
+    public function deleteMailbox(MailgunDomain $domain, string $mailboxAddress): void
+    {
+        try {
+            $this->client($domain)
+                ->domains()
+                ->deleteCredential($domain->domain, Str::lower($mailboxAddress));
+        } catch (HttpClientException $exception) {
+            if ($exception->getResponseCode() !== 404) {
+                throw $exception;
+            }
+        }
+    }
+
+    /**
+     * Every address with a mailbox on the domain, lowercased. Job search
+     * addresses are never deleted, so this includes ones no longer in use.
      *
      * @return Collection<int, string>
      */

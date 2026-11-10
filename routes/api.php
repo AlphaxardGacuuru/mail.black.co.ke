@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminAiUsageController;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminMailgunAccountController;
 use App\Http\Controllers\Admin\AdminWebhookController;
 use App\Http\Controllers\Chat\ChatAttachmentController;
 use App\Http\Controllers\Chat\ChatConversationController;
@@ -154,6 +155,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::apiResource('users', UserController::class)
         ->only(['store', 'destroy']);
     Route::patch('users/{id}/verify', [UserController::class, 'verify'])->name('users.verify');
+    Route::delete('mailgun-accounts/{id}', [AdminMailgunAccountController::class, 'destroy'])->name('mailgun-accounts.destroy');
 });
 
 // AI spend is for the same people as Telescope (see the viewAiUsage gate).

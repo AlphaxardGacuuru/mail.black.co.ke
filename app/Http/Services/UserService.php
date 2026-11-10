@@ -3,6 +3,7 @@
 namespace App\Http\Services;
 
 use App\Http\Resources\UserResource;
+use App\Models\MailgunAccount;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -13,6 +14,11 @@ use Illuminate\Support\Collection;
 
 class UserService extends Service
 {
+	public function __construct(protected MailgunMailboxService $mailboxService)
+	{
+		parent::__construct();
+	}
+
 	public function index(Request $request): LengthAwarePaginator|Collection
 	{
 		if ($request->filled('idAndName')) {
@@ -97,6 +103,14 @@ class UserService extends Service
 	public function destroy(int|string $id): array
 	{
 		$user = User::query()->findOrFail($id);
+
+		// Their mailboxes go on Mailgun too; a job search address stays
+		// there so it's never given to anyone else.
+		$user->mailgunAccounts()
+			->get()
+			->reject(fn (MailgunAccount $account) => $account->isPlatform())
+			->each(fn (MailgunAccount $account) => $this->mailboxService->removeAccount($account));
+
 		$deleted = $user->delete();
 
 		return [$deleted, $user->name . ' deleted'];

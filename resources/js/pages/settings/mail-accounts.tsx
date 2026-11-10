@@ -18,6 +18,7 @@ import type { MailgunAccount, MailgunDomain } from "@/types"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 import { invalidateAuth } from "@/middleware/auth"
+import { errorMessage } from "@/queries/job-search"
 import { edit } from "@/routes/mail-accounts"
 
 // Import React FilePond
@@ -69,10 +70,14 @@ const emptyDomainForm: DomainForm = {
 
 function DomainsSection({
 	domains,
+	accounts,
 	onChange,
+	onAccountsChange,
 }: {
 	domains: MailgunDomain[]
+	accounts: MailgunAccount[]
 	onChange: (domains: MailgunDomain[]) => void
+	onAccountsChange: (accounts: MailgunAccount[]) => void
 }) {
 	const [editingId, setEditingId] = useState<string | null>(null)
 	const [form, setForm] = useState<DomainForm>(emptyDomainForm)
@@ -114,13 +119,30 @@ function DomainsSection({
 	}
 
 	function destroy(domain: MailgunDomain): void {
+		const mailboxes = accounts.filter(
+			(account) => account.mailgunDomainId === domain.id
+		).length
+
+		if (
+			!window.confirm(
+				mailboxes > 0
+					? `Remove ${domain.domain} and its ${mailboxes} mailbox${mailboxes === 1 ? "" : "es"}? The mailboxes are deleted on Mailgun too.`
+					: `Remove ${domain.domain}?`
+			)
+		) {
+			return
+		}
+
 		Axios.delete(MailgunDomainController.destroy.url(domain.id))
 			.then((response) => {
 				onChange(response.data.domains)
+				onAccountsChange(response.data.accounts)
 				invalidateAuth()
 				toast.success(response.data.message)
 			})
-			.catch(() => toast.error("Unable to remove this domain."))
+			.catch((error) =>
+				toast.error(errorMessage(error, "Unable to remove this domain."))
+			)
 	}
 
 	return (
@@ -277,6 +299,26 @@ function AccountsSection({
 		invalidateAuth()
 	}
 
+	function destroy(account: MailgunAccount): void {
+		if (
+			!window.confirm(
+				`Remove ${account.mailboxAddress}? It's deleted on Mailgun too, and new mail to it won't arrive. Mail you already have stays.`
+			)
+		) {
+			return
+		}
+
+		Axios.delete(MailgunAccountController.destroy.url(account.id))
+			.then((response) => {
+				onChange(response.data.accounts)
+				invalidateAuth()
+				toast.success(response.data.message)
+			})
+			.catch((error) =>
+				toast.error(errorMessage(error, "Unable to remove this mailbox."))
+			)
+	}
+
 	function submit(event: FormEvent<HTMLFormElement>): void {
 		event.preventDefault()
 		setProcessing(true)
@@ -342,6 +384,15 @@ function AccountsSection({
 							onClick={() => editAccount(account)}>
 							Edit
 						</Button>
+						{!account.isPlatform && (
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onClick={() => destroy(account)}>
+								Remove
+							</Button>
+						)}
 					</div>
 				))}
 			</div>
@@ -518,7 +569,9 @@ export default function MailAccounts() {
 					/>
 					<DomainsSection
 						domains={domains}
+						accounts={accounts}
 						onChange={setDomains}
+						onAccountsChange={setAccounts}
 					/>
 				</div>
 

@@ -1,7 +1,9 @@
+import { X } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import Heading from "@/components/heading"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
 import { Input } from "@/components/ui/input"
@@ -13,8 +15,11 @@ import toast from "@/lib/toast"
 import {
 	type AdminUser,
 	useAdminUsers,
+	useRemoveMailbox,
 	useToggleUserVerified,
 } from "@/queries/admin"
+import { errorMessage } from "@/queries/job-search"
+import type { MailgunAccount } from "@/types"
 
 function initials(name?: string | null): string {
 	return (name?.trim() || "?").slice(0, 2).toUpperCase()
@@ -26,6 +31,24 @@ export default function AdminUsers() {
 	const [perPage, setPerPage] = useState(20)
 	const { data, isLoading } = useAdminUsers(search, page, perPage)
 	const toggleVerified = useToggleUserVerified()
+	const removeMailbox = useRemoveMailbox()
+
+	function handleRemoveMailbox(account: MailgunAccount): void {
+		if (
+			!window.confirm(
+				`Remove ${account.mailboxAddress}? It's deleted on Mailgun too, and new mail to it won't arrive.`
+			)
+		) {
+			return
+		}
+
+		removeMailbox
+			.mutateAsync(account.id)
+			.then((data) => toast.success(data.message))
+			.catch((error) =>
+				toast.error(errorMessage(error, "Couldn't remove this mailbox"))
+			)
+	}
 
 	function handleToggle(userId: string, verified: boolean): void {
 		toggleVerified.mutate(
@@ -65,6 +88,35 @@ export default function AdminUsers() {
 			header: "Email",
 			cell: ({ row }) => (
 				<span className="text-muted-foreground">{row.original.email}</span>
+			),
+		},
+		{
+			id: "mailboxes",
+			header: "Mailboxes",
+			enableSorting: false,
+			cell: ({ row }) => (
+				<div className="flex flex-wrap gap-1.5">
+					{row.original.mailgunAccounts.map((account) => (
+						<Badge
+							key={account.id}
+							variant="secondary"
+							className="gap-1">
+							{account.mailboxAddress}
+							{account.isPlatform ? (
+								<span className="text-muted-foreground">(job search)</span>
+							) : (
+								<button
+									type="button"
+									className="cursor-pointer rounded-full text-muted-foreground hover:text-destructive disabled:opacity-50"
+									disabled={removeMailbox.isPending}
+									onClick={() => handleRemoveMailbox(account)}
+									aria-label={`Remove ${account.mailboxAddress}`}>
+									<X className="size-3" />
+								</button>
+							)}
+						</Badge>
+					))}
+				</div>
 			),
 		},
 		{

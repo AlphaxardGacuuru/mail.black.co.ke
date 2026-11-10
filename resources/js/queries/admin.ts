@@ -5,6 +5,7 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query"
 import Axios from "@/lib/axios"
+import type { MailgunAccount } from "@/types"
 
 export type AdminDashboardData = {
 	totals: {
@@ -48,6 +49,7 @@ export type AdminUser = {
 	gender: "male" | "female" | "other" | null
 	avatar: string | null
 	verified: boolean
+	mailgunAccounts: MailgunAccount[]
 	createdAt: string
 }
 
@@ -75,6 +77,23 @@ export function useToggleUserVerified() {
 			Axios.patch<{ message: string }>(`api/admin/users/${userId}/verify`, {
 				verified,
 			}),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
+		},
+	})
+}
+
+/**
+ * Removes anyone's mailbox, here and on Mailgun.
+ */
+export function useRemoveMailbox() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (accountId: string) =>
+			Axios.delete<{ message: string }>(
+				`api/admin/mailgun-accounts/${accountId}`
+			).then((res) => res.data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["admin", "users"] })
 		},
