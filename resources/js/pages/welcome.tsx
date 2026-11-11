@@ -8,14 +8,21 @@ import type { MailMessageStatus } from "@/types/mail"
 import { Link } from "@/components/ui/link"
 import {
 	ArrowRight,
+	BellRing,
+	Briefcase,
 	CheckCircle2,
 	Clock,
+	FileText,
 	Globe,
 	Inbox,
 	Mail,
+	MessageCircle,
+	Newspaper,
 	Send,
+	Share2,
 	ShieldCheck,
 	Sparkles,
+	Wand2,
 } from "lucide-react"
 import { ScrollToTopButton } from "@/components/scroll-to-top-button"
 
@@ -98,16 +105,16 @@ const featureHighlights = [
 			"A clock for queued, one tick the moment it's sent — delivery, open, and click ticks are rolling out next.",
 	},
 	{
-		icon: ShieldCheck,
-		title: "Failures flagged in red",
+		icon: Wand2,
+		title: "AI-suggested replies",
 		description:
-			"Failed sends show up as a red tick immediately. Bounce detection straight from Mailgun's webhook is next.",
+			"One tap drafts a reply from the thread's context. Edit it, or send it as it is.",
 	},
 	{
-		icon: Send,
-		title: "Threaded conversations",
+		icon: BellRing,
+		title: "Instant notifications",
 		description:
-			"Replies stay grouped into clean threads, so context never gets lost across a long back-and-forth.",
+			"New mail, chats and job replies arrive as push notifications, with per-category settings.",
 	},
 	{
 		icon: Globe,
@@ -117,14 +124,54 @@ const featureHighlights = [
 	},
 ]
 
+const productPillars = [
+	{
+		icon: Briefcase,
+		eyebrow: "Jobs",
+		title: "A job search that runs itself",
+		description:
+			"Tell us what you do and where you want to work. New postings are matched to your profile every day, and you choose how far it goes.",
+		points: [
+			"Matched jobs with a tailored cover letter, sent with your CV once you approve, or on autopilot.",
+			"Employer forms filled in for you to review, with answers you've typed remembered for next time.",
+			"Share a job post from WhatsApp or any app and it lands in your list.",
+			"Salary estimates, an AI CV revamp, and employer replies tracked in one place.",
+		],
+	},
+	{
+		icon: MessageCircle,
+		eyebrow: "Chats",
+		title: "Real-time chats",
+		description: "Message anyone on Black without leaving the app.",
+		points: [
+			"Typing indicators, plus sent and read ticks on every message.",
+			"Attachments, starred messages and forwarding.",
+			"Live location sharing, for as long as you choose.",
+		],
+	},
+	{
+		icon: Newspaper,
+		eyebrow: "Stories",
+		title: "Career news, daily",
+		description:
+			"Short stories on the news that matters to your field, waiting at the top of your chats.",
+		points: [
+			"Picked for the career fields you follow.",
+			"Unread stories flagged so you never miss one.",
+		],
+	},
+]
+
 const workflowBenefits = [
 	{ text: "Status tracking for every message you send, queued through sent." },
 	{
 		text: "Delivery confirmation and read receipts, powered by Mailgun's webhooks.",
 		comingSoon: true,
 	},
-	{ text: "A threaded inbox with starred, sent, and archive views." },
-	{ text: "Custom domain sending, backed by Mailgun's delivery network." },
+	{ text: "A threaded inbox with AI-suggested replies." },
+	{ text: "Jobs matched and applied to, with your approval." },
+	{ text: "Chats with read ticks, attachments and live location." },
+	{ text: "Push notifications, installable as an app on any device." },
 ]
 
 const mockInbox = [
@@ -143,10 +190,10 @@ const mockInbox = [
 		isRead: true,
 	},
 	{
-		from: "Billing",
-		subject: "Invoice #482 delivery failed",
+		from: "Hiring Team",
+		subject: "Re: Application for Product Designer",
 		time: "Yesterday",
-		status: "bounced" as MailMessageStatus,
+		status: "received" as MailMessageStatus,
 		isRead: false,
 	},
 ]
@@ -268,19 +315,20 @@ const Welcome: FC<WelcomeProps> = () => {
 					<div className="space-y-8">
 						<div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-4 py-2 text-sm text-primary shadow-sm backdrop-blur-sm">
 							<Sparkles className="size-4" />
-							<span>Email that tells you what happened</span>
+							<span>Mail, chats and your job search in one app</span>
 						</div>
 
 						<div className="space-y-5">
 							<h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
 								<span className="bg-linear-to-r from-primary via-foreground to-primary bg-clip-text text-transparent dark:via-white">
-									Send email. Know it landed.
+									Send email. Know it landed. Land the job.
 								</span>
 							</h1>
 							<p className="max-w-2xl text-lg leading-8 text-muted-foreground sm:text-xl">
 								An email client built around one status icon that tells you
-								exactly where every message stands, from your outbox to their
-								inbox.
+								exactly where every message stands, with chats, daily career
+								news and a job search that applies for you, all in the same
+								place.
 							</p>
 							<p className="max-w-xl text-base leading-7 text-muted-foreground/90">
 								Queued and sent today. Delivery, open, and click tracking are
@@ -391,12 +439,12 @@ const Welcome: FC<WelcomeProps> = () => {
 							className={`absolute -bottom-6 -left-6 z-20 hidden w-56 p-4 lg:block ${magnifyHoverClass}`}>
 							<div className="flex items-start gap-3">
 								<div className="rounded-2xl bg-primary/10 p-2 text-primary">
-									<ShieldCheck className="size-5" />
+									<Wand2 className="size-5" />
 								</div>
 								<div>
-									<p className="text-sm font-medium">Read receipt clarity</p>
+									<p className="text-sm font-medium">Reply in one tap</p>
 									<p className="mt-1 text-sm text-muted-foreground">
-										Every status icon stays legible in both light and dark mode.
+										AI drafts a reply from the thread, ready for you to send.
 									</p>
 								</div>
 							</div>
@@ -458,6 +506,90 @@ const Welcome: FC<WelcomeProps> = () => {
 				</div>
 			</section>
 			{/* END: Feature Highlights Section */}
+
+			{/* START: Product Pillars Section */}
+			<section
+				data-cursor-label="More than mail"
+				id="more"
+				className="relative z-10 mx-auto max-w-7xl px-4 pt-16 sm:px-6 lg:px-8 lg:pt-20">
+				<div className="mb-10 max-w-3xl">
+					<p className="text-sm font-medium uppercase tracking-[0.28em] text-primary">
+						More than mail
+					</p>
+					<h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+						Your next job, your conversations and your news, next to your inbox.
+					</h2>
+					<p className="mt-4 text-lg leading-8 text-muted-foreground">
+						No mailbox yet? Turning on job search gives you a free address on
+						mail.black.co.ke to apply from.
+					</p>
+				</div>
+
+				<div className="grid gap-6 lg:grid-cols-[1.3fr_1fr_1fr]">
+					{productPillars.map(
+						({ icon: Icon, eyebrow, title, description, points }) => (
+							<Card
+								key={eyebrow}
+								className={`overflow-hidden ${magnifyHoverClass}`}>
+								<CardHeader className="pb-4">
+									<div className="flex items-center gap-3">
+										<div className="rounded-2xl bg-primary/10 p-3 text-primary">
+											<Icon className="size-5" />
+										</div>
+										<div>
+											<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+												{eyebrow}
+											</p>
+											<CardTitle className="mt-1">{title}</CardTitle>
+										</div>
+									</div>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									<p className="text-sm leading-6 text-muted-foreground">
+										{description}
+									</p>
+									<ul className="space-y-2">
+										{points.map((point) => (
+											<li
+												key={point}
+												className="flex items-start gap-2 text-sm leading-6 text-foreground/90">
+												<CheckCircle2 className="mt-1 size-4 shrink-0 text-primary" />
+												{point}
+											</li>
+										))}
+									</ul>
+								</CardContent>
+							</Card>
+						)
+					)}
+				</div>
+
+				<div className="mt-6 grid gap-3 sm:grid-cols-3">
+					<GlassCard
+						className={`flex items-start gap-3 p-4 ${magnifyHoverClass}`}>
+						<Share2 className="mt-0.5 size-5 shrink-0 text-primary" />
+						<p className="text-sm leading-6 text-foreground/90">
+							Install it as an app, then share job posts straight into it.
+						</p>
+					</GlassCard>
+					<GlassCard
+						className={`flex items-start gap-3 p-4 ${magnifyHoverClass}`}>
+						<FileText className="mt-0.5 size-5 shrink-0 text-primary" />
+						<p className="text-sm leading-6 text-foreground/90">
+							Revamp your CV with AI into a clean, ATS-friendly document.
+						</p>
+					</GlassCard>
+					<GlassCard
+						className={`flex items-start gap-3 p-4 ${magnifyHoverClass}`}>
+						<Send className="mt-0.5 size-5 shrink-0 text-primary" />
+						<p className="text-sm leading-6 text-foreground/90">
+							Applications go out from your own address, so replies come
+							straight back to your inbox.
+						</p>
+					</GlassCard>
+				</div>
+			</section>
+			{/* END: Product Pillars Section */}
 
 			{/* START: Platform Walkthrough Section */}
 			<section
@@ -603,12 +735,12 @@ const Welcome: FC<WelcomeProps> = () => {
 								Everything in one inbox
 							</p>
 							<h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-								Send with confidence, and know exactly what happened next.
+								One app for your mail, your chats and your next job.
 							</h2>
 							<p className="mt-4 max-w-2xl text-lg leading-8 text-muted-foreground">
-								Whether you're sending a handful of emails a day or running a
-								team inbox, Black Mail gives you the status clarity to stop
-								guessing and start knowing.
+								Whether you're sending a handful of emails a day, chatting with
+								your team or looking for your next role, Black Mail keeps it all
+								in one place and tells you exactly what happened.
 							</p>
 							<div className="mt-6 grid gap-3 sm:grid-cols-2">
 								{workflowBenefits.map((benefit) => (
