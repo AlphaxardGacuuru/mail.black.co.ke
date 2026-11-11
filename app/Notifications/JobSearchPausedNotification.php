@@ -3,11 +3,11 @@
 namespace App\Notifications;
 
 use App\Notifications\Concerns\RespectsNotificationPreferences;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushMessage;
 
 class JobSearchPausedNotification extends Notification implements ShouldQueue
 {
@@ -52,6 +52,8 @@ class JobSearchPausedNotification extends Notification implements ShouldQueue
 			->title('Job Search Paused')
 			->icon('/notification-icon-192x192.png')
 			->body($this->reason ?? 'Check your settings before turning it back on.')
+			->openAction('settings', 'Check Settings', '/settings/job-search')
+			->openAction('applications', 'View Applications', '/job-applications')
 			->data(['url' => '/settings/job-search'])
 			->options(['TTL' => 86400]);
 	}

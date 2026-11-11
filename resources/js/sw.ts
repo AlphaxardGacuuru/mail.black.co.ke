@@ -235,7 +235,15 @@ registerRoute(
 
 type PushAction = { action: string; title: string }
 
-type PushNotificationData = { url?: string; conversationId?: string }
+// What each button does, keyed by its action name (see
+// App\Notifications\Messages\WebPushMessage): open a page, or post to a
+// signed link in the background.
+type PushActionLink = { url?: string; post?: string }
+
+type PushNotificationData = {
+	url?: string
+	actions?: Record<string, PushActionLink>
+}
 
 type PushPayload = {
 	title?: string
@@ -255,7 +263,7 @@ self.addEventListener("push", (event) => {
 
 	const payload: PushPayload = event.data.json()
 
-	// `renotify` and `actions` (chat's reply/mark read/delete) are real,
+	// `renotify` and `actions` (the notification's buttons) are real,
 	// supported NotificationOptions fields missing from TypeScript's bundled
 	// DOM lib.
 	const options: NotificationOptions & {
@@ -279,6 +287,8 @@ self.addEventListener("push", (event) => {
 	)
 })
 
+// Opens the URL (or focuses it if already open in some tab). A button can
+// also open a page outside the app, like a job posting.
 function openUrl(url: string) {
 	return self.clients
 		.matchAll({ type: "window", includeUncontrolled: true })
@@ -294,103 +304,43 @@ function openUrl(url: string) {
 		})
 }
 
-// Opens the conversation (or focuses it if already open in some tab), the
-// fallback for a reply that couldn't be sent from the service worker.
-// `draft` prefills the message composer so a typed reply is never lost.
-function openConversation(url: string, draft?: string) {
-	const targetUrl = draft ? `${url}?draft=${encodeURIComponent(draft)}` : url
-
-	return self.clients
-		.matchAll({ type: "window", includeUncontrolled: true })
-		.then((clients) => {
-			const targetPath = new URL(url, self.location.origin).pathname
-			const existing = clients.find(
-				(client) => new URL(client.url).pathname === targetPath
-			)
-
-			if (existing) {
-				return existing.focus()
-			}
-
-			return self.clients.openWindow(
-				new URL(targetUrl, self.location.origin).href
-			)
-		})
-}
-
-// A same-origin request carrying whatever session cookie the browser has.
-// A service worker can't reach the bearer token an open tab keeps in
-// localStorage, so this only authenticates for session-cookie logins and
-// fails silently for everyone else.
-function apiFetch(path: string, method: string, body?: unknown) {
-	return fetch(path, {
-		method,
-		credentials: "include",
-		headers: {
-			Accept: "application/json",
-			"X-Requested-With": "XMLHttpRequest",
-			...(body ? { "Content-Type": "application/json" } : {}),
-		},
-		body: body ? JSON.stringify(body) : undefined,
-	}).then((response) => {
-		if (!response.ok) {
-			throw new Error(`Request to ${path} failed with ${response.status}`)
-		}
+// Posts a button's signed link. The signature stands in for the user's
+// token, which the service worker can't read from the tab's localStorage.
+// If it fails (the link expired or the phone is offline) the
+// notification's page opens instead, so the user can do it in the app.
+function runSignedAction(post: string, fallbackUrl?: string) {
+	return fetch(new URL(post, self.location.origin), {
+		method: "POST",
+		headers: { Accept: "application/json" },
 	})
+		.then((response) => {
+			if (!response.ok) {
+				throw new Error(`Push action failed with ${response.status}`)
+			}
+		})
+		.catch(() => (fallbackUrl ? openUrl(fallbackUrl) : undefined))
 }
 
 self.addEventListener("notificationclick", (event) => {
 	event.notification.close()
 
 	const data = event.notification.data as PushNotificationData | undefined
+	// event.action is empty for a click on the notification itself.
+	const link = event.action ? data?.actions?.[event.action] : undefined
 
-	if (!data?.url) {
-		return
-	}
-
-	const conversationId = data.conversationId
-
-	if (!conversationId) {
-		event.waitUntil(openUrl(data.url))
+	if (link?.post) {
+		event.waitUntil(runSignedAction(link.post, data?.url))
 
 		return
 	}
 
-	// Inline reply text, typed straight into the notification; only some
-	// browsers support it and TypeScript's NotificationEvent lacks it.
-	const reply = (event as unknown as { reply?: string }).reply
+	const url = link?.url ?? data?.url
 
-	if (event.action === "mark-read") {
-		event.waitUntil(
-			apiFetch(`/api/chat/conversations/${conversationId}/read`, "POST").catch(
-				() => {}
-			)
-		)
-
+	if (!url) {
 		return
 	}
 
-	if (event.action === "delete") {
-		event.waitUntil(
-			apiFetch(`/api/chat/conversations/${conversationId}`, "DELETE").catch(
-				() => {}
-			)
-		)
-
-		return
-	}
-
-	if (event.action === "reply" && reply) {
-		event.waitUntil(
-			apiFetch(`/api/chat/conversations/${conversationId}/messages`, "POST", {
-				body: reply,
-			}).catch(() => openConversation(data.url!, reply))
-		)
-
-		return
-	}
-
-	event.waitUntil(openConversation(data.url))
+	event.waitUntil(openUrl(url))
 })
 
 // ─── SPA navigation fallback ──────────────────────────────────────────────────

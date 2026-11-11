@@ -1,12 +1,16 @@
+import { useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import MailComposePane from "@/components/mail/MailComposePane"
 import MailShell from "@/components/mail/MailShell"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { mailtoDraftFromLocation } from "@/lib/mailto"
 import { Head } from "@/lib/spa"
 
 export default function MailCompose() {
 	const isMobile = useIsMobile()
 	const navigate = useNavigate()
+	// Opened from a mailto: link: the message starts filled in from it.
+	const [draft] = useState(mailtoDraftFromLocation)
 
 	if (isMobile) {
 		return (
@@ -16,6 +20,7 @@ export default function MailCompose() {
 				<div className="flex h-[calc(100vh-4rem)] flex-col border rounded-lg overflow-hidden">
 					<MailComposePane
 						variant="page"
+						draft={draft}
 						onBack={() => navigate({ to: "/mail" })}
 						onSent={({ threadId }) => {
 							if (threadId) {
@@ -36,7 +41,7 @@ export default function MailCompose() {
 			<Head title="New message" />
 			<MailShell
 				folder="inbox"
-				initialPane={{ type: "compose" }}
+				initialPane={{ type: "compose", draft }}
 				onComposeSent={({ threadId }) => {
 					if (threadId) {
 						navigate({ to: "/mail/sent/$id", params: { id: threadId } })

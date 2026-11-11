@@ -4,11 +4,11 @@ namespace App\Notifications;
 
 use App\Notifications\Concerns\RespectsNotificationPreferences;
 use App\Models\JobApplication;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * The first reply from an employer to an application. The reply already
@@ -59,6 +59,8 @@ class JobApplicationRepliedNotification extends Notification implements ShouldQu
 			->title($this->title())
 			->icon('/notification-icon-192x192.png')
 			->body('Read the reply in your inbox.')
+			->openAction('read', 'Read Reply', $this->url())
+			->openAction('applications', 'View Applications', '/job-applications/sent')
 			->data(['url' => $this->url()])
 			->options(['TTL' => 3600]);
 	}

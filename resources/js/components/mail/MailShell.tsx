@@ -8,13 +8,14 @@ import MailThreadView from "@/components/mail/MailThreadView"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useMailRealtimeSync } from "@/hooks/use-mail-realtime-sync"
 import { useApp } from "@/contexts/AppContext"
+import type { MailDraft } from "@/lib/mailto"
 import type { MailThreadFilters } from "@/queries/mail"
 import type { MailFolderKey } from "@/types/mail"
 
 type MailPane =
 	| { type: "none" }
 	| { type: "thread"; id: string }
-	| { type: "compose" }
+	| { type: "compose"; draft?: MailDraft | null }
 
 type Props = {
 	folder: MailFolderKey
@@ -162,6 +163,7 @@ export default function MailShell({
 				<section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-sm">
 					<MailComposePane
 						variant="pane"
+						draft={pane.draft}
 						onClose={closePane}
 						onSent={onComposeSent ?? closePane}
 					/>

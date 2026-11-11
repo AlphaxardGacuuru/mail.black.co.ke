@@ -3,10 +3,10 @@
 namespace App\Notifications;
 
 use App\Notifications\Concerns\RespectsNotificationPreferences;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
-use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * Good matches that can't be applied to by email, so the user has to apply
@@ -55,6 +55,7 @@ class JobsToApplyManuallyNotification extends Notification
 			->title($this->title())
 			->icon('/notification-icon-192x192.png')
 			->body('These employers take applications on their own sites.')
+			->openAction('see', 'See Jobs', '/job-applications/manual')
 			->data(['url' => '/job-applications/manual'])
 			->options(['TTL' => 3600]);
 	}

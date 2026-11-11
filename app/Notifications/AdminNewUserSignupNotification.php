@@ -3,11 +3,11 @@
 namespace App\Notifications;
 
 use App\Models\User;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
-use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * An operational alert to the admin account, not a user-facing preference,
@@ -39,6 +39,11 @@ class AdminNewUserSignupNotification extends Notification implements ShouldQueue
             ->icon('/notification-icon-192x192.png')
             ->badge('/notification-badge-192x192.png')
             ->body($this->bodyLine())
+            ->signedAction('verify', 'Verify', 'push-actions.users.verify', [
+                'user' => $notifiable->id,
+                'subject' => $this->newUser->id,
+            ])
+            ->openAction('users', 'View Users', '/admin/users')
             ->data(['url' => '/admin/users']);
     }
 }

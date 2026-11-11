@@ -103,12 +103,32 @@ class JobBoardSource
             default => $this->structured->read($html, (string) parse_url($posting->url, PHP_URL_HOST)),
         };
 
+        // A page listing several jobs ("Vacancies at Acme") would otherwise
+        // be matched as one job read from its first: the posting becomes
+        // that first job, and every other job its own posting.
+        $roles = $posting->board?->reader === JobBoard::READER_MYJOBMAG
+            ? $this->myJobMag->roles($html)
+            : [];
+
         $posting->update([
-            ...collect($details ?? [])
+            ...collect([...($details ?? []), ...($roles[0] ?? [])])
                 ->reject(fn ($value) => $value === null || $value === '')
                 ->all(),
             'details_fetched_at' => now(),
         ]);
+
+        collect($roles)
+            ->skip(1)
+            ->each(fn (array $role) => JobPosting::firstOrCreate(
+                ['fingerprint' => JobPosting::fingerprint(JobPosting::SOURCE_BOARD, $role['url'])],
+                [
+                    ...$posting->only(['source', 'job_board_id', 'company', 'industry', 'apply_email', 'apply_instructions', 'posted_at', 'valid_through']),
+                    ...collect($role)
+                        ->reject(fn ($value) => $value === null || $value === '')
+                        ->all(),
+                    'details_fetched_at' => now(),
+                ],
+            ));
 
         return $details !== null;
     }

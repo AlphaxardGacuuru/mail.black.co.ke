@@ -4,11 +4,11 @@ namespace App\Notifications;
 
 use App\Notifications\Concerns\RespectsNotificationPreferences;
 use App\Models\JobApplication;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * An application sent on the user's behalf bounced, so the employer never
@@ -57,6 +57,9 @@ class JobApplicationFailedNotification extends Notification implements ShouldQue
 			->title($this->title())
 			->icon('/notification-icon-192x192.png')
 			->body("{$this->application->posting->apply_email} did not accept it. You may want to apply another way.")
+			->when($this->application->posting->url, fn (WebPushMessage $message, string $url) => $message
+				->openAction('posting', 'Open Posting', $url))
+			->openAction('applications', 'View Applications', '/job-applications/closed')
 			->data(['url' => '/job-applications/closed'])
 			->options(['TTL' => 86400]);
 	}

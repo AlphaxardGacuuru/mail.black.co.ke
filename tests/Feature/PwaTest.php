@@ -23,4 +23,14 @@ class PwaTest extends TestCase
         $this->assertFileExists(public_path('android-chrome-192x192.png'));
         $this->assertFileExists(public_path('android-chrome-512x512.png'));
     }
+
+    public function test_the_installed_app_opens_mailto_links_in_compose(): void
+    {
+        $manifest = json_decode(file_get_contents(public_path('manifest.webmanifest')), true);
+
+        $this->assertContains(
+            ['protocol' => 'mailto', 'url' => '/mail/compose?mailto=%s'],
+            $manifest['protocol_handlers'],
+        );
+    }
 }

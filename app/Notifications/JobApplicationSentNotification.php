@@ -4,11 +4,11 @@ namespace App\Notifications;
 
 use App\Notifications\Concerns\RespectsNotificationPreferences;
 use App\Models\JobApplication;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * Sent every time an application goes out from the user's mailbox on
@@ -57,6 +57,8 @@ class JobApplicationSentNotification extends Notification implements ShouldQueue
 			->title($this->title())
 			->icon('/notification-icon-192x192.png')
 			->body("Sent to {$this->application->posting->apply_email} with your CV attached.")
+			->openAction('view', 'View Application', $this->url())
+			->openAction('settings', 'Job Search Settings', '/settings/job-search')
 			->data(['url' => $this->url()])
 			->options(['TTL' => 86400]);
 	}

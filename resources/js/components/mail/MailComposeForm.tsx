@@ -25,7 +25,9 @@ type Props = {
 	parentMessageId?: string
 	initialTo?: string[]
 	initialCc?: string[]
+	initialBcc?: string[]
 	initialSubject?: string
+	initialBody?: string
 	onSent?: (result: { threadId?: string }) => void
 	onCancel?: () => void
 }
@@ -35,17 +37,19 @@ export default function MailComposeForm({
 	parentMessageId,
 	initialTo = [],
 	initialCc = [],
+	initialBcc = [],
 	initialSubject = "",
+	initialBody = "",
 	onSent,
 	onCancel,
 }: Props) {
 	const [to, setTo] = useState<string[]>(initialTo)
 	const [cc, setCc] = useState<string[]>(initialCc)
 	const [showCc, setShowCc] = useState(initialCc.length > 0)
-	const [bcc, setBcc] = useState<string[]>([])
-	const [showBcc, setShowBcc] = useState(false)
+	const [bcc, setBcc] = useState<string[]>(initialBcc)
+	const [showBcc, setShowBcc] = useState(initialBcc.length > 0)
 	const [subject, setSubject] = useState(initialSubject)
-	const [body, setBody] = useState("")
+	const [body, setBody] = useState(initialBody)
 	const [attachmentIds, setAttachmentIds] = useState<Record<string, number>>({})
 	const [pendingUploads, setPendingUploads] = useState(0)
 	const [showAttachments, setShowAttachments] = useState(false)

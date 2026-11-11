@@ -5,8 +5,8 @@ namespace App\Notifications;
 use App\Notifications\Concerns\RespectsNotificationPreferences;
 use App\Models\MailgunAccount;
 use App\Models\MailMessage;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushMessage;
 
 class NewMailReceivedNotification extends Notification
 {
@@ -69,6 +69,14 @@ class NewMailReceivedNotification extends Notification
 			->title($this->from())
 			->icon('/notification-icon-192x192.png')
 			->body($this->body())
+			->signedAction('mark-read', 'Mark As Read', 'push-actions.threads.read', [
+				'user' => $notifiable->id,
+				'thread' => $this->mailMessage->mail_thread_id,
+			])
+			->signedAction('archive', 'Archive', 'push-actions.threads.archive', [
+				'user' => $notifiable->id,
+				'thread' => $this->mailMessage->mail_thread_id,
+			])
 			->data(['url' => $this->url()])
 			->options(['TTL' => 300]);
 	}

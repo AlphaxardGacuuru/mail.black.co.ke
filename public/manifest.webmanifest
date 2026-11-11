@@ -23,6 +23,12 @@
 			]
 		}
 	},
+	"protocol_handlers": [
+		{
+			"protocol": "mailto",
+			"url": "/mail/compose?mailto=%s"
+		}
+	],
 	"icons": [
 		{
 			"src": "/android-chrome-192x192.png",

@@ -3,10 +3,10 @@
 namespace App\Notifications;
 
 use App\Notifications\Concerns\RespectsNotificationPreferences;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
-use NotificationChannels\WebPush\WebPushMessage;
 
 class JobApplicationsReadyNotification extends Notification
 {
@@ -51,6 +51,8 @@ class JobApplicationsReadyNotification extends Notification
 			->title($this->title())
 			->icon('/notification-icon-192x192.png')
 			->body('Review them before they are sent.')
+			->openAction('review', 'Review', '/job-applications')
+			->openAction('settings', 'Job Search Settings', '/settings/job-search')
 			->data(['url' => '/job-applications'])
 			->options(['TTL' => 3600]);
 	}

@@ -20,6 +20,7 @@ use App\Http\Controllers\Mail\MailMessageController;
 use App\Http\Controllers\Mail\MailThreadController;
 use App\Http\Controllers\Mail\MailWebhookController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PushActionController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StoryController;
@@ -154,7 +155,8 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::get('users', [UserController::class, 'index'])->name('users.index');
     Route::apiResource('users', UserController::class)
         ->only(['store', 'destroy']);
-    Route::patch('users/{id}/verify', [UserController::class, 'verify'])->name('users.verify');
+    Route::patch('users/{id}/verify', [UserController::class, 'verify'])
+            ->name('users.verify');
     Route::delete('mailgun-accounts/{id}', [AdminMailgunAccountController::class, 'destroy'])->name('mailgun-accounts.destroy');
 });
 
@@ -188,6 +190,23 @@ Route::middleware('auth:sanctum')->post(
     'filepond/mailgun-accounts/{account}/avatar',
     [FilePondController::class, 'updateMailgunAccountAvatar']
 );
+
+// Background buttons on web push notifications. The signature stands in
+// for the user's token, since the service worker doesn't have it.
+Route::prefix('push-actions/{user}')
+    ->middleware(['signed:relative', 'throttle:30,1'])
+    ->name('push-actions.')
+    ->controller(PushActionController::class)
+    ->group(function () {
+        Route::post('threads/{thread}/read', 'readMailThread')
+            ->name('threads.read');
+        Route::post('threads/{thread}/archive', 'archiveMailThread')
+            ->name('threads.archive');
+        Route::post('chat/conversations/{conversation}/read', 'readChatConversation')
+            ->name('chat.conversations.read');
+        Route::post('users/{subject}/verify', 'verifyUser')
+            ->name('users.verify');
+    });
 
 // Signed links, for <img> tags, which can't send the bearer token.
 Route::get('job-applications/{id}/form/screenshots/{name}', [JobApplicationFormController::class, 'screenshot'])

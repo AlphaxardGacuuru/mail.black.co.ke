@@ -205,6 +205,64 @@ class JobSearchTest extends TestCase
         $this->assertNotNull($posting->details_fetched_at);
     }
 
+    public function test_each_job_on_a_myjobmag_page_listing_several_is_its_own_posting(): void
+    {
+        Http::fake([
+            'www.myjobmag.co.ke/robots.txt' => Http::response("User-agent: *\nDisallow: /*?\nDisallow: /apply-now/\n"),
+            'www.myjobmag.co.ke/jobs/fresh-jobs-at-acme-ltd' => Http::response(<<<'HTML'
+                <html><body>
+                <h2 class="mag-b" id="job101"><a href='/job/sales-merchandiser-acme' class='subjob-title'>Sales Merchandiser </a></h2>
+                <ul class="job-key-info">
+                <li><span class="jkey-title">Location</span> <span class="jkey-info"><a href='/jobs-location/nairobi'>Nairobi</a></span></li>
+                </ul>
+                <div class="job-details"><p>Stock supermarket shelves.</p></div>
+                <h2 class="mag-b" id="job102"><a href='/job/senior-software-developer-acme' class='subjob-title'>Senior Software Developer </a></h2>
+                <ul class="job-key-info">
+                <li><span class="jkey-title">Location</span> <span class="jkey-info"><a href='/jobs-location/mombasa'>Mombasa</a></span></li>
+                </ul>
+                <div class="job-details"><p>Build Laravel APIs.</p></div>
+                <h2 id="application-method">Method of Application</h2>
+                <div><p>Use the link(s) below to apply on company website.</p>
+                <ul class="application-links">
+                <li><a href="/apply-now/101">Sales Merchandiser</a></li>
+                <li><a href="/apply-now/102">Senior Software Developer</a></li>
+                </ul></div>
+                </body></html>
+                HTML),
+        ]);
+
+        $board = JobBoard::where('host', 'www.myjobmag.co.ke')->sole();
+        $roundup = JobPosting::create([
+            'source' => JobPosting::SOURCE_BOARD,
+            'job_board_id' => $board->id,
+            'fingerprint' => JobPosting::fingerprint(JobPosting::SOURCE_BOARD, 'https://www.myjobmag.co.ke/jobs/fresh-jobs-at-acme-ltd'),
+            'title' => 'Fresh Jobs',
+            'company' => 'Acme Ltd',
+            'industry' => 'Consulting',
+            'url' => 'https://www.myjobmag.co.ke/jobs/fresh-jobs-at-acme-ltd',
+            'posted_at' => now(),
+        ]);
+
+        $this->assertTrue(app(JobBoardSource::class)->fetchDetails($roundup));
+
+        $first = $roundup->fresh();
+        $this->assertSame('Sales Merchandiser', $first->title);
+        $this->assertSame('https://www.myjobmag.co.ke/job/sales-merchandiser-acme', $first->url);
+        $this->assertSame('Nairobi', $first->location);
+        $this->assertSame('https://www.myjobmag.co.ke/apply-now/101', $first->apply_url);
+        $this->assertStringNotContainsString('Laravel', $first->description);
+
+        $second = JobPosting::where('title', 'Senior Software Developer')->sole();
+        $this->assertSame('https://www.myjobmag.co.ke/job/senior-software-developer-acme', $second->url);
+        $this->assertSame('Acme Ltd', $second->company);
+        $this->assertSame('Mombasa', $second->location);
+        $this->assertSame('https://www.myjobmag.co.ke/apply-now/102', $second->apply_url);
+        $this->assertStringContainsString('Build Laravel APIs.', $second->description);
+        $this->assertSame($board->id, $second->job_board_id);
+        $this->assertNotNull($second->details_fetched_at);
+        $this->assertNotSame($first->dedupe_key, $second->dedupe_key);
+    }
+
     public function test_pages_disallowed_by_robots_txt_are_not_fetched(): void
     {
         Http::fake([

@@ -6,10 +6,10 @@ use App\Models\ChatMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use App\Notifications\Concerns\RespectsNotificationPreferences;
+use App\Notifications\Messages\WebPushMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
-use NotificationChannels\WebPush\WebPushMessage;
 
 class NewChatMessageNotification extends Notification implements ShouldQueue
 {
@@ -67,15 +67,13 @@ class NewChatMessageNotification extends Notification implements ShouldQueue
             ->tag('chat-conversation-' . $conversationId)
             ->renotify()
             // Handled in resources/js/sw.ts's notificationclick listener.
-            // Browsers that support notification actions cap the number
-            // shown at 2, so this list is ordered by priority.
-            ->action('Reply', 'reply')
-            ->action('Mark as read', 'mark-read')
-            ->action('Delete', 'delete')
-            ->data([
-                'url' => "/chats/{$conversationId}/show",
-                'conversationId' => $conversationId,
-            ]);
+            // Browsers that support notification actions show at most 2.
+            ->openAction('reply', 'Reply', "/chats/{$conversationId}/show")
+            ->signedAction('mark-read', 'Mark As Read', 'push-actions.chat.conversations.read', [
+                'user' => $notifiable->id,
+                'conversation' => $conversationId,
+            ])
+            ->data(['url' => "/chats/{$conversationId}/show"]);
     }
 
     protected function body(): string
