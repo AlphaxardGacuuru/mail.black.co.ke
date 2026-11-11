@@ -84,6 +84,23 @@ export function useToggleUserVerified() {
 }
 
 /**
+ * Deletes someone's account and everything in it (their AI usage is kept).
+ */
+export function useDeleteUser() {
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn: (userId: string) =>
+			Axios.delete<{ message: string }>(`api/admin/users/${userId}`).then(
+				(res) => res.data
+			),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin"] })
+		},
+	})
+}
+
+/**
  * Removes anyone's mailbox, here and on Mailgun.
  */
 export function useRemoveMailbox() {

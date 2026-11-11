@@ -128,7 +128,7 @@ class AiUsageService
             ])
             ->map(fn (AiUsage $row): array => [
                 'userId' => $row->user_id,
-                'name' => $row->user_id === null ? 'System' : (string) $row->name,
+                'name' => $row->user_id === null ? 'System' : ($row->name ?? 'Deleted user'),
                 'email' => $row->email,
                 'requests' => (int) $row->requests,
                 'replySuggestions' => (int) $row->reply_suggestions,

@@ -1,20 +1,23 @@
-import { X } from "lucide-react"
+import { Trash2, X } from "lucide-react"
 import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import Heading from "@/components/heading"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/ui/data-table"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { AvatarVerifiedBadge } from "@/components/verified-badge"
+import { useApp } from "@/contexts/AppContext"
 import { Head } from "@/lib/spa"
 import toast from "@/lib/toast"
 import {
 	type AdminUser,
 	useAdminUsers,
+	useDeleteUser,
 	useRemoveMailbox,
 	useToggleUserVerified,
 } from "@/queries/admin"
@@ -32,6 +35,25 @@ export default function AdminUsers() {
 	const { data, isLoading } = useAdminUsers(search, page, perPage)
 	const toggleVerified = useToggleUserVerified()
 	const removeMailbox = useRemoveMailbox()
+	const deleteUser = useDeleteUser()
+	const { auth } = useApp()
+
+	function handleDeleteUser(user: AdminUser): void {
+		if (
+			!window.confirm(
+				`Delete ${user.name}'s account? Their mail, chats, job search, CVs and mailboxes are deleted for good, including on Mailgun. Their AI usage is kept.`
+			)
+		) {
+			return
+		}
+
+		deleteUser
+			.mutateAsync(user.id)
+			.then((data) => toast.success(data.message))
+			.catch((error) =>
+				toast.error(errorMessage(error, "Couldn't delete this account"))
+			)
+	}
 
 	function handleRemoveMailbox(account: MailgunAccount): void {
 		if (
@@ -168,6 +190,25 @@ export default function AdminUsers() {
 					</div>
 				)
 			},
+		},
+		{
+			id: "actions",
+			header: "",
+			enableSorting: false,
+			meta: { className: "text-right" },
+			cell: ({ row }) =>
+				row.original.id !== String(auth?.id) && (
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon"
+						className="text-muted-foreground hover:text-destructive"
+						disabled={deleteUser.isPending}
+						onClick={() => handleDeleteUser(row.original)}
+						aria-label={`Delete ${row.original.name}'s account`}>
+						<Trash2 />
+					</Button>
+				),
 		},
 	]
 

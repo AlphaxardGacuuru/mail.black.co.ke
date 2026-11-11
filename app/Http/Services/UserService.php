@@ -3,7 +3,6 @@
 namespace App\Http\Services;
 
 use App\Http\Resources\UserResource;
-use App\Models\MailgunAccount;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -11,10 +10,11 @@ use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 class UserService extends Service
 {
-	public function __construct(protected MailgunMailboxService $mailboxService)
+	public function __construct(protected AccountDeletionService $accountDeletion)
 	{
 		parent::__construct();
 	}
@@ -104,16 +104,13 @@ class UserService extends Service
 	{
 		$user = User::query()->findOrFail($id);
 
-		// Their mailboxes go on Mailgun too; a job search address stays
-		// there so it's never given to anyone else.
-		$user->mailgunAccounts()
-			->get()
-			->reject(fn (MailgunAccount $account) => $account->isPlatform())
-			->each(fn (MailgunAccount $account) => $this->mailboxService->removeAccount($account));
+		if ($user->id === $this->id) {
+			throw ValidationException::withMessages(['user' => ['Delete your own account from your profile settings.']]);
+		}
 
-		$deleted = $user->delete();
+		$this->accountDeletion->delete($user);
 
-		return [$deleted, $user->name . ' deleted'];
+		return [true, 'Account Deleted'];
 	}
 
 	public function auth(): UserResource|Response

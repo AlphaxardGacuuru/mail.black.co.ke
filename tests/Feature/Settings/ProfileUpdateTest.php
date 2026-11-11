@@ -65,17 +65,14 @@ class ProfileUpdateTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->delete(route('profile.destroy'), [
-                'password' => 'password',
-            ]);
+        $this->actingAs($user)
+            ->deleteJson(route('profile.destroy'), [
+                'password' => $user->email,
+            ])
+            ->assertOk()
+            ->assertJson(['message' => 'Account Deleted']);
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('home'));
-
-        $this->assertGuest();
+        $this->assertGuest('web');
         $this->assertNull($user->fresh());
     }
 
@@ -83,16 +80,12 @@ class ProfileUpdateTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->from(route('profile.edit'))
-            ->delete(route('profile.destroy'), [
+        $this->actingAs($user)
+            ->deleteJson(route('profile.destroy'), [
                 'password' => 'wrong-password',
-            ]);
-
-        $response
-            ->assertSessionHasErrors('password')
-            ->assertRedirect(route('profile.edit'));
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('password');
 
         $this->assertNotNull($user->fresh());
     }

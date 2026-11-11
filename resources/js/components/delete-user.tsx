@@ -14,10 +14,17 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
+import { useApp } from "@/contexts/AppContext"
 import axios from "@/lib/axios"
+import toast from "@/lib/toast"
+import { clearAuth } from "@/middleware/auth"
 
 export default function DeleteUser() {
+	const { auth } = useApp()
+	// Google sign-ups never saw their password, so they type their email.
+	const withEmail = !!auth?.signsInWithGoogle
 	const passwordInput = useRef<HTMLInputElement>(null)
 	const [processing, setProcessing] = useState(false)
 	const [errors, setErrors] = useState<Record<string, string>>({})
@@ -36,15 +43,14 @@ export default function DeleteUser() {
 		const fd = new FormData(event.currentTarget)
 		try {
 			const { action, method } = ProfileController.destroy.form()
-			const response = await axios.request({
+			const response = await axios.request<{ message: string }>({
 				url: action,
 				method,
 				data: Object.fromEntries(fd),
 			})
-			const finalUrl = (response.request as XMLHttpRequest | null)?.responseURL
-			if (finalUrl) {
-				window.location.assign(finalUrl)
-			}
+			toast.success(response.data.message)
+			clearAuth()
+			window.location.assign("/login")
 		} catch (err: unknown) {
 			const e = err as {
 				response?: {
@@ -97,31 +103,52 @@ export default function DeleteUser() {
 							Are you sure you want to delete your account?
 						</DialogTitle>
 						<DialogDescription>
-							Once your account is deleted, all of its resources and data will
-							also be permanently deleted. Please enter your password to confirm
-							you would like to permanently delete your account.
+							Your mail, chats, job search, CVs and mailboxes are permanently
+							deleted, including on Mailgun.{" "}
+							{withEmail
+								? `Type ${auth?.email} to confirm.`
+								: "Enter your password to confirm."}
 						</DialogDescription>
 
 						<form
 							onSubmit={handleSubmit}
 							className="space-y-6">
-							<div className="grid gap-2">
-								<Label
-									htmlFor="password"
-									className="sr-only">
-									Password
-								</Label>
+							{withEmail ? (
+								<div className="grid gap-2">
+									{/* Email Start */}
+									<Input
+										id="email"
+										name="email"
+										type="email"
+										ref={passwordInput}
+										label="Your email address"
+										autoComplete="off"
+									/>
+									{/* Email End */}
 
-								<PasswordInput
-									id="password"
-									name="password"
-									ref={passwordInput}
-									placeholder="Password"
-									autoComplete="current-password"
-								/>
+									<InputError message={errors.email} />
+								</div>
+							) : (
+								<div className="grid gap-2">
+									<Label
+										htmlFor="password"
+										className="sr-only">
+										Password
+									</Label>
 
-								<InputError message={errors.password} />
-							</div>
+									{/* Password Start */}
+									<PasswordInput
+										id="password"
+										name="password"
+										ref={passwordInput}
+										placeholder="Password"
+										autoComplete="current-password"
+									/>
+									{/* Password End */}
+
+									<InputError message={errors.password} />
+								</div>
+							)}
 
 							<DialogFooter className="gap-2">
 								<DialogClose asChild>

@@ -226,7 +226,10 @@ export default function AdminAiUsage() {
 																		{user.name}
 																	</span>
 																	<span className="block truncate text-xs text-muted-foreground">
-																		{user.email ?? "Not tied to a user"}
+																		{user.email ??
+																			(user.userId
+																				? "Account deleted"
+																				: "Not tied to a user")}
 																	</span>
 																</span>
 															</button>

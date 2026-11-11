@@ -49,6 +49,8 @@ class UserResource extends JsonResource
             "roleNames" => [$userRoleNames],
             "permissions" => $this->getAllPermissions()->pluck('name')->unique()->values(),
             "twoFactorEnabled" => $this->hasTwoFactorEnabled(),
+            // Confirms deleting the account with their email, not a password.
+            "signsInWithGoogle" => filled($this->google_id),
             "can_view_ai_usage" => Gate::forUser($this->resource)
                 ->allows('viewAiUsage'),
             "createdAt" => $this->created_at,

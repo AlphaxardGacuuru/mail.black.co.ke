@@ -26,6 +26,8 @@ export type User = {
 	email_verified_at: string | null
 	verified?: boolean
 	twoFactorEnabled?: boolean
+	// Confirms deleting their account with their email, not a password.
+	signsInWithGoogle?: boolean
 	can_view_ai_usage?: boolean
 	created_at: string
 	updated_at: string
