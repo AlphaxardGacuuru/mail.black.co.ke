@@ -180,7 +180,7 @@ class MailReplySuggestionService extends Service
             'message' => 'Suggested reply ready',
             'data' => [
                 'text' => $text,
-                'html' => $this->toHtml($text),
+                'html' => self::toHtml($text),
             ],
             'cached' => $cached,
         ];
@@ -189,7 +189,7 @@ class MailReplySuggestionService extends Service
     /**
      * Plain text paragraphs as safe HTML for the rich text editor.
      */
-    private function toHtml(string $text): string
+    public static function toHtml(string $text): string
     {
         return collect(preg_split("/\n\s*\n/", $text))
             ->map(fn (string $paragraph) => '<p>'.str_replace("\n", '<br>', e(trim($paragraph))).'</p>')

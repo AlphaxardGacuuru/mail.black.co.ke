@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\MailStatus;
+use App\Events\MailMessageStatusUpdatedEvent;
 use App\Mail\ComposedMail;
 use App\Models\MailgunAccount;
 use App\Models\MailMessage;
@@ -151,9 +152,24 @@ class SendMailMessageJob implements ShouldQueue
             'error' => $exception->getMessage(),
         ]);
 
-        MailMessage::where('id', $this->mailMessageId)->update([
+        $message = MailMessage::find($this->mailMessageId);
+
+        if (! $message) {
+            return;
+        }
+
+        $message->update([
             'status' => MailStatus::FAILED->value,
             'error_message' => $exception->getMessage(),
         ]);
+
+        // Live in the open mailbox, and the user is told it didn't go.
+        MailMessageStatusUpdatedEvent::dispatch(
+            $message->user_id,
+            $message->id,
+            $message->mail_thread_id,
+            MailStatus::FAILED->value,
+            $exception->getMessage(),
+        );
     }
 }

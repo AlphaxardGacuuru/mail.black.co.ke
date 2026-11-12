@@ -11,6 +11,8 @@ import type { AdminAiUsageFeature } from "@/queries/admin"
 /** What each feature is, and what one use of it is, for pricing. */
 const FEATURES: Record<string, { label: string; unit: string }> = {
 	reply_suggestion: { label: "Reply suggestions", unit: "per message" },
+	mail_draft: { label: "Email drafts", unit: "per draft" },
+	mail_revamp: { label: "Email rewrites", unit: "per rewrite" },
 	cv_parse: { label: "Reading CVs", unit: "per CV" },
 	cv_revamp: { label: "CV revamps", unit: "per CV" },
 	cv_tailor: { label: "CVs tailored to a job", unit: "per application" },

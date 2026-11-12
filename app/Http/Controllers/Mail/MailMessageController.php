@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Mail;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\MailMessageResource;
 use App\Http\Services\MailMessageService;
+use App\Http\Services\MailComposeAssistService;
 use App\Http\Services\MailReplySuggestionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -118,6 +119,39 @@ class MailMessageController extends Controller
         ]);
 
         $result = $suggestions->suggest($request->user(), $id, $validated['mode'] ?? 'reply');
+
+        return response()->json(
+            collect($result)->except('status')->all(),
+            $result['status'],
+        );
+    }
+
+    public function draft(Request $request, MailComposeAssistService $assist): JsonResponse
+    {
+        $validated = $request->validate([
+            'instruction' => 'required|string|max:1000',
+            'subject' => 'nullable|string|max:255',
+            'to' => 'nullable|array|max:50',
+            'to.*' => 'string|max:255',
+        ]);
+
+        $result = $assist->draft($request->user(), $validated['instruction'], $validated['subject'] ?? null, $validated['to'] ?? []);
+
+        return response()->json(
+            collect($result)->except('status')->all(),
+            $result['status'],
+        );
+    }
+
+    public function revamp(Request $request, MailComposeAssistService $assist): JsonResponse
+    {
+        $validated = $request->validate([
+            'bodyHtml' => 'required|string|max:100000',
+            'style' => 'required|in:'.implode(',', array_keys(MailComposeAssistService::STYLES)),
+            'subject' => 'nullable|string|max:255',
+        ]);
+
+        $result = $assist->revamp($request->user(), $validated['bodyHtml'], $validated['style'], $validated['subject'] ?? null);
 
         return response()->json(
             collect($result)->except('status')->all(),

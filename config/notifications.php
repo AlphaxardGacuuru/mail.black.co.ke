@@ -22,6 +22,13 @@ return [
             'defaults' => ['in_app' => true, 'push' => true, 'email' => false],
         ],
 
+        'mail_not_delivered' => [
+            'group' => 'Mail',
+            'label' => 'Mail not delivered',
+            'description' => 'A message you sent couldn\'t be delivered or bounced.',
+            'defaults' => ['in_app' => true, 'push' => true, 'email' => true],
+        ],
+
         'job_applications_ready' => [
             'group' => 'Job search',
             'label' => 'Applications to review',

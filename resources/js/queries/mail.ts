@@ -374,6 +374,36 @@ export function useSuggestReply(parentMessageId: string) {
 	})
 }
 
+export function useDraftMail() {
+	return useMutation({
+		mutationFn: (payload: {
+			instruction: string
+			subject?: string
+			to?: string[]
+		}) =>
+			Axios.post<{ data: MailReplySuggestion }>(
+				MailMessageController.draft.url(),
+				payload
+			).then((response) => response.data),
+	})
+}
+
+export type MailRevampStyle = "polish" | "formal" | "friendly" | "shorter"
+
+export function useRevampMail() {
+	return useMutation({
+		mutationFn: (payload: {
+			bodyHtml: string
+			style: MailRevampStyle
+			subject?: string
+		}) =>
+			Axios.post<{ data: MailReplySuggestion }>(
+				MailMessageController.revamp.url(),
+				payload
+			).then((response) => response.data),
+	})
+}
+
 export function useAddMailThreadLabel() {
 	const queryClient = useQueryClient()
 

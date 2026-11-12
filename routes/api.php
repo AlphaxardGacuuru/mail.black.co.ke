@@ -101,6 +101,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('messages/{id}/reply-all', [MailMessageController::class, 'replyAll']);
     Route::post('messages/{id}/forward', [MailMessageController::class, 'forward']);
     Route::post('messages/{id}/retry', [MailMessageController::class, 'retry']);
+    Route::post('messages/draft', [MailMessageController::class, 'draft'])
+        ->middleware('throttle:20,1');
+    Route::post('messages/revamp', [MailMessageController::class, 'revamp'])
+        ->middleware('throttle:20,1');
     Route::post('messages/{id}/suggest-reply', [MailMessageController::class, 'suggestReply'])
         ->middleware('throttle:20,1');
 

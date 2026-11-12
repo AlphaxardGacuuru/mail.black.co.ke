@@ -27,6 +27,16 @@ class AiUsage extends Model
     public const FEATURE_REPLY_SUGGESTION = 'reply_suggestion';
 
     /**
+     * An email drafted from the user's instruction on the compose form.
+     */
+    public const FEATURE_MAIL_DRAFT = 'mail_draft';
+
+    /**
+     * The user's own message rewritten on the compose form.
+     */
+    public const FEATURE_MAIL_REVAMP = 'mail_revamp';
+
+    /**
      * Reading an uploaded CV into a job seeker profile.
      */
     public const FEATURE_CV_PARSE = 'cv_parse';

@@ -2,11 +2,16 @@ import { isAxiosError, isCancel } from "axios"
 import { useQueryClient } from "@tanstack/react-query"
 import type { FilePondFile } from "filepond"
 import FilePondPluginFileValidateSize from "filepond-plugin-file-validate-size"
-import { Paperclip, Send, Sparkles } from "lucide-react"
+import { Paperclip, Send, Sparkles, Wand2 } from "lucide-react"
 import { useRef, useState } from "react"
 import type { FormEvent } from "react"
 import { FilePond, registerPlugin } from "react-filepond"
 import FilePondController from "@/actions/App/Http/Controllers/FilePondController"
+import {
+	MailDraftPrompt,
+	MailRevampSuggestions,
+	plainText,
+} from "@/components/mail/MailComposeAssist"
 import MailRecipientInput from "@/components/mail/MailRecipientInput"
 import RichTextEditor from "@/components/rich-text-editor"
 import { Button } from "@/components/ui/button"
@@ -53,6 +58,7 @@ export default function MailComposeForm({
 	const [attachmentIds, setAttachmentIds] = useState<Record<string, number>>({})
 	const [pendingUploads, setPendingUploads] = useState(0)
 	const [showAttachments, setShowAttachments] = useState(false)
+	const [showDraftPrompt, setShowDraftPrompt] = useState(false)
 	const pondRef = useRef<FilePond>(null)
 	const queryClient = useQueryClient()
 
@@ -67,6 +73,8 @@ export default function MailComposeForm({
 	const mutation = mode === "new" ? sendMail : replyMail
 	const canSuggest =
 		(mode === "reply" || mode === "reply-all") && !!parentMessageId
+	// Replies have Suggest Reply, written from the thread instead.
+	const canDraft = mode === "new" || mode === "forward"
 	const showToField = mode === "new" || mode === "forward"
 	const isUploading = pendingUploads > 0
 
@@ -85,13 +93,8 @@ export default function MailComposeForm({
 			return
 		}
 
-		const hasText =
-			new DOMParser()
-				.parseFromString(body, "text/html")
-				.body.textContent?.trim() ?? ""
-
 		if (
-			hasText &&
+			plainText(body) &&
 			!window.confirm("Replace your message with a suggested reply?")
 		) {
 			return
@@ -118,6 +121,7 @@ export default function MailComposeForm({
 		setBody("")
 		setAttachmentIds({})
 		setShowAttachments(false)
+		setShowDraftPrompt(false)
 		pondRef.current?.removeFiles()
 	}
 
@@ -242,11 +246,33 @@ export default function MailComposeForm({
 				/>
 			)}
 
+			{/* Draft Prompt Start */}
+			{canDraft && showDraftPrompt && (
+				<MailDraftPrompt
+					subject={subject}
+					to={to}
+					hasBody={!!plainText(body)}
+					onDraft={setBody}
+					onClose={() => setShowDraftPrompt(false)}
+				/>
+			)}
+			{/* Draft Prompt End */}
+
+			{/* Body Start */}
 			<RichTextEditor
 				value={body}
 				onChange={setBody}
 				placeholder="Write your message"
 			/>
+			{/* Body End */}
+
+			{/* Revamp Suggestions Start */}
+			<MailRevampSuggestions
+				body={body}
+				subject={subject}
+				onUse={setBody}
+			/>
+			{/* Revamp Suggestions End */}
 
 			{/* Attachments Start */}
 			{showAttachments && (
@@ -360,6 +386,20 @@ export default function MailComposeForm({
 						</Button>
 					)}
 					{/* Suggest Reply End */}
+
+					{/* Draft With AI Start */}
+					{canDraft && (
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={() => setShowDraftPrompt((shown) => !shown)}
+							disabled={mutation.isPending}
+							className="gap-2">
+							<Wand2 className="size-4" />
+							<span className="hidden sm:inline">Draft with AI</span>
+						</Button>
+					)}
+					{/* Draft With AI End */}
 
 					{/* Attachment Start */}
 					<Button

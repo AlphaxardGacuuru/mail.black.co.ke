@@ -12,6 +12,28 @@ use Illuminate\Http\Request;
 class MailgunWebhookService
 {
     /**
+     * How far a message has got on its way: an event never moves it back,
+     * as Mailgun's events can arrive out of order.
+     */
+    private const PROGRESS = [
+        MailStatus::QUEUED->value => 0,
+        MailStatus::SENT->value => 1,
+        MailStatus::DELIVERED->value => 2,
+        MailStatus::OPENED->value => 3,
+        MailStatus::CLICKED->value => 4,
+    ];
+
+    /**
+     * The message didn't reach a recipient. Kept even when another
+     * recipient later opens it, so the failure isn't hidden.
+     */
+    private const UNDELIVERED = [
+        MailStatus::FAILED->value,
+        MailStatus::BOUNCED->value,
+        MailStatus::PERMANENT_FAILED->value,
+    ];
+
+    /**
      * Process an account-level Mailgun event webhook.
      *
      * @return array{status: bool, message: string, updated: int}
@@ -40,10 +62,14 @@ class MailgunWebhookService
             ];
         }
 
+        // Mail coming in has events too ("accepted" when Mailgun takes it):
+        // only mail the user sent has a delivery status.
         $message = $messageId === '' ? null : MailMessage::query()
-            ->where('mailgun_message_id', $messageId)
-            ->orWhere('message_id', $messageId)
-            ->orWhere('message_id', '<' . $messageId . '>')
+            ->where('direction', 'outbound')
+            ->where(fn ($query) => $query
+                ->where('mailgun_message_id', $messageId)
+                ->orWhere('message_id', $messageId)
+                ->orWhere('message_id', '<' . $messageId . '>'))
             ->first();
 
         $mailgunEvent = new MailgunEvent;
@@ -67,6 +93,14 @@ class MailgunWebhookService
             return [
                 'status' => true,
                 'message' => 'Message Not Found',
+                'updated' => 0
+            ];
+        }
+
+        if (! $this->moves($message->status, $status)) {
+            return [
+                'status' => true,
+                'message' => 'Event ignored',
                 'updated' => 0
             ];
         }
@@ -100,6 +134,29 @@ class MailgunWebhookService
     }
 
     /**
+     * Whether an event's status replaces the message's current one: not
+     * when it's the same, a step back, a temporary failure after delivery,
+     * or progress after the message failed to reach someone.
+     */
+    private function moves(?string $current, string $status): bool
+    {
+        if ($current === $status) {
+            return false;
+        }
+
+        if (in_array($current, self::UNDELIVERED, true) && isset(self::PROGRESS[$status])) {
+            return false;
+        }
+
+        if ($status === MailStatus::TEMPORARY_FAILED->value) {
+            return (self::PROGRESS[$current] ?? 0) < self::PROGRESS[MailStatus::DELIVERED->value];
+        }
+
+        return ! isset(self::PROGRESS[$current], self::PROGRESS[$status])
+            || self::PROGRESS[$status] > self::PROGRESS[$current];
+    }
+
+    /**
      * @param array<string, mixed> $payload
      */
     private function messageId(array $payload): string
@@ -130,8 +187,11 @@ class MailgunWebhookService
         return match ($event) {
             'accepted' => MailStatus::SENT->value,
             'delivered' => MailStatus::DELIVERED->value,
-            'opened' => MailStatus::OPENED->value,
-            'clicked' => MailStatus::CLICKED->value,
+            // Gmail and Apple Mail fetch images and links themselves the
+            // moment a message arrives, before anyone reads it; Mailgun
+            // names the bot, and those aren't the recipient opening it.
+            'opened' => $this->byBot($payload) ? null : MailStatus::OPENED->value,
+            'clicked' => $this->byBot($payload) ? null : MailStatus::CLICKED->value,
             'complained', 'spam_complaint' => MailStatus::COMPLAINED->value,
             'unsubscribed' => MailStatus::UNSUBSCRIBED->value,
             'permanent_failure', 'permanent-failure' => MailStatus::PERMANENT_FAILED->value,
@@ -139,6 +199,14 @@ class MailgunWebhookService
             'failed' => $this->failureStatus($payload),
             default => null,
         };
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function byBot(array $payload): bool
+    {
+        return filled(data_get($payload, 'event-data.client-info.bot') ?? data_get($payload, 'client-info.bot'));
     }
 
     /**
