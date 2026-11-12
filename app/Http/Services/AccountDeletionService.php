@@ -87,8 +87,13 @@ class AccountDeletionService
     {
         $public = fn (?string $path) => ['disk' => 'public', 'path' => $path];
 
+        // Only the user's own upload: the default picture is shared, and a
+        // Google picture is a URL, not a file.
         return collect()
-            ->push($public($user->getRawOriginal('avatar')))
+            ->when(
+                $user->hasUploadedAvatar(),
+                fn (Collection $files) => $files->push($public($user->getRawOriginal('avatar')))
+            )
             ->merge(MailgunAccount::query()
                 ->where('user_id', $user->id)
                 ->pluck('avatar')

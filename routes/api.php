@@ -170,9 +170,6 @@ Route::middleware(['auth:sanctum', 'can:viewAiUsage'])->prefix('admin')->name('a
  */
 Route::prefix('filepond')->group(function () {
     Route::controller(FilePondController::class)->group(function () {
-        // User
-        Route::post('avatar/{id}', 'updateAvatar');
-
         // Support Tickets
         Route::post('support-tickets/attachments', 'storeSupportTicketAttachment');
         Route::delete('support-tickets/attachments/{id}', 'destroySupportTicketAttachment');

@@ -25,6 +25,7 @@ Route::get('settings/appearance', fn() => view('app'))->name('appearance.edit');
 // as intended here.
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('settings/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
 
     Route::get('settings/mailgun-domains', [MailgunDomainController::class, 'index'])->name('mailgun-domains.index');
     Route::post('settings/mailgun-domains', [MailgunDomainController::class, 'store'])->name('mailgun-domains.store');

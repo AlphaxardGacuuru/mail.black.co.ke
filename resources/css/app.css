@@ -313,3 +313,50 @@
         animation-play-state: paused;
     }
 }
+
+.avatar-upload .filepond--root {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    font-family: inherit;
+}
+
+.avatar-upload .filepond--panel,
+.avatar-upload .filepond--panel-root,
+.avatar-upload .filepond--panel-root > *,
+.avatar-upload .filepond--item-panel {
+    background: transparent;
+    border: 0;
+}
+
+/* The drop label fills the circle so a tap (or a drop) anywhere on it
+   opens the picker, and dims on hover and while dragging a file over it. */
+.avatar-upload .filepond--drop-label {
+    inset: 0;
+    height: 100%;
+    min-height: 0;
+    cursor: pointer;
+    transition: background-color 150ms;
+}
+
+.avatar-upload .filepond--drop-label label {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.avatar-upload:hover .filepond--drop-label,
+.avatar-upload .filepond--root[data-hopper-state='drag-over'] .filepond--drop-label {
+    background-color: rgb(0 0 0 / 0.25);
+}
+
+/* Save and Cancel live next to the circle, so FilePond's own buttons and
+   status text would only cover the preview. */
+.avatar-upload .filepond--file-action-button:not(.filepond--action-abort-item-processing),
+.avatar-upload .filepond--file-info,
+.avatar-upload .filepond--file-status {
+    display: none;
+}

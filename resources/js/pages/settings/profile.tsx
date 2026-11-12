@@ -3,11 +3,13 @@ import { LoaderCircle } from "lucide-react"
 import { useState } from "react"
 import { useApp } from "@/contexts/AppContext"
 import ProfileController from "@/actions/App/Http/Controllers/Settings/ProfileController"
+import { AvatarUploadField } from "@/components/avatar-upload-field"
 import DeleteUser from "@/components/delete-user"
 import Heading from "@/components/heading"
 import InputError from "@/components/input-error"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useInitials } from "@/hooks/use-initials"
 import Axios from "@/lib/axios"
 import toast from "@/lib/toast"
 import { edit } from "@/routes/profile"
@@ -21,9 +23,11 @@ export default function Profile({
 	status?: string
 }) {
 	const { auth } = useApp()
+	const getInitials = useInitials()
 	const user = {
 		name: auth?.name ?? "",
 		email: auth?.email ?? "",
+		avatar: auth?.avatar,
 		email_verified_at: auth?.email_verified_at ?? null,
 	}
 
@@ -92,6 +96,13 @@ export default function Profile({
 					title="Profile information"
 					description="Update your name and email address"
 				/>
+
+				{/* Avatar Start */}
+				<AvatarUploadField
+					avatar={user.avatar}
+					initials={getInitials(user.name)}
+				/>
+				{/* Avatar End */}
 
 				<form
 					onSubmit={handleSubmit}

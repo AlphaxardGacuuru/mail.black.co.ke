@@ -215,6 +215,25 @@ class AccountDeletionTest extends TestCase
         $this->assertModelMissing($this->user);
     }
 
+    public function test_deleting_an_account_keeps_the_shared_default_avatar_and_removes_an_upload(): void
+    {
+        Storage::disk('public')->put('avatars/male-avatar.png', 'default');
+        Storage::disk('public')->put('avatars/uploads/me.jpg', 'mine');
+
+        $admin = User::factory()->create(['email' => config('admin.email')]);
+        $defaultUser = User::factory()->create(['avatar' => 'avatars/male-avatar.png']);
+        $uploader = User::factory()->create(['avatar' => 'avatars/uploads/me.jpg']);
+
+        collect([$defaultUser, $uploader])
+            ->each(fn (User $user) => $this->actingAs($admin, 'sanctum')
+                ->deleteJson("/api/admin/users/{$user->id}")
+                ->assertOk());
+
+        Storage::disk('public')
+            ->assertExists('avatars/male-avatar.png')
+            ->assertMissing('avatars/uploads/me.jpg');
+    }
+
     public function test_admins_delete_their_own_account_from_their_settings(): void
     {
         $admin = User::factory()->create(['email' => config('admin.email')]);

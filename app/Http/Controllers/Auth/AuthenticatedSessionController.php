@@ -62,7 +62,8 @@ class AuthenticatedSessionController extends Controller
                 $attributes['name'] = $name;
             }
 
-            if (filled($avatarUrl) && $dbUser->avatar !== $avatarUrl) {
+            // A picture the user uploaded themselves outranks Google's.
+            if (filled($avatarUrl) && ! $dbUser->hasUploadedAvatar() && $dbUser->avatar !== $avatarUrl) {
                 $attributes['avatar'] = $avatarUrl;
             }
 
