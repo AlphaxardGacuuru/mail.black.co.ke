@@ -14,12 +14,14 @@
         "lint": "eslint . --fix",
         "lint:check": "eslint .",
         "postinstall": "playwright install chromium-headless-shell",
-        "types:check": "tsc --noEmit"
+        "types:check": "tsc --noEmit",
+        "test:e2e": "playwright test"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",
         "@laravel/echo-react": "^2.4.0",
         "@laravel/vite-plugin-wayfinder": "^0.1.3",
+        "@playwright/test": "^1.64.1",
         "@stylistic/eslint-plugin": "^5.10.0",
         "@types/crypto-js": "^4.2.2",
         "@types/leaflet": "^1.9.22",
