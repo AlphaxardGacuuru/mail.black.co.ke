@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\StoryPostedEvent;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -35,6 +36,15 @@ class Story extends Model
      */
     protected $casts = [
         'media' => 'array',
+    ];
+
+    /**
+     * The model's events (StoryPostedListener tells its audience).
+     *
+     * @var array<string, class-string>
+     */
+    protected $dispatchesEvents = [
+        'created' => StoryPostedEvent::class,
     ];
 
     /**

@@ -10,13 +10,16 @@ use App\Models\AiUsage;
 use App\Models\JobSeekerProfile;
 use App\Models\Story;
 use App\Models\User;
+use App\Notifications\NewStoryNotification;
 use App\Services\Jobs\SafePageFetcher;
 use App\Services\Stories\CareerNewsStoryPoster;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Exceptions\RateLimitedException;
 use Laravel\Ai\Prompts\AgentPrompt;
+use NotificationChannels\WebPush\WebPushChannel;
 use Tests\TestCase;
 
 class CareerNewsStoryTest extends TestCase
@@ -119,6 +122,43 @@ class CareerNewsStoryTest extends TestCase
         Storage::disk('public')->assertExists($story->media[0]['image']);
         $this->assertSame(2, AiUsage::where('feature', AiUsage::FEATURE_CAREER_FIELDS)->count());
         $this->assertSame(1, AiUsage::where('feature', AiUsage::FEATURE_CAREER_NEWS)->count());
+    }
+
+    public function test_people_in_the_field_are_told_about_a_new_story(): void
+    {
+        Notification::fake();
+        CareerNewsAgent::fake([self::ANSWER]);
+        $accountant = $this->profile(['Accountant', 'Finance Officer']);
+        $engineer = $this->profile(['Software Engineer'], 'Otieno Barasa');
+        $engineer->update(['career_fields' => ['software_it'], 'career_fields_at' => now()]);
+        $accountant->update(['career_fields' => ['accounting_finance'], 'career_fields_at' => now()]);
+
+        app(CareerNewsStoryPoster::class)->run('accounting_finance');
+
+        $story = Story::sole();
+
+        Notification::assertSentTo($accountant->user, NewStoryNotification::class, function (NewStoryNotification $notification, array $channels) use ($accountant, $story): bool {
+            $push = $notification->toWebPush($accountant->user, $notification)->toArray();
+
+            return $channels === [WebPushChannel::class]
+                && $push['title'] === 'News for you'
+                && $push['body'] === 'Accounting & finance: KRA changes VAT rules for SMEs, and 2 more'
+                && str_ends_with($push['image'], $story->media[0]['image'])
+                && $push['data']['url'] === "/chats/stories/{$story->id}/view";
+        });
+        Notification::assertNotSentTo([$engineer->user, $this->account], NewStoryNotification::class);
+    }
+
+    public function test_story_notifications_follow_the_users_settings(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create([
+            'notification_preferences' => ['new_story' => ['in_app' => true, 'push' => false, 'email' => false]],
+        ]);
+
+        Story::create(['user_id' => $this->account->id, 'text' => 'Hello everyone', 'media' => []]);
+
+        Notification::assertSentTo($user, NewStoryNotification::class, fn ($notification, array $channels) => $channels === ['database', 'broadcast']);
     }
 
     public function test_a_cv_is_only_tagged_again_once_it_changes(): void

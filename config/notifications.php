@@ -15,6 +15,13 @@ return [
             'defaults' => ['in_app' => false, 'push' => true, 'email' => false],
         ],
 
+        'new_story' => [
+            'group' => 'Chats',
+            'label' => 'New story',
+            'description' => 'A news story for your career field is posted.',
+            'defaults' => ['in_app' => false, 'push' => true, 'email' => false],
+        ],
+
         'new_mail' => [
             'group' => 'Mail',
             'label' => 'New mail',

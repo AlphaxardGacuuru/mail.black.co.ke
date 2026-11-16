@@ -250,6 +250,7 @@ type PushPayload = {
 	body?: string
 	icon?: string
 	badge?: string
+	image?: string
 	tag?: string
 	renotify?: boolean
 	actions?: PushAction[]
@@ -263,16 +264,18 @@ self.addEventListener("push", (event) => {
 
 	const payload: PushPayload = event.data.json()
 
-	// `renotify` and `actions` (the notification's buttons) are real,
+	// `renotify`, `actions` (the notification's buttons) and `image` are real,
 	// supported NotificationOptions fields missing from TypeScript's bundled
 	// DOM lib.
 	const options: NotificationOptions & {
 		renotify?: boolean
 		actions?: PushAction[]
+		image?: string
 	} = {
 		body: payload.body,
 		icon: payload.icon ?? "/notification-icon-192x192.png",
 		badge: payload.badge ?? "/notification-badge-192x192.png",
+		image: payload.image,
 		tag: payload.tag,
 		renotify: payload.renotify,
 		actions: payload.actions,
