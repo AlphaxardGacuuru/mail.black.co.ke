@@ -524,7 +524,15 @@ class JobSearchTest extends TestCase
         config(['services.mailgun.webhook_signing_secret' => 'secret']);
         $profile = $this->readyProfile();
 
-        $receive = function (string $from, string $subject) {
+        $linkedInAlert = '<a href="https://www.linkedin.com/comm/jobs/view/4123456789/?trackingId=a">Accountant</a>'
+            .'<a href="https://www.linkedin.com/comm/jobs/view/4123456790/?trackingId=b">Auditor</a>';
+        // myjobmag wraps each link in its click tracking.
+        $myJobMagAlert = collect(['devops-engineer-onfon-mobile', 'it-officer-ignite-energy-access'])
+            ->map(fn (string $job) => '<a href="https://tracking.myjobmag.co.ke/CL0/https:%2F%2Fwww.myjobmag.co.ke%2Fjob%2F'.$job.'%3Futm_source=email%26utm_medium=daily/1/0100abc/xyz=">Job</a>')
+            ->implode('')
+            .'<a href="https://tracking.myjobmag.co.ke/CL0/https:%2F%2Fwww.myjobmag.co.ke%2Fuser%2Fjob-setting/1/0100abc/xyz=">Settings</a>';
+
+        $receive = function (string $from, string $subject, string $html = '<p>Hello</p>') {
             $timestamp = (string) now()->timestamp;
             $token = Str::random(10);
 
@@ -537,22 +545,27 @@ class JobSearchTest extends TestCase
                 'from' => $from,
                 'To' => 'wanjiku@example.com',
                 'subject' => $subject,
-                'body-html' => '<p>Hello</p>',
+                'body-html' => $html,
                 'Message-Id' => '<'.Str::random(10).'@example.com>',
             ])->assertOk();
         };
 
-        $receive('jobalerts-noreply@linkedin.com', 'Accountant: Acme Ltd and 4 more jobs in Nairobi');
-        // Not alerts: LinkedIn's other mail, and mail from anyone else.
+        $receive('jobalerts-noreply@linkedin.com', 'Accountant: Acme Ltd and 4 more jobs in Nairobi', $linkedInAlert);
+        // An alert whose subject doesn't mention jobs.
+        $receive('no_reply@myjobmag.co.ke', 'Safaricom, Jambojet +160 More', $myJobMagAlert);
+        // Not alerts: job sites' other mail, which links to no job, and
+        // mail from anyone else.
         $receive('notifications-noreply@linkedin.com', 'You appeared in 5 searches this week');
-        $receive('friend@gmail.com', 'Any jobs going?');
+        $receive('security-noreply@linkedin.com', 'Your pin is 764890. Please confirm your email address.', '<a href="https://www.linkedin.com/comm/psettings">Settings</a>');
+        $receive('services@myjobmag.co.ke', 'Welcome to MyJobMag!', '<a href="http://url9388.myjobmag.co.ke/ls/click?upn=abc">Get started</a>');
+        $receive('friend@gmail.com', 'Any jobs going?', $linkedInAlert);
 
-        Queue::assertPushed(ReadJobAlertJob::class, 1);
+        Queue::assertPushed(ReadJobAlertJob::class, 2);
 
         $profile->update(['auto_apply' => false]);
-        $receive('alert@indeed.com', 'New jobs for accountant');
+        $receive('alert@indeed.com', 'New jobs for accountant', $linkedInAlert);
 
-        Queue::assertPushed(ReadJobAlertJob::class, 1);
+        Queue::assertPushed(ReadJobAlertJob::class, 2);
     }
 
     public function test_jobs_in_an_alert_join_a_board_we_read_or_become_the_users_own(): void
@@ -562,6 +575,7 @@ class JobSearchTest extends TestCase
             <table>
             <tr><td><a href="https://www.linkedin.com/comm/jobs/view/4123456789/?trackingId=abc123xyz">Accountant</a><br>Acme Ltd · Nairobi</td></tr>
             <tr><td><a href="https://www.brightermonday.co.ke/listings/finance-officer-xyz789?utm_source=alert">Finance Officer</a><br>Beta Bank · Nairobi</td></tr>
+            <tr><td><a href="https://tracking.myjobmag.co.ke/CL0/https:%2F%2Fwww.myjobmag.co.ke%2Fjob%2Fdevops-engineer-onfon-mobile%3Futm_source=email/1/0100abc/xyz=">DevOps Engineer</a><br>Onfon Mobile · Nairobi</td></tr>
             <tr><td><a href="https://www.linkedin.com/comm/jobs/unsubscribe?id=1">Unsubscribe</a></td></tr>
             </table>
             HTML);
@@ -569,11 +583,12 @@ class JobSearchTest extends TestCase
         JobAlertAgent::fake([['jobs' => [
             ['title' => 'Accountant', 'company' => 'Acme Ltd', 'location' => 'Nairobi', 'link' => 1],
             ['title' => 'Finance Officer', 'company' => 'Beta Bank', 'location' => 'Nairobi', 'link' => 2],
+            ['title' => 'DevOps Engineer', 'company' => 'Onfon Mobile', 'location' => 'Nairobi', 'link' => 3],
             // A link that isn't in the email.
             ['title' => 'Auditor', 'company' => 'Gamma', 'location' => 'Nairobi', 'link' => 99],
         ]]]);
 
-        $this->assertSame(2, app(JobAlertReader::class)->read($profile, $message));
+        $this->assertSame(3, app(JobAlertReader::class)->read($profile, $message));
 
         // The AI sees numbered links, not the tracking addresses.
         JobAlertAgent::assertPrompted(fn (AgentPrompt $prompt) => str_contains($prompt->prompt, 'Accountant [1]')
@@ -585,11 +600,19 @@ class JobSearchTest extends TestCase
         $this->assertSame('LinkedIn', $linkedIn->sourceName());
         $this->assertNotNull($linkedIn->details_fetched_at);
 
-        // BrighterMonday is read like its other jobs, for everyone.
-        $board = JobPosting::where('source', JobPosting::SOURCE_BOARD)->sole();
-        $this->assertSame('https://www.brightermonday.co.ke/listings/finance-officer-xyz789', $board->url);
+        // BrighterMonday and myjobmag are read like their other jobs, for
+        // everyone, named as the alert names them.
+        $board = JobPosting::where('url', 'https://www.brightermonday.co.ke/listings/finance-officer-xyz789')->sole();
+        $this->assertSame(JobPosting::SOURCE_BOARD, $board->source);
+        $this->assertSame('Finance Officer', $board->title);
+        $this->assertSame('Beta Bank', $board->company);
         $this->assertNull($board->user_id);
         $this->assertNull($board->details_fetched_at);
+
+        // With myjobmag's click tracking taken off.
+        $myJobMag = JobPosting::where('url', 'https://www.myjobmag.co.ke/job/devops-engineer-onfon-mobile')->sole();
+        $this->assertSame(JobBoard::where('host', 'www.myjobmag.co.ke')->value('id'), $myJobMag->job_board_id);
+        $this->assertSame('Onfon Mobile', $myJobMag->company);
 
         $this->assertSame('LinkedIn', $profile->fresh()->last_alert_source);
         $this->assertSame(1, AiUsage::where('feature', AiUsage::FEATURE_JOB_ALERT_READ)->where('user_id', $this->user->id)->count());
@@ -604,7 +627,7 @@ class JobSearchTest extends TestCase
         config(['job_search.alerts.max_per_user_per_day' => 1]);
         $profile = $this->readyProfile();
         JobAlertAgent::fake([['jobs' => []]]);
-        $message = $this->alertEmail('noreply@fuzu.com', 'New jobs matching your profile');
+        $message = $this->alertEmail('noreply@fuzu.com', 'New jobs matching your profile', '<a href="https://www.fuzu.com/kenya/jobs/accountant-1">Accountant</a><a href="https://www.fuzu.com/kenya/jobs/auditor-2">Auditor</a>');
 
         $this->assertSame(0, app(JobAlertReader::class)->read($profile, $message));
         $this->assertNull(app(JobAlertReader::class)->read($profile, $message));

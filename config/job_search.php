@@ -140,6 +140,20 @@ return [
             'careerjet.co.ke' => 'Careerjet',
             'jooble.org' => 'Jooble',
         ],
+        // Links to a single job's page on each site. Mail from a sender
+        // above is read as an alert only when it links to at least
+        // min_job_links of them (after click tracking is taken off).
+        'job_links' => [
+            '#^https?://([a-z]+\.)?linkedin\.com/(comm/)?jobs/view/#i',
+            '#^https?://(www\.)?myjobmag\.co\.ke/jobs?/[^/]+#i',
+            '#^https?://(www\.)?brightermonday\.co\.ke/listings/#i',
+            '#^https?://([a-z]+\.)?indeed\.com/(viewjob|rc/clk|pagead/clk|m/viewjob)#i',
+            '#^https?://(www\.)?fuzu\.com/(.+/)?jobs?/[^/]+#i',
+            '#^https?://(www\.)?glassdoor\.[a-z.]+/(job-listing|partner/joblisting)#i',
+            '#^https?://(www\.)?careerjet\.co\.ke/(jobad|job)/#i',
+            '#^https?://([a-z]+\.)?jooble\.org/(desc|away|jdp)/#i',
+        ],
+        'min_job_links' => 2,
         // Alerts the AI reads per user per day, how much of each, and how
         // many jobs are kept from one alert.
         'max_per_user_per_day' => 20,

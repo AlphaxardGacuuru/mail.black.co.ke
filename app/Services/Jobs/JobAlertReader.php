@@ -28,20 +28,55 @@ class JobAlertReader
 
     /**
      * The site a job alert came from, or null when the message isn't one:
-     * mail from a job site that looks like it's about jobs (LinkedIn also
-     * sends messages and notifications).
+     * mail from a job site that links to several job pages. Job sites also
+     * send welcomes, sign-in codes and notifications, which link to none,
+     * and alert subjects often don't mention jobs ("Safaricom, Jambojet
+     * +160 More").
      */
     public static function alertSource(MailMessage $message): ?string
     {
-        $from = mb_strtolower((string) ($message->from_address['address'] ?? ''));
-        $domain = Str::after($from, '@');
+        $domain = Str::of((string) ($message->from_address['address'] ?? ''))
+            ->lower()
+            ->after('@')
+            ->toString();
 
         $site = collect(config('job_search.alerts.senders'))
             ->first(fn (string $name, string $sender) => $domain === $sender || str_ends_with($domain, '.'.$sender));
 
-        $aboutJobs = preg_match('/job|vacanc|career|hiring|opportunit|position|alert/i', Str::before($from, '@').' '.$message->subject) === 1;
+        return $site && self::jobLinks($message)->count() >= (int) config('job_search.alerts.min_job_links')
+            ? $site
+            : null;
+    }
 
-        return $site && $aboutJobs ? $site : null;
+    /**
+     * The distinct job pages the message links to, with click tracking
+     * taken off.
+     *
+     * @return Collection<int, string>
+     */
+    public static function jobLinks(MailMessage $message): Collection
+    {
+        preg_match_all('#href\s*=\s*["\']\s*(https?://[^"\'\s]+)#i', (string) $message->body_html, $matches);
+
+        return collect($matches[1])
+            ->map(fn (string $href) => Str::before(self::unwrap(html_entity_decode($href)), '?'))
+            ->filter(fn (string $url) => collect(config('job_search.alerts.job_links'))
+                ->contains(fn (string $pattern) => preg_match($pattern, $url) === 1))
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * The address a click-tracking link leads to: alerts wrap every link,
+     * with the real one inside it, percent-encoded
+     * ("https://tracking.myjobmag.co.ke/CL0/https:%2F%2Fwww.myjobmag.co.ke%2Fjob%2F...").
+     * Other links come back as they are.
+     */
+    public static function unwrap(string $url): string
+    {
+        return preg_match('#.(https?(?::|%3A)(?:%2F){2}[^/&\s]+)#i', $url, $match)
+            ? rawurldecode($match[1])
+            : $url;
     }
 
     /**
@@ -116,14 +151,17 @@ class JobAlertReader
         $board = $boards->first(fn (JobBoard $board) => parse_url($boardUrl, PHP_URL_HOST) === $board->host && $board->isJobLink($boardUrl));
 
         // A job on a board we read: the board's page gives the details and
-        // often an email to apply to.
+        // often an email to apply to. The alert names the job, as some
+        // boards' pages don't.
         if ($board) {
             return JobPosting::firstOrCreate(
                 ['fingerprint' => JobPosting::fingerprint(JobPosting::SOURCE_BOARD, $boardUrl)],
                 [
                     'source' => JobPosting::SOURCE_BOARD,
                     'job_board_id' => $board->id,
-                    'title' => '',
+                    'title' => $job['title'],
+                    'company' => $job['company'],
+                    'location' => $job['location'],
                     'url' => $boardUrl,
                     'posted_at' => now(),
                 ],
@@ -170,7 +208,7 @@ class JobAlertReader
             $href = trim($anchor->getAttribute('href'));
 
             if (preg_match('#^https?://#i', $href)) {
-                $links->put($links->count() + 1, $href);
+                $links->put($links->count() + 1, self::unwrap($href));
                 $anchor->appendChild($document->createTextNode(' ['.$links->count().']'));
             }
         }
