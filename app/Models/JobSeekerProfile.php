@@ -11,6 +11,11 @@ class JobSeekerProfile extends Model
 {
     use HasUuids;
 
+    /**
+     * The contact details employers ask for on application forms.
+     */
+    public const CONTACT_DETAILS = ['phone', 'location', 'linkedin', 'github', 'portfolio', 'twitter'];
+
     protected $guarded = [];
 
     protected $hidden = ['cv_path'];
@@ -22,6 +27,7 @@ class JobSeekerProfile extends Model
         'profile' => 'array',
         'preferences' => 'array',
         'form_answers' => 'array',
+        'contact_details' => 'array',
         'parsed_at' => 'datetime',
         'career_fields' => 'array',
         'career_fields_at' => 'datetime',
@@ -101,6 +107,11 @@ class JobSeekerProfile extends Model
     public function isAutopilot(): bool
     {
         return $this->mode === 'autopilot';
+    }
+
+    public function contactDetail(?string $key): ?string
+    {
+        return $key === null ? null : ($this->contact_details[$key] ?? null);
     }
 
     /**

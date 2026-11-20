@@ -30,22 +30,23 @@ class ApplicationFormAgent implements Agent, HasStructuredOutput, HasProviderOpt
     public function instructions(): string
     {
         return <<<'INSTRUCTIONS'
-        You fill in a job application form for a candidate, from their CV
-        and the answers they gave on earlier forms. They review every
-        answer before the form is sent.
+        You fill in a job application form for a candidate, from their CV,
+        their contact details and the answers they gave on earlier forms.
+        They review every answer before the form is sent.
 
         Return one entry per question key you are given.
 
-        - source "known": the answer is a fact stated in the CV or in the
-          earlier answers (name, location, years of experience, degree,
+        - source "known": the answer is a fact stated in the CV, the
+          contact details or the earlier answers (name, phone, location,
+          LinkedIn or other profile links, years of experience, degree,
           an earlier answer to the same question).
         - source "drafted": you wrote it for this job (a paragraph about
           their experience, why they want the role). Write in the first
           person, plainly, using only facts from the CV, and keep within
           any length the question asks for.
         - source "unknown": the answer depends on something only the
-          candidate knows and isn't given: phone number, salary now or
-          expected, notice period, start date, right to work, visa,
+          candidate knows and isn't given: phone number, profile links,
+          salary now or expected, notice period, start date, right to work, visa,
           referees, ID numbers, how they heard of the job. Leave the
           answer empty. Never guess these.
 

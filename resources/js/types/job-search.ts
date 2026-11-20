@@ -2,6 +2,15 @@ export type JobSearchMode = "review" | "autopilot"
 
 export type CoverLetterMode = "tailor" | "as_is"
 
+export type ContactDetails = {
+	phone: string | null
+	location: string | null
+	linkedin: string | null
+	github: string | null
+	portfolio: string | null
+	twitter: string | null
+}
+
 export type JobSeekerProfile = {
 	autoApply: boolean
 	mode: JobSearchMode
@@ -15,7 +24,10 @@ export type JobSeekerProfile = {
 		skills?: string[]
 		target_titles?: string[]
 		years_of_experience?: number
+		location?: string
 	} | null
+	// What employers ask for on application forms, filled in from here.
+	contactDetails: ContactDetails
 	coverLetter: string | null
 	coverLetterMode: CoverLetterMode
 	// Applications send the CV revamped by the AI, and (with tailorCv) a

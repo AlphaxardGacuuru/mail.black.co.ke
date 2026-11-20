@@ -191,6 +191,52 @@ class JobSearchController extends Controller
     }
 
     /**
+     * The phone number, location and profile links employers ask for.
+     * Links typed without https:// get it, so "linkedin.com/in/me" works.
+     */
+    public function updateContactDetails(Request $request): JsonResponse
+    {
+        $request->merge(
+            collect($request->only(['linkedin', 'github', 'portfolio', 'twitter']))
+                ->map(fn ($value) => Str::of((string) $value)
+                    ->trim()
+                    ->unless(
+                        fn ($link) => $link->isEmpty() || $link->isMatch('/^https?:\/\//i'),
+                        fn ($link) => $link->prepend('https://'),
+                    )
+                    ->toString())
+                ->all()
+        );
+
+        $data = $request->validate([
+            'phone' => ['nullable', 'string', 'max:30', 'regex:/^\+?[\d\s().-]{7,}$/'],
+            'location' => 'nullable|string|max:120',
+            'linkedin' => ['nullable', 'url:http,https', 'max:255', 'regex:/^https?:\/\/([\w-]+\.)?linkedin\.com\//i'],
+            'github' => ['nullable', 'url:http,https', 'max:255', 'regex:/^https?:\/\/(www\.)?github\.com\//i'],
+            'portfolio' => 'nullable|url:http,https|max:255',
+            'twitter' => ['nullable', 'url:http,https', 'max:255', 'regex:/^https?:\/\/(www\.)?(twitter|x)\.com\//i'],
+        ], [
+            'phone.regex' => 'Enter a phone number, e.g. +254 712 345 678.',
+            'linkedin.regex' => 'Enter a link to your LinkedIn profile.',
+            'github.regex' => 'Enter a link to your GitHub profile.',
+            'twitter.regex' => 'Enter a link to your X profile.',
+        ]);
+
+        $user = $request->user();
+
+        $this->profile($user)
+            ->fill([
+                'contact_details' => collect($data)
+                    ->map(fn ($value) => trim((string) $value))
+                    ->filter()
+                    ->all(),
+            ])
+            ->save();
+
+        return response()->json(['message' => 'Details Saved', ...$this->state($user->fresh())]);
+    }
+
+    /**
      * Read the text of an uploaded cover letter into the profile; the file
      * itself isn't kept.
      */

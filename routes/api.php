@@ -121,6 +121,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('job-search', [JobSearchController::class, 'destroy']);
     Route::post('job-search/cv', [JobSearchController::class, 'uploadCv'])->middleware('throttle:10,1');
     Route::put('job-search/cover-letter', [JobSearchController::class, 'updateCoverLetter']);
+    Route::put('job-search/contact-details', [JobSearchController::class, 'updateContactDetails']);
     Route::put('job-search/setup-step', [JobSearchController::class, 'updateSetupStep']);
     Route::post('job-search/cover-letter', [JobSearchController::class, 'uploadCoverLetter'])->middleware('throttle:10,1');
     Route::post('job-search/career-pages', [JobSearchController::class, 'storeCareerPage'])->middleware('throttle:10,1');

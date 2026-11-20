@@ -12,6 +12,7 @@ import JobSearchController from "@/actions/App/Http/Controllers/Jobs/JobSearchCo
 import Axios from "@/lib/axios"
 import type { JobSearchSetupStep } from "@/types/job-search"
 import type {
+	ContactDetails,
 	CoverLetterMode,
 	JobApplication,
 	JobApplicationTab,
@@ -113,6 +114,12 @@ export function useSaveCoverLetter() {
 	return useJobSearchMutation(
 		(variables: { coverLetter: string; coverLetterMode: CoverLetterMode }) =>
 			Axios.put(JobSearchController.updateCoverLetter.url(), variables)
+	)
+}
+
+export function useSaveContactDetails() {
+	return useJobSearchMutation((details: ContactDetails) =>
+		Axios.put(JobSearchController.updateContactDetails.url(), details)
 	)
 }
 

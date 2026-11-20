@@ -779,6 +779,41 @@ class JobSearchTest extends TestCase
             ->assertJsonValidationErrors(['dailyLimit', 'minMatchScore']);
     }
 
+    public function test_contact_details_are_saved_with_links_made_whole(): void
+    {
+        $this->actingAs($this->user, 'sanctum')
+            ->putJson('/api/job-search/contact-details', [
+                'phone' => '+254 712 345 678',
+                'location' => ' Nairobi, Kenya ',
+                'linkedin' => 'linkedin.com/in/wanjiku',
+                'github' => '',
+                'portfolio' => 'https://wanjiku.dev',
+                'twitter' => null,
+            ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Details Saved')
+            ->assertJsonPath('profile.contactDetails.linkedin', 'https://linkedin.com/in/wanjiku')
+            ->assertJsonPath('profile.contactDetails.location', 'Nairobi, Kenya')
+            ->assertJsonPath('profile.contactDetails.github', null);
+
+        $this->assertEquals(
+            ['phone' => '+254 712 345 678', 'location' => 'Nairobi, Kenya', 'linkedin' => 'https://linkedin.com/in/wanjiku', 'portfolio' => 'https://wanjiku.dev'],
+            JobSeekerProfile::sole()->contact_details,
+        );
+    }
+
+    public function test_contact_details_must_be_a_phone_number_and_the_right_sites(): void
+    {
+        $this->actingAs($this->user, 'sanctum')
+            ->putJson('/api/job-search/contact-details', [
+                'phone' => 'call me',
+                'linkedin' => 'https://github.com/wanjiku',
+                'github' => 'https://evil.example/github.com/',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['phone', 'linkedin', 'github']);
+    }
+
     public function test_a_cv_is_stored_privately_and_read_once(): void
     {
         Queue::fake([ParseCvJob::class]);

@@ -1,6 +1,6 @@
 import { Head } from "@/lib/spa"
 import { LoaderCircle } from "lucide-react"
-import { useState } from "react"
+import { type FormEvent, useState } from "react"
 import { useApp } from "@/contexts/AppContext"
 import ProfileController from "@/actions/App/Http/Controllers/Settings/ProfileController"
 import { AvatarUploadField } from "@/components/avatar-upload-field"
@@ -11,9 +11,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useInitials } from "@/hooks/use-initials"
 import Axios from "@/lib/axios"
+import {
+	errorMessage,
+	useJobSearch,
+	useSaveContactDetails,
+} from "@/queries/job-search"
 import toast from "@/lib/toast"
 import { edit } from "@/routes/profile"
 import { send } from "@/routes/verification"
+import type { ContactDetails } from "@/types"
 
 export default function Profile({
 	mustVerifyEmail = false,
@@ -178,8 +184,171 @@ export default function Profile({
 				</form>
 			</div>
 
+			<JobApplicationDetails />
+
 			<DeleteUser />
 		</>
+	)
+}
+
+const EMPTY_CONTACT_DETAILS: ContactDetails = {
+	phone: null,
+	location: null,
+	linkedin: null,
+	github: null,
+	portfolio: null,
+	twitter: null,
+}
+
+/**
+ * The details employers ask for on application forms, which the app fills
+ * in when it applies for you.
+ */
+function JobApplicationDetails() {
+	const { data, isPending } = useJobSearch()
+
+	if (isPending) {
+		return null
+	}
+
+	return (
+		<ContactDetailsForm
+			details={data?.profile?.contactDetails ?? EMPTY_CONTACT_DETAILS}
+			cvLocation={data?.profile?.profile?.location}
+		/>
+	)
+}
+
+function ContactDetailsForm({
+	details,
+	cvLocation,
+}: {
+	details: ContactDetails
+	cvLocation?: string
+}) {
+	const save = useSaveContactDetails()
+	const [form, setForm] = useState(details)
+	const [errors, setErrors] = useState<
+		Partial<Record<keyof ContactDetails, string>>
+	>({})
+
+	function field(key: keyof ContactDetails) {
+		return {
+			id: key,
+			name: key,
+			value: form[key] ?? "",
+			onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+				setForm({ ...form, [key]: event.target.value }),
+			error: errors[key],
+		}
+	}
+
+	function submit(event: FormEvent): void {
+		event.preventDefault()
+		setErrors({})
+
+		save
+			.mutateAsync(form)
+			.then((data) => {
+				setForm(data.profile?.contactDetails ?? form)
+				toast.success(data.message)
+			})
+			.catch((error) => {
+				const raw =
+					(
+						error as {
+							response?: { data?: { errors?: Record<string, string[]> } }
+						}
+					).response?.data?.errors ?? {}
+
+				setErrors(
+					Object.fromEntries(
+						Object.entries(raw).map(([key, messages]) => [key, messages[0]])
+					)
+				)
+				toast.error(errorMessage(error, "Unable to save your details."))
+			})
+	}
+
+	return (
+		<div className="space-y-6">
+			<Heading
+				variant="small"
+				title="Job application details"
+				description="What employers ask for on application forms. When the app applies for you, it fills these in for you."
+			/>
+
+			<form
+				onSubmit={submit}
+				className="space-y-6">
+				{/* Phone Start */}
+				<Input
+					label="Phone number"
+					type="tel"
+					autoComplete="tel"
+					{...field("phone")}
+				/>
+				{/* Phone End */}
+
+				{/* Location Start */}
+				<Input
+					label="Location"
+					autoComplete="address-level2"
+					helperText={
+						cvLocation && !form.location
+							? `Your CV says ${cvLocation}.`
+							: "City and country, e.g. Nairobi, Kenya"
+					}
+					{...field("location")}
+				/>
+				{/* Location End */}
+
+				{/* LinkedIn Start */}
+				<Input
+					label="LinkedIn profile"
+					inputMode="url"
+					autoCapitalize="none"
+					{...field("linkedin")}
+				/>
+				{/* LinkedIn End */}
+
+				{/* GitHub Start */}
+				<Input
+					label="GitHub profile"
+					inputMode="url"
+					autoCapitalize="none"
+					{...field("github")}
+				/>
+				{/* GitHub End */}
+
+				{/* Portfolio Start */}
+				<Input
+					label="Portfolio or website"
+					inputMode="url"
+					autoCapitalize="none"
+					{...field("portfolio")}
+				/>
+				{/* Portfolio End */}
+
+				{/* X Start */}
+				<Input
+					label="X (Twitter) profile"
+					inputMode="url"
+					autoCapitalize="none"
+					{...field("twitter")}
+				/>
+				{/* X End */}
+
+				<div className="flex items-center justify-end gap-4">
+					<Button disabled={save.isPending}>
+						Save
+						{save.isPending && (
+							<LoaderCircle className="h-4 w-4 animate-spin" />
+						)}
+					</Button>
+				</div>
+			</form>
+		</div>
 	)
 }
 

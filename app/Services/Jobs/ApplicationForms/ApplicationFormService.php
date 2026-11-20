@@ -275,8 +275,9 @@ class ApplicationFormService
     }
 
     /**
-     * Answers that need no AI: uploads, name and email, and the user's
-     * own answer to the same question on an earlier form.
+     * Answers that need no AI: uploads, name and email, the contact
+     * details on their profile, and the user's own answer to the same
+     * question on an earlier form.
      *
      * @param  array<string, mixed>  $field
      * @return array{answer: string, source: string, note: string}|null
@@ -295,6 +296,7 @@ class ApplicationFormService
                 : $known(self::FILE_CV, 'Your CV');
         }
 
+        $contactDetail = $profile->contactDetail($this->contactDetailKey($field, $label));
         $remembered = $profile->form_answers[$this->questionKey($label)]['answer'] ?? null;
 
         return match (true) {
@@ -305,7 +307,30 @@ class ApplicationFormService
                 $profile->sendingAccount()?->mailbox_address ?? $application->user->email,
                 'Replies come to your Black Mail inbox.',
             ),
+            $contactDetail !== null => $known($contactDetail, 'From your profile'),
             $remembered !== null => $known($remembered, 'Your answer on an earlier form'),
+            default => null,
+        };
+    }
+
+    /**
+     * Which of the profile's contact details a typed question asks for.
+     *
+     * @param  array<string, mixed>  $field
+     */
+    protected function contactDetailKey(array $field, string $label): ?string
+    {
+        if ($field['options'] !== [] || in_array($field['type'], ['file', 'textarea', 'checkbox', 'radio'], true)) {
+            return null;
+        }
+
+        return match (true) {
+            $field['type'] === 'tel' || (bool) preg_match('/phone|mobile|telephone|cell ?number|whatsapp/', $label) => 'phone',
+            (bool) preg_match('/linked ?in/', $label) => 'linkedin',
+            (bool) preg_match('/git ?hub/', $label) => 'github',
+            (bool) preg_match('/twitter|^x( profile| handle| url|$)/', $label) => 'twitter',
+            (bool) preg_match('/portfolio|^(personal )?(website|site|blog)|(personal|your) (website|site|blog)/', $label) => 'portfolio',
+            (bool) preg_match('/^(current |your )?(location|city|town)|where are you (based|located)|city of residence/', $label) => 'location',
             default => null,
         };
     }
@@ -324,6 +349,9 @@ class ApplicationFormService
                     collect([
                         'Candidate CV:',
                         json_encode($profile->profile ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+                        'Contact details: '.(collect($profile->contact_details ?? [])
+                            ->map(fn (string $value, string $key) => "{$key}: {$value}")
+                            ->implode(', ') ?: 'none given'),
                         'Preferred locations: '.(implode(', ', $profile->preference('locations')) ?: 'any'),
                         "Job:\n".collect([
                             "Title: {$posting->title}",

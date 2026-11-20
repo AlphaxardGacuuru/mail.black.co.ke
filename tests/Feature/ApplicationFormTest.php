@@ -165,6 +165,35 @@ class ApplicationFormTest extends TestCase
             ->assertJsonPath('data.0.form.fields.2.effort', 'needs_you');
     }
 
+    public function test_contact_details_on_the_profile_fill_in_their_questions(): void
+    {
+        $this->user->jobSeekerProfile->update(['contact_details' => [
+            'phone' => '+254 712 345 678',
+            'linkedin' => 'https://linkedin.com/in/wanjiku',
+        ]]);
+        $application = $this->manualApplication();
+
+        $this->fakeBrowser(['url' => 'https://acme.bamboohr.com/careers/12', 'adapter' => 'generic', 'blocker' => null, 'fields' => [
+            ['key' => 'tel-phone', 'type' => 'tel', 'label' => 'Phone', 'required' => true, 'options' => []],
+            ['key' => 'text-linkedin', 'type' => 'text', 'label' => 'LinkedIn Profile URL', 'required' => false, 'options' => []],
+            ['key' => 'text-github', 'type' => 'text', 'label' => 'GitHub', 'required' => false, 'options' => []],
+            ['key' => 'radio-mobile', 'type' => 'radio', 'label' => 'Can we call your mobile?', 'required' => false, 'options' => ['Yes', 'No']],
+        ]]);
+        ApplicationFormAgent::fake([['answers' => []]]);
+
+        $application->update(['form_status' => ApplicationFormStatus::PREPARING]);
+        (new PrepareApplicationFormJob($application->id))->handle(app(ApplicationFormService::class));
+        $application->refresh();
+
+        $this->assertSame(['answer' => '+254 712 345 678', 'effort' => 'filled'], collect($this->field($application, 'tel-phone'))->only(['answer', 'effort'])->all());
+        $this->assertSame('https://linkedin.com/in/wanjiku', $this->field($application, 'text-linkedin')['answer']);
+        // Not on the profile, and a choice isn't a contact detail: both go to the AI.
+        ApplicationFormAgent::assertPrompted(fn (AgentPrompt $prompt) => str_contains($prompt->prompt, 'text-github')
+            && str_contains($prompt->prompt, 'radio-mobile')
+            && ! str_contains($prompt->prompt, '"tel-phone"')
+            && str_contains($prompt->prompt, 'linkedin: https://linkedin.com/in/wanjiku'));
+    }
+
     public function test_forms_behind_a_sign_in_say_so(): void
     {
         $application = $this->manualApplication();

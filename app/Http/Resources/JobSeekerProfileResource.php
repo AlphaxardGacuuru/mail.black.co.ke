@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\JobSeekerProfile;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,6 +27,9 @@ class JobSeekerProfileResource extends JsonResource
                 default => 'ready',
             },
             'profile' => $this->profile,
+            'contactDetails' => collect(JobSeekerProfile::CONTACT_DETAILS)
+                ->mapWithKeys(fn (string $key) => [$key => $this->contactDetail($key)])
+                ->all(),
             'coverLetter' => $this->cover_letter,
             'coverLetterMode' => $this->cover_letter_mode ?? 'tailor',
             // Whether applications send the CV revamped by the AI, and get
