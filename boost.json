@@ -11,6 +11,7 @@
         "fortify-development",
         "laravel-best-practices",
         "configuring-horizon",
+        "configure-nightwatch",
         "pulse-development",
         "socialite-development",
         "wayfinder-development",
