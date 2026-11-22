@@ -93,6 +93,7 @@ class AdminDashboardController extends Controller
                 'statusBreakdown' => $statusBreakdown,
                 'dailyVolume' => $dailyVolume,
                 'recentFailures' => $recentFailures,
+                'activeUsers' => User::activeCounts(),
             ],
         ]);
     }

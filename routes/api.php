@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminAiUsageController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminMailgunAccountController;
+use App\Http\Controllers\Admin\AdminUserLoginController;
 use App\Http\Controllers\Admin\AdminWebhookController;
 use App\Http\Controllers\Chat\ChatAttachmentController;
 use App\Http\Controllers\Chat\ChatConversationController;
@@ -158,6 +159,7 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->name('admin.')->g
     Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('webhooks', [AdminWebhookController::class, 'index'])->name('webhooks');
     Route::get('users', [UserController::class, 'index'])->name('users.index');
+    Route::get('user-logins', [AdminUserLoginController::class, 'index'])->name('user-logins.index');
     Route::apiResource('users', UserController::class)
         ->only(['store', 'destroy']);
     Route::patch('users/{id}/verify', [UserController::class, 'verify'])

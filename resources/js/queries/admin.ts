@@ -29,6 +29,14 @@ export type AdminDashboardData = {
 		errorMessage: string | null
 		createdAt: string
 	}[]
+	activeUsers: ActiveUserCounts
+}
+
+/** Users who used the app in the last day, week and month. */
+export type ActiveUserCounts = {
+	day: number
+	week: number
+	month: number
 }
 
 export function useAdminDashboard() {
@@ -213,6 +221,47 @@ export function useAdminAiUsage(month: string) {
 		queryFn: () =>
 			Axios.get<AdminAiUsageReport>("api/admin/ai-usage", {
 				params: { month },
+			}).then((res) => res.data),
+		placeholderData: keepPreviousData,
+	})
+}
+
+export type UserLoginMethod = "google" | "password"
+
+export type AdminUserLogin = {
+	id: string
+	method: UserLoginMethod
+	ipAddress: string | null
+	userAgent: string | null
+	createdAt: string
+	user: {
+		id: string
+		name: string
+		email: string
+		avatar: string | null
+		lastActiveAt: string | null
+	}
+}
+
+type AdminUserLoginsResponse = {
+	data: AdminUserLogin[]
+	meta: {
+		current_page: number
+		last_page: number
+		total: number
+		activeUsers: ActiveUserCounts
+		/** Sign-ins and distinct users signing in per day, oldest first. */
+		daily: { date: string; logins: number; users: number }[]
+	}
+}
+
+/** Sign-ins, newest first, searchable by name or email. */
+export function useAdminUserLogins(search: string, page = 1, perPage = 20) {
+	return useQuery({
+		queryKey: ["admin", "user-logins", search, page, perPage],
+		queryFn: () =>
+			Axios.get<AdminUserLoginsResponse>("api/admin/user-logins", {
+				params: { search: search || undefined, page, per_page: perPage },
 			}).then((res) => res.data),
 		placeholderData: keepPreviousData,
 	})

@@ -4,6 +4,7 @@ import {
 	Coins,
 	Gauge,
 	LayoutDashboard,
+	LogIn,
 	ShieldCheck,
 	Telescope,
 	Users,
@@ -43,6 +44,7 @@ const ADMIN_ITEMS: AdminItem[] = [
 	{ title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
 	{ title: "Webhooks", href: "/admin/webhooks", icon: Webhook },
 	{ title: "Users", href: "/admin/users", icon: Users },
+	{ title: "Logins", href: "/admin/logins", icon: LogIn },
 	{
 		title: "AI usage",
 		href: "/admin/ai-usage",

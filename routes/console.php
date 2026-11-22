@@ -12,6 +12,7 @@ use App\Models\CompanyCareerPage;
 use App\Models\JobPosting;
 use App\Models\JobSeekerProfile;
 use App\Models\Story;
+use App\Models\UserLogin;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -81,6 +82,10 @@ Schedule::job(new PostCareerNewsStoriesJob)->dailyAt('06:30');
 
 // Stories (and their pictures) are deleted a day after they're posted.
 Schedule::command('model:prune', ['--model' => [Story::class]])->hourly();
+
+// Sign-in records older than UserLogin::RETENTION_DAYS.
+Schedule::command('model:prune', ['--model' => [UserLogin::class]])
+    ->daily();
 
 // Hourly, at 45 minutes past the hour.
 Schedule::job(new SendJobApplicationsJob)->hourlyAt(45)->withoutOverlapping();
