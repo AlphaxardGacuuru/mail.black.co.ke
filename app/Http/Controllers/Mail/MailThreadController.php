@@ -17,6 +17,8 @@ class MailThreadController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        $request->validate(['status' => ['nullable', 'in:read,unread']]);
+
         [$status, $message, $threads] = $this->service->index($request);
 
         return MailThreadResource::collection($threads)

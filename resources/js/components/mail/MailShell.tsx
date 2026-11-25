@@ -45,7 +45,6 @@ export default function MailShell({
 	const [filters, setFilters] = useState<MailThreadFilters>({
 		folder,
 		label: labelId,
-		page: 1,
 		q: "",
 	})
 	const [pane, setPane] = useState<MailPane>(initialPane ?? { type: "none" })

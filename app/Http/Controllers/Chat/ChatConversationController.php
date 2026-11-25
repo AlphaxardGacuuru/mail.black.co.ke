@@ -43,7 +43,12 @@ class ChatConversationController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        [$status, $message, $conversations] = $this->service->index($request->boolean('archived'));
+        $request->validate(['status' => ['nullable', 'in:read,unread']]);
+
+        [$status, $message, $conversations] = $this->service->index(
+            $request->boolean('archived'),
+            $request->input('status'),
+        );
 
         return ChatConversationResource::collection($conversations)
             ->additional([

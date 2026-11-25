@@ -3,11 +3,12 @@ import { useNavigate } from "@tanstack/react-router"
 import { Feather } from "lucide-react"
 import ChatEmptyState from "@/components/chat/ChatEmptyState"
 import ConversationListRow from "@/components/chat/ConversationListRow"
+import ReadStatusFilter from "@/components/read-status-filter"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import toast from "@/lib/toast"
-import { useRemoveConversation } from "@/queries/chat"
-import type { ChatConversation } from "@/types/chat"
+import { useConversations, useRemoveConversation } from "@/queries/chat"
+import type { ReadStatus } from "@/queries/mail"
 
 const UNDO_REMOVE_WINDOW_MS = 5000
 
@@ -15,18 +16,22 @@ type Props = {
 	selectedId: string | null
 	onSelect: (id: string) => void
 	archived?: boolean
-	conversations?: ChatConversation[]
-	isLoading?: boolean
 }
 
 export default function ConversationList({
 	selectedId,
 	onSelect,
 	archived = false,
-	conversations = [],
-	isLoading = false,
 }: Props) {
 	const navigate = useNavigate()
+	const [status, setStatus] = useState<ReadStatus>()
+	const {
+		data: conversations = [],
+		isLoading,
+		hasNextPage,
+		isFetchingNextPage,
+		fetchNextPage,
+	} = useConversations(archived, status)
 	const removeConversation = useRemoveConversation()
 
 	const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(
@@ -85,12 +90,17 @@ export default function ConversationList({
 		})
 	}
 
-	const visibleConversations = (conversations ?? []).filter(
+	const visibleConversations = conversations.filter(
 		(conversation) => !pendingRemoveIds.has(conversation.id)
 	)
 
 	return (
 		<div className="relative flex min-h-0 flex-1 flex-col">
+			<ReadStatusFilter
+				value={status}
+				onChange={setStatus}
+			/>
+
 			<div className="flex-1 space-y-1 overflow-y-auto p-1.5 md:space-y-2 md:p-3">
 				{isLoading && (
 					<>
@@ -103,7 +113,11 @@ export default function ConversationList({
 				{!isLoading && visibleConversations.length === 0 && (
 					<ChatEmptyState
 						variant={
-							archived ? "no-archived-conversations" : "no-conversations"
+							status
+								? "filter-no-results"
+								: archived
+									? "no-archived-conversations"
+									: "no-conversations"
 						}
 					/>
 				)}
@@ -119,6 +133,17 @@ export default function ConversationList({
 							archived={archived}
 						/>
 					))}
+
+				{!isLoading && hasNextPage && (
+					<Button
+						variant="outline"
+						size="sm"
+						className="w-full"
+						disabled={isFetchingNextPage}
+						onClick={() => fetchNextPage()}>
+						{isFetchingNextPage ? "Loading..." : "Load More"}
+					</Button>
+				)}
 			</div>
 
 			{!archived && (

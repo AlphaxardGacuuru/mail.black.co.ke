@@ -21,6 +21,7 @@ class MailThreadService extends Service
         $folder = $request->input('folder', MailFolder::INBOX->value);
         $labelId = $request->input('label');
         $q = trim((string) $request->input('q', ''));
+        $status = $request->input('status');
 
         $query = MailThread::query()
             ->ownedBy($this->id)
@@ -30,6 +31,12 @@ class MailThreadService extends Service
             $query->starred();
         } elseif ($folder) {
             $query->folder($folder);
+        }
+
+        if ($status === 'unread') {
+            $query->unread();
+        } elseif ($status === 'read') {
+            $query->where('has_unread', false);
         }
 
         if ($labelId) {

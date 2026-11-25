@@ -273,4 +273,50 @@ class ChatConversationServiceTest extends TestCase
 
         ChatConversation::create(['type' => 'direct', 'pair_key' => $pairKey]);
     }
+
+    public function test_conversations_can_be_filtered_by_read_status(): void
+    {
+        $me = User::factory()->create();
+        $unreadSender = User::factory()->create();
+        $readSender = User::factory()->create();
+
+        $this->actingAs($unreadSender, 'sanctum');
+        [, , $unreadConversation] = (new ChatConversationService)->startWith($me->id);
+        (new ChatMessageService)->send($unreadConversation->id, 'Are you there?');
+
+        $this->actingAs($readSender, 'sanctum');
+        [, , $readConversation] = (new ChatConversationService)->startWith($me->id);
+        (new ChatMessageService)->send($readConversation->id, 'Seen this?');
+
+        $this->actingAs($me, 'sanctum');
+        $service = new ChatConversationService;
+        $service->markRead($readConversation->id);
+
+        [, , $unread] = $service->index(status: 'unread');
+        [, , $read] = $service->index(status: 'read');
+        [, , $all] = $service->index();
+
+        $this->assertSame([$unreadConversation->id], $unread->pluck('id')->all());
+        $this->assertSame([$readConversation->id], $read->pluck('id')->all());
+        $this->assertCount(2, $all);
+    }
+
+    public function test_conversations_are_paginated_for_load_more(): void
+    {
+        $me = User::factory()->create();
+
+        $this->actingAs($me, 'sanctum');
+        $service = new ChatConversationService;
+
+        User::factory()
+            ->count(21)
+            ->create()
+            ->each(fn (User $other) => $service->startWith($other->id));
+
+        [, , $conversations] = $service->index();
+
+        $this->assertCount(20, $conversations);
+        $this->assertSame(21, $conversations->total());
+        $this->assertTrue($conversations->hasMorePages());
+    }
 }

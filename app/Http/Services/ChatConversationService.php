@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 class ChatConversationService extends Service
 {
-    public function index(bool $archived = false): array
+    public function index(bool $archived = false, ?string $status = null): array
     {
         $this->touchLastSeen();
 
@@ -20,14 +20,16 @@ class ChatConversationService extends Service
                 fn($query) => $query->notArchivedBy($this->id)
             )
             ->notDeletedBy($this->id)
+            ->when($status === 'unread', fn($query) => $query->unreadBy($this->id))
+            ->when($status === 'read', fn($query) => $query->whereNot(fn($query) => $query->unreadBy($this->id)))
             ->with([
                 'participants',
                 'messages' => fn($query) => $query->latest()->limit(1),
             ])
             ->orderByDesc('last_message_at')
-            ->get();
+            ->paginate(20);
 
-        return [true, $conversations->count() . ' Conversations Retrieved', $conversations];
+        return [true, $conversations->total() . ' Conversations Retrieved', $conversations];
     }
 
     public function startWith(string $otherUserId): array

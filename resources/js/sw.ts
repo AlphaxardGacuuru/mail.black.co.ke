@@ -346,6 +346,20 @@ self.addEventListener("notificationclick", (event) => {
 	event.waitUntil(openUrl(url))
 })
 
+// ─── Offline page ─────────────────────────────────────────────────────────────
+// Shown instead of the browser's own error page when a page can't be loaded
+// and has no cached copy (never visited, or expired). public/offline.html
+// inlines its icon, so it needs no other request while offline.
+const OFFLINE_URL = "/offline.html"
+
+self.addEventListener("install", (event) => {
+	event.waitUntil(
+		caches
+			.open("offline")
+			.then((cache) => cache.add(new Request(OFFLINE_URL, { cache: "reload" })))
+	)
+})
+
 // ─── SPA navigation fallback ──────────────────────────────────────────────────
 // All navigate requests that don't match a precached URL fall back to /index.php
 // so TanStack Router handles routing on the client side. Kept for a month so
@@ -360,6 +374,7 @@ registerRoute(
 		networkTimeoutSeconds: 3,
 		plugins: [
 			new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 30 * 24 * 60 * 60 }),
+			{ handlerDidError: () => caches.match(OFFLINE_URL) },
 		],
 	})
 )

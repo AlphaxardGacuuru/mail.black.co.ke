@@ -3,6 +3,7 @@ import MailEmptyState from "@/components/mail/MailEmptyState"
 import MailRealtimeBanner from "@/components/mail/MailRealtimeBanner"
 import MailSearchBar from "@/components/mail/MailSearchBar"
 import MailThreadListRow from "@/components/mail/MailThreadListRow"
+import ReadStatusFilter from "@/components/read-status-filter"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useJobSearchOnly } from "@/hooks/use-job-search-only"
@@ -28,11 +29,14 @@ export default function MailThreadList({
 	onSelectThread,
 	onCompose,
 }: Props) {
-	const { data, isLoading } = useMailThreads(filters)
+	const {
+		data: threads = [],
+		isLoading,
+		hasNextPage,
+		isFetchingNextPage,
+		fetchNextPage,
+	} = useMailThreads(filters)
 	const jobSearchOnly = useJobSearchOnly()
-
-	const threads = data?.data ?? []
-	const meta = data?.meta
 
 	return (
 		<div className="relative flex h-full flex-col">
@@ -40,7 +44,12 @@ export default function MailThreadList({
 
 			<MailSearchBar
 				value={filters.q ?? ""}
-				onChange={(q) => onFiltersChange({ ...filters, q, page: 1 })}
+				onChange={(q) => onFiltersChange({ ...filters, q })}
+			/>
+
+			<ReadStatusFilter
+				value={filters.status}
+				onChange={(status) => onFiltersChange({ ...filters, status })}
 			/>
 
 			<div className="flex-1 overflow-y-auto lg:p-3">
@@ -54,7 +63,13 @@ export default function MailThreadList({
 
 				{!isLoading && threads.length === 0 && (
 					<MailEmptyState
-						variant={filters.q ? "search-no-results" : "no-threads"}
+						variant={
+							filters.q
+								? "search-no-results"
+								: filters.status
+									? "filter-no-results"
+									: "no-threads"
+						}
 					/>
 				)}
 
@@ -70,35 +85,20 @@ export default function MailThreadList({
 								onSelect={() => onSelectThread(thread.id)}
 							/>
 						))}
+
+						{hasNextPage && (
+							<Button
+								variant="outline"
+								size="sm"
+								className="w-full"
+								disabled={isFetchingNextPage}
+								onClick={() => fetchNextPage()}>
+								{isFetchingNextPage ? "Loading..." : "Load More"}
+							</Button>
+						)}
 					</div>
 				)}
 			</div>
-
-			{meta && meta.last_page > 1 && (
-				<div className="flex items-center justify-between border-t p-2">
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={meta.current_page <= 1}
-						onClick={() =>
-							onFiltersChange({ ...filters, page: meta.current_page - 1 })
-						}>
-						Previous
-					</Button>
-					<span className="text-xs text-muted-foreground">
-						Page {meta.current_page} of {meta.last_page}
-					</span>
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={meta.current_page >= meta.last_page}
-						onClick={() =>
-							onFiltersChange({ ...filters, page: meta.current_page + 1 })
-						}>
-						Next
-					</Button>
-				</div>
-			)}
 
 			{!jobSearchOnly && (
 				<Button

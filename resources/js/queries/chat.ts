@@ -1,5 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+	keepPreviousData,
+	useInfiniteQuery,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query"
+import type { InfiniteData } from "@tanstack/react-query"
 import Axios from "@/lib/axios"
+import type { ReadStatus } from "@/queries/mail"
 import type { ChatConversation, ChatMessage } from "@/types/chat"
 
 type ConversationShowResponse = {
@@ -10,13 +18,27 @@ type ConversationShowResponse = {
 	}
 }
 
-export function useConversations(archived = false) {
-	return useQuery({
-		queryKey: ["chat", "conversations", archived],
-		queryFn: () =>
-			Axios.get<{ data: ChatConversation[] }>("api/chat/conversations", {
-				params: { archived },
-			}).then((res) => res.data.data),
+type ConversationPage = {
+	data: ChatConversation[]
+	meta: { current_page: number; last_page: number; total: number }
+}
+
+type ConversationPages = InfiniteData<ConversationPage>
+
+export function useConversations(archived = false, status?: ReadStatus) {
+	return useInfiniteQuery({
+		queryKey: ["chat", "conversations", archived, status],
+		queryFn: ({ pageParam }) =>
+			Axios.get<ConversationPage>("api/chat/conversations", {
+				params: { archived, page: pageParam, ...(status ? { status } : {}) },
+			}).then((res) => res.data),
+		initialPageParam: 1,
+		getNextPageParam: (lastPage) =>
+			lastPage.meta.current_page < lastPage.meta.last_page
+				? lastPage.meta.current_page + 1
+				: undefined,
+		select: (data) => data.pages.flatMap((page) => page.data),
+		placeholderData: keepPreviousData,
 	})
 }
 
@@ -78,21 +100,24 @@ export function useToggleArchiveConversation() {
 			// Whichever list this conversation is currently showing in
 			// (archived or not), drop it immediately rather than waiting on
 			// the request — it belongs in the other list now.
-			const previous = queryClient.getQueriesData<ChatConversation[]>({
+			const previous = queryClient.getQueriesData<ConversationPages>({
 				queryKey: ["chat", "conversations"],
 			})
 
-			previous.forEach(([queryKey, conversations]) => {
-				if (!conversations) {
+			previous.forEach(([queryKey, existing]) => {
+				if (!existing) {
 					return
 				}
 
-				queryClient.setQueryData(
-					queryKey,
-					conversations.filter(
-						(conversation) => conversation.id !== conversationId
-					)
-				)
+				queryClient.setQueryData(queryKey, {
+					...existing,
+					pages: existing.pages.map((page) => ({
+						...page,
+						data: page.data.filter(
+							(conversation) => conversation.id !== conversationId
+						),
+					})),
+				})
 			})
 
 			return { previous }

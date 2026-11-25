@@ -1,7 +1,7 @@
-import { Inbox, MailSearch, MousePointerClick } from "lucide-react"
+import { Filter, Inbox, MailSearch, MousePointerClick } from "lucide-react"
 
 type Props = {
-	variant: "no-threads" | "no-selection" | "search-no-results"
+	variant: "no-threads" | "no-selection" | "search-no-results" | "filter-no-results"
 }
 
 const CONTENT: Record<Props["variant"], { icon: typeof Inbox; title: string; description: string }> = {
@@ -19,6 +19,11 @@ const CONTENT: Record<Props["variant"], { icon: typeof Inbox; title: string; des
 		icon: MailSearch,
 		title: "No results",
 		description: "Try a different search term.",
+	},
+	"filter-no-results": {
+		icon: Filter,
+		title: "No matches",
+		description: "No threads match this filter.",
 	},
 }
 

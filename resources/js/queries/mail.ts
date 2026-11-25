@@ -1,9 +1,11 @@
 import {
 	keepPreviousData,
+	useInfiniteQuery,
 	useMutation,
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query"
+import type { InfiniteData } from "@tanstack/react-query"
 import type { AxiosResponse } from "axios"
 import MailThreadController from "@/actions/App/Http/Controllers/Mail/MailThreadController"
 import MailMessageController from "@/actions/App/Http/Controllers/Mail/MailMessageController"
@@ -17,11 +19,13 @@ import type {
 	MailThreadSummary,
 } from "@/types/mail"
 
+export type ReadStatus = "read" | "unread"
+
 export type MailThreadFilters = {
 	folder: string
 	label?: string
 	q?: string
-	page?: number
+	status?: ReadStatus
 }
 
 type Paginated<T> = {
@@ -30,6 +34,21 @@ type Paginated<T> = {
 		current_page: number
 		last_page: number
 		total: number
+	}
+}
+
+type ThreadPages = InfiniteData<Paginated<MailThreadSummary>>
+
+function mapThreadPages(
+	existing: ThreadPages,
+	update: (threads: MailThreadSummary[], pageIndex: number) => MailThreadSummary[]
+): ThreadPages {
+	return {
+		...existing,
+		pages: existing.pages.map((page, pageIndex) => ({
+			...page,
+			data: update(page.data, pageIndex),
+		})),
 	}
 }
 
@@ -66,14 +85,13 @@ function updateThreadLists(
 	shouldInclude: (filters: MailThreadFilters) => boolean,
 	patch: (thread: MailThreadSummary) => MailThreadSummary
 ) {
-	const queries = queryClient.getQueriesData<Paginated<MailThreadSummary>>({
+	const queries = queryClient.getQueriesData<ThreadPages>({
 		queryKey: ["mail", "threads"],
 	})
 	const sourceThread = queries
-		.map(([, existing]) =>
-			existing?.data.find((thread) => thread.id === threadId)
-		)
-		.find((thread): thread is MailThreadSummary => !!thread)
+		.flatMap(([, existing]) => existing?.pages ?? [])
+		.flatMap((page) => page.data)
+		.find((thread) => thread.id === threadId)
 
 	queries.forEach(([key, existing]) => {
 		if (!existing) {
@@ -82,37 +100,50 @@ function updateThreadLists(
 
 		const filters = key[2] as MailThreadFilters
 		const shouldBeIncluded = shouldInclude(filters)
-		const hasThread = existing.data.some((thread) => thread.id === threadId)
-		let data = existing.data
+		const hasThread = existing.pages.some((page) =>
+			page.data.some((thread) => thread.id === threadId)
+		)
 
-		if (shouldBeIncluded && !hasThread && sourceThread) {
-			data = [patch(sourceThread), ...data]
-		} else if (!shouldBeIncluded) {
-			data = data.filter((thread) => thread.id !== threadId)
-		} else {
-			data = data.map((thread) =>
-				thread.id === threadId ? patch(thread) : thread
-			)
-		}
+		queryClient.setQueryData(
+			key,
+			mapThreadPages(existing, (threads, pageIndex) => {
+				if (shouldBeIncluded && !hasThread && sourceThread) {
+					return pageIndex === 0 ? [patch(sourceThread), ...threads] : threads
+				}
 
-		queryClient.setQueryData(key, { ...existing, data })
+				if (!shouldBeIncluded) {
+					return threads.filter((thread) => thread.id !== threadId)
+				}
+
+				return threads.map((thread) =>
+					thread.id === threadId ? patch(thread) : thread
+				)
+			})
+		)
 	})
 }
 
 export function useMailThreads(filters: MailThreadFilters) {
-	return useQuery({
+	return useInfiniteQuery({
 		queryKey: threadsQueryKey(filters),
-		queryFn: () =>
+		queryFn: ({ pageParam }) =>
 			Axios.get<Paginated<MailThreadSummary>>(
 				MailThreadController.index.url({
 					query: {
 						folder: filters.folder,
 						...(filters.label ? { label: filters.label } : {}),
 						...(filters.q ? { q: filters.q } : {}),
-						page: filters.page ?? 1,
+						...(filters.status ? { status: filters.status } : {}),
+						page: pageParam,
 					},
 				})
 			).then((res) => res.data),
+		initialPageParam: 1,
+		getNextPageParam: (lastPage) =>
+			lastPage.meta.current_page < lastPage.meta.last_page
+				? lastPage.meta.current_page + 1
+				: undefined,
+		select: (data) => data.pages.flatMap((page) => page.data),
 		placeholderData: keepPreviousData,
 	})
 }
@@ -126,22 +157,17 @@ export function useMailThread(threadId: string | null) {
 			Axios.get<{ data: MailThread }>(
 				MailThreadController.show.url(threadId as string)
 			).then((res) => {
-				queryClient.setQueriesData<Paginated<MailThreadSummary>>(
+				queryClient.setQueriesData<ThreadPages>(
 					{ queryKey: ["mail", "threads"] },
-					(existing) => {
-						if (!existing) {
-							return existing
-						}
-
-						return {
-							...existing,
-							data: existing.data.map((thread) =>
+					(existing) =>
+						existing &&
+						mapThreadPages(existing, (threads) =>
+							threads.map((thread) =>
 								thread.id === threadId
 									? { ...thread, hasUnread: false }
 									: thread
-							),
-						}
-					}
+							)
+						)
 				)
 
 				// Opening it marked it read.
@@ -176,11 +202,9 @@ function useOptimisticThreadMutation(
 		onMutate: async (threadId: string) => {
 			await queryClient.cancelQueries({ queryKey: ["mail", "threads"] })
 
-			const previous = queryClient.getQueriesData<Paginated<MailThreadSummary>>(
-				{
-					queryKey: ["mail", "threads"],
-				}
-			)
+			const previous = queryClient.getQueriesData<ThreadPages>({
+				queryKey: ["mail", "threads"],
+			})
 
 			updateThreadLists(queryClient, threadId, shouldInclude, patch)
 
@@ -209,7 +233,8 @@ export function useStarMailThread(starred: boolean) {
 export function useMarkMailThreadRead(read: boolean) {
 	return useOptimisticThreadMutation(
 		(id) => Axios.patch(MailThreadController.update.url(id), { isRead: read }),
-		(thread) => ({ ...thread, hasUnread: !read })
+		(thread) => ({ ...thread, hasUnread: !read }),
+		(filters) => filters.status !== (read ? "unread" : "read")
 	)
 }
 
@@ -224,11 +249,9 @@ function useMoveThreadMutation(
 		onMutate: async (threadId: string) => {
 			await queryClient.cancelQueries({ queryKey: ["mail", "threads"] })
 
-			const previous = queryClient.getQueriesData<Paginated<MailThreadSummary>>(
-				{
-					queryKey: ["mail", "threads"],
-				}
-			)
+			const previous = queryClient.getQueriesData<ThreadPages>({
+				queryKey: ["mail", "threads"],
+			})
 
 			updateThreadLists(
 				queryClient,

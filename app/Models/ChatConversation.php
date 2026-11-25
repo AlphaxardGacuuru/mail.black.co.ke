@@ -91,4 +91,26 @@ class ChatConversation extends Model
                 })
         );
     }
+
+    // Has a message from someone else that landed after both my last read
+    // and my delete cutoff — the same rule ChatConversationResource uses
+    // for unreadCount.
+    public function scopeUnreadBy(Builder $query, string $userId): Builder
+    {
+        return $query->whereHas(
+            'participants',
+            fn (Builder $q) => $q->where('users.id', $userId)
+                ->whereExists(fn ($messageQuery) => $messageQuery
+                    ->from('chat_messages')
+                    ->whereColumn('chat_messages.conversation_id', 'chat_conversation_participants.conversation_id')
+                    ->whereNull('chat_messages.deleted_at')
+                    ->where('chat_messages.sender_id', '!=', $userId)
+                    ->where(fn ($q2) => $q2
+                        ->whereNull('chat_conversation_participants.last_read_at')
+                        ->orWhereColumn('chat_messages.created_at', '>', 'chat_conversation_participants.last_read_at'))
+                    ->where(fn ($q2) => $q2
+                        ->whereNull('chat_conversation_participants.deleted_at')
+                        ->orWhereColumn('chat_messages.created_at', '>', 'chat_conversation_participants.deleted_at')))
+        );
+    }
 }

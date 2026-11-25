@@ -1,4 +1,10 @@
-import { Archive, MessageCircle, MessagesSquare, SearchX } from "lucide-react"
+import {
+	Archive,
+	Filter,
+	MessageCircle,
+	MessagesSquare,
+	SearchX,
+} from "lucide-react"
 
 type Props = {
 	variant:
@@ -6,6 +12,7 @@ type Props = {
 		| "no-archived-conversations"
 		| "no-selection"
 		| "search-no-results"
+		| "filter-no-results"
 }
 
 const CONTENT: Record<
@@ -31,6 +38,11 @@ const CONTENT: Record<
 		icon: SearchX,
 		title: "No results",
 		description: "Try a different search term.",
+	},
+	"filter-no-results": {
+		icon: Filter,
+		title: "No matches",
+		description: "No conversations match this filter.",
 	},
 }
 
