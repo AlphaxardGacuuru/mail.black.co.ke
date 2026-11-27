@@ -2,6 +2,7 @@ import { Briefcase, Mail, MessageSquareMore, Tag } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import type { ReactNode } from "react"
 import { Link } from "@/components/ui/link"
+import { AVATAR_ALIGNED_ITEM } from "@/components/nav-user"
 import { CHATS_URL, chatNavItems, mailNavItems } from "@/components/app-sidebar"
 import {
 	SidebarGroup,
@@ -104,8 +105,10 @@ function NavSection({
 			<SidebarMenuButton
 				asChild
 				isActive={inSection && !showsItems}
-				tooltip={title}>
+				tooltip={title}
+				className={AVATAR_ALIGNED_ITEM}>
 				<Link
+					variant="unstyled"
 					href={href}
 					onClick={closeSidebar}>
 					<Icon />

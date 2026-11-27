@@ -141,7 +141,7 @@ export function AppSidebar() {
 				{!isInstalled && (
 					<NavFooter
 						items={footerNavItems}
-						className="mt-auto"
+						className="mt-auto p-0"
 					/>
 				)}
 				<NavUser />
